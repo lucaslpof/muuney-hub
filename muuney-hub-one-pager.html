@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>muuney.hub — Inteligência de Mercado Financeiro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #0a0a0a;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            border-bottom: 1px solid #00d4aa;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 212, 170, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .logo-placeholder {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 28px;
+            color: #0a0a0a;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #00d4aa;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Value Proposition */
+        .value-prop {
+            background: #1a1a1a;
+            padding: 4rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #222;
+        }
+
+        .value-prop h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .value-prop-text {
+            font-size: 1.2rem;
+            color: #b0b0b0;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .value-prop-highlight {
+            color: #00d4aa;
+            font-weight: 600;
+        }
+
+        /* Modules Grid */
+        .modules {
+            padding: 4rem 2rem;
+            background: #0a0a0a;
+        }
+
+        .modules h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .module-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4aa, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .module-card:hover {
+            border-color: #00d4aa;
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .module-card:hover::before {
+            opacity: 1;
+        }
+
+        .module-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 24px;
+        }
+
+        .module-card h3 {
+            font-size: 1.3rem;
+            color: #ffffff;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+        }
+
+        .module-card p {
+            font-size: 0.95rem;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        /* Differentiators */
+        .differentiators {
+            background: #1a1a1a;
+            padding: 4rem 2rem;
+            border-top: 1px solid #222;
+            border-bottom: 1px solid #222;
+        }
+
+        .differentiators h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .diff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .diff-item {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .diff-icon {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid #00d4aa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00d4aa;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .diff-content h3 {
+            font-size: 1.1rem;
+            color: #ffffff;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+
+        .diff-content p {
+            font-size: 0.9rem;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* Pricing */
+        .pricing {
+            padding: 4rem 2rem;
+            background: #0a0a0a;
+        }
+
+        .pricing h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 2.5rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card.featured {
+            border: 2px solid #00d4aa;
+            box-shadow: 0 0 30px rgba(0, 212, 170, 0.2);
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: 'RECOMENDADO';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #00d4aa, #00a884);
+            color: #0a0a0a;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .pricing-card h3 {
+            font-size: 1.4rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .pricing-tier {
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-features li {
+            padding: 0.6rem 0;
+            color: #888;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 1px solid #222;
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: #00d4aa;
+            font-weight: bold;
+            min-width: 20px;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            color: #0a0a0a;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .cta-button:hover {
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .cta-button-secondary {
+            background: transparent;
+            border: 1px solid #00d4aa;
+            color: #00d4aa;
+        }
+
+        .cta-button-secondary:hover {
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+            padding: 4rem 2rem;
+            text-align: center;
+            border-top: 1px solid #222;
+            border-bottom: 1px solid #222;
+        }
+
+        .cta-section h2 {
+            font-size: 2rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta-buttons button {
+            padding: 1rem 2rem;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cta-primary {
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            color: #0a0a0a;
+        }
+
+        .cta-primary:hover {
+            box-shadow: 0 0 25px rgba(0, 212, 170, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .cta-secondary {
+            background: transparent;
+            border: 1px solid #00d4aa;
+            color: #00d4aa;
+        }
+
+        .cta-secondary:hover {
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        /* Footer */
+        footer {
+            background: #0a0a0a;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid #222;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            html, body {
+                background: white;
+                color: #000;
+            }
+
+            .container, header, .value-prop, .modules, .differentiators, .pricing, .cta-section {
+                background: white;
+                page-break-inside: avoid;
+            }
+
+            .cta-buttons, footer {
+                display: none;
+            }
+
+            header {
+                border-bottom: 1px solid #ddd;
+            }
+
+            .module-card, .pricing-card {
+                background: white;
+                border: 1px solid #ddd;
+            }
+
+            .module-card:hover, .pricing-card.featured {
+                box-shadow: none;
+            }
+
+            .cta-button {
+                background: #00d4aa;
+                color: white;
+                border: 1px solid #00d4aa;
+            }
+
+            h1, h2, h3 {
+                color: #000;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .value-prop h2, .modules h2, .differentiators h2, .pricing h2 {
+                font-size: 1.5rem;
+            }
+
+            .modules-grid, .diff-grid, .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .cta-buttons button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo-placeholder">μ</div>
+            <h1>muuney.hub</h1>
+            <p class="tagline">Inteligência de Mercado Financeiro</p>
+        </header>
+
+        <!-- Value Proposition -->
+        <section class="value-prop">
+            <h2>Dados Financeiros Sem Filtros</h2>
+            <p class="value-prop-text">
+                Informações do mercado financeiro brasileiro de <span class="value-prop-highlight">fontes oficiais primárias</span> (BACEN, CVM), 
+                organizadas, analisadas e acessíveis. <span class="value-prop-highlight">Inteligência financeira democratizada</span> 
+                para assessores, consultores e gestoras independentes.
+            </p>
+        </section>
+
+        <!-- Modules -->
+        <section class="modules">
+            <h2>5 Módulos Analíticos</h2>
+            <div class="modules-grid">
+                <div class="module-card">
+                    <div class="module-icon">📊</div>
+                    <h3>Panorama Macroeconômico</h3>
+                    <p>Selic, IPCA, câmbio, curva de juros, PIB e balança comercial em tempo real, com análises históricas.</p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-icon">💰</div>
+                    <h3>Overview de Crédito</h3>
+                    <p>Spreads bancários, condições de crédito, índices de inadimplência e volume de concessões.</p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-icon">📈</div>
+                    <h3>Fundos</h3>
+                    <p>Análise profunda de fundos: performance, drawdown, Sharpe ratio, captação líquida e rentabilidade.</p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-icon">🏢</div>
+                    <h3>Empresas</h3>
+                    <p>Screening de empresas listadas com métricas: P/L, ROE, EV/EBITDA, Dividend Yield e dados CVM completos.</p>
+                </div>
+
+                <div class="module-card">
+                    <div class="module-icon">📚</div>
+                    <h3>Educacional</h3>
+                    <p>Blog e conteúdos curados sobre mercado financeiro, análise técnica e estratégias de investimento.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Differentiators -->
+        <section class="differentiators">
+            <h2>Por Que Muuney.hub?</h2>
+            <div class="diff-grid">
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Fontes Oficiais</h3>
+                        <p>Dados diretos de BACEN e CVM, sem intermediários ou filtros comerciais.</p>
+                    </div>
+                </div>
+
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Análise Profunda</h3>
+                        <p>Métricas e indicadores processados com expertise em gestão e análise de investimentos.</p>
+                    </div>
+                </div>
+
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Acessibilidade</h3>
+                        <p>Interface intuitiva para consultores, assessores e gestoras, sem exigência de conhecimento técnico.</p>
+                    </div>
+                </div>
+
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Escalabilidade</h3>
+                        <p>API robusta para integração em suas plataformas e estratégias automatizadas.</p>
+                    </div>
+                </div>
+
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Conformidade Regulatória</h3>
+                        <p>Aderente a normas CVM e Bacen. Relatórios e alertas auditáveis para compliance.</p>
+                    </div>
+                </div>
+
+                <div class="diff-item">
+                    <div class="diff-icon">✓</div>
+                    <div class="diff-content">
+                        <h3>Transparência Total</h3>
+                        <p>Metodologias de cálculo expostas. Sem black-boxes ou recomendações arbitrárias.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing -->
+        <section class="pricing">
+            <h2>Planos de Preço</h2>
+            <div class="pricing-grid">
+                <!-- Starter -->
+                <div class="pricing-card">
+                    <span class="pricing-tier">Starter</span>
+                    <h3>Acesso Essencial</h3>
+                    <ul class="pricing-features">
+                        <li>Acesso aos 5 módulos analíticos</li>
+                        <li>Dados com delay de 1 hora</li>
+                        <li>Visualização em dashboard</li>
+                        <li>Suporte por email</li>
+                        <li>Até 2 usuários</li>
+                    </ul>
+                    <button class="cta-button cta-button-secondary">Solicitar Demo</button>
+                </div>
+
+                <!-- Professional (Featured) -->
+                <div class="pricing-card featured">
+                    <span class="pricing-tier">Professional</span>
+                    <h3>Solução Completa</h3>
+                    <ul class="pricing-features">
+                        <li>Todos os módulos em tempo real</li>
+                        <li>Exportação CSV, PDF e Excel</li>
+                        <li>Alertas customizáveis</li>
+                        <li>API com acesso limitado</li>
+                        <li>Até 5 usuários</li>
+                        <li>Suporte prioritário</li>
+                    </ul>
+                    <button class="cta-button">Começar Agora</button>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="pricing-card">
+                    <span class="pricing-tier">Enterprise</span>
+                    <h3>Solução Customizada</h3>
+                    <ul class="pricing-features">
+                        <li>API full access e webhooks</li>
+                        <li>White-label sob sua marca</li>
+                        <li>Integrações customizadas</li>
+                        <li>Usuários ilimitados</li>
+                        <li>Suporte dedicado 24/7</li>
+                        <li>SLA garantido 99.9%</li>
+                    </ul>
+                    <button class="cta-button cta-button-secondary">Falar com Vendas</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta-section">
+            <h2>Pronto para Transformar Sua Análise?</h2>
+            <p>Comece com uma demonstração personalizada ou acesso ao plano Starter gratuitamente.</p>
+            <div class="cta-buttons">
+                <button class="cta-primary">Solicitar Demo Agora</button>
+                <button class="cta-secondary">Documentação Técnica</button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>muuney.hub © 2026 | Dados oficiais BACEN & CVM | Todos os direitos reservados</p>
+            <p style="margin-top: 0.5rem;">contato@muuney.hub | www.muuney.hub</p>
+        </footer>
+    </div>
+</body>
+</html>

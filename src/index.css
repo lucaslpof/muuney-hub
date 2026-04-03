@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   MUUNEY HUB — Tech-Noir Design System
+   Background: #0a0a0a | Accent: #0B6C3E (macro) / #10B981 (crédito)
+   Typography: Inter (body) + JetBrains Mono (data)
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --background: 0 0% 3.9%;
+    --foreground: 240 5% 92%;
+    --card: 0 0% 6.7%;
+    --card-foreground: 240 5% 92%;
+    --border: 0 0% 10%;
+    --input: 0 0% 10%;
+    --ring: 152 82% 24%;
+    --primary: 152 82% 24%;
+    --primary-foreground: 0 0% 100%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#0a0a0a] text-zinc-100 antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar — tech-noir */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1a1a1a;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a2a2a;
+  }
+
+  /* Hide scrollbar on tabs */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
