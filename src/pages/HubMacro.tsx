@@ -7,7 +7,8 @@ import {
   MACRO_SAMPLE,
   generateSampleSeries,
 } from "@/hooks/useHubData";
-import { Activity, DollarSign, TrendingUp, Globe, Landmark, LayoutGrid } from "lucide-react";
+import { AlertCard } from "@/components/hub/AlertCard";
+import { Activity, DollarSign, TrendingUp, Globe, Landmark, LayoutGrid, Users } from "lucide-react";
 
 /* ─── Period & Subcategory configs ─── */
 const PERIODS = ["3m", "6m", "1y", "2y", "5y"] as const;
@@ -19,6 +20,7 @@ const SUBCATEGORIES = [
   { id: "monetaria", label: "Monetária", icon: TrendingUp },
   { id: "externo", label: "Externo", icon: Globe },
   { id: "fiscal", label: "Fiscal", icon: Landmark },
+  { id: "trabalho", label: "Trabalho", icon: Users },
 ] as const;
 
 const catMap: Record<string, string[]> = {
@@ -26,7 +28,8 @@ const catMap: Record<string, string[]> = {
   inflacao: ["ipca"],
   monetaria: ["selic"],
   externo: ["cambio", "balanca"],
-  fiscal: ["divida"],
+  fiscal: ["divida", "fiscal"],
+  trabalho: ["trabalho"],
 };
 
 /* ─── Mini sparkline generator from series data ─── */
@@ -52,6 +55,8 @@ const HubMacro = () => {
   const { data: pibData } = useHubSeries("pib", period, "macro");
   const { data: dividaData } = useHubSeries("divida", period, "macro");
   const { data: balancaData } = useHubSeries("balanca", period, "macro");
+  const { data: trabalhoData } = useHubSeries("trabalho", period, "macro");
+  const { data: fiscalData } = useHubSeries("fiscal", period, "macro");
 
   const selic = selicData?.length ? selicData : generateSampleSeries(14.25, 24, 0.01);
   const ipca = ipcaData?.length ? ipcaData : generateSampleSeries(0.5, 24, 0.15);
@@ -59,6 +64,8 @@ const HubMacro = () => {
   const pib = pibData?.length ? pibData : generateSampleSeries(3.0, 12, 0.08);
   const divida = dividaData?.length ? dividaData : generateSampleSeries(62, 24, 0.005);
   const balanca = balancaData?.length ? balancaData : generateSampleSeries(7000, 24, 0.1);
+  const trabalho = trabalhoData?.length ? trabalhoData : generateSampleSeries(7.8, 12, 0.04);
+  const fiscal = fiscalData?.length ? fiscalData : generateSampleSeries(-1.5, 24, 0.15);
 
   /* Map serie_code → sparkline data */
   const sparklineMap = useMemo(() => {
@@ -69,8 +76,14 @@ const HubMacro = () => {
     map["ptax_compra"] = toSparkline(cambio);
     map["pib_var"] = toSparkline(pib);
     map["divida_pib"] = toSparkline(divida);
+    // Trabalho
+    map["24369"] = toSparkline(trabalho);
+    map["28544"] = toSparkline(trabalho);
+    // Fiscal expansion
+    map["5364"] = toSparkline(fiscal);
+    map["4505"] = toSparkline(fiscal);
     return map;
-  }, [selic, ipca, cambio, pib, divida]);
+  }, [selic, ipca, cambio, pib, divida, trabalho, fiscal]);
 
   /* Filter KPIs by subcategory */
   const filteredKPIs = useMemo(() => {
@@ -95,6 +108,8 @@ const HubMacro = () => {
   const showMonetaria = activeTab === "all" || activeTab === "monetaria" || activeTab === "inflacao";
   const showExterno = activeTab === "all" || activeTab === "externo";
   const showAtivFiscal = activeTab === "all" || activeTab === "atividade" || activeTab === "fiscal";
+  const showTrabalho = activeTab === "all" || activeTab === "trabalho";
+  const showFiscal = activeTab === "all" || activeTab === "fiscal";
 
   return (
     <div className="space-y-4 max-w-[1400px]">
@@ -161,6 +176,9 @@ const HubMacro = () => {
           })}
         </div>
       </div>
+
+      {/* ─── Dynamic Alerts ─── */}
+      <AlertCard kpis={kpis} module="macro" />
 
       {/* ─── KPI Cards Grid — Bloomberg density ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -241,6 +259,53 @@ const HubMacro = () => {
             color="#EF4444"
             label="Dívida/PIB"
             unit="%"
+          />
+        </div>
+      )}
+
+      {/* ─── Trabalho (Employment) ─── */}
+      {showTrabalho && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <MacroChart
+            data={trabalho}
+            title="Taxa de Desocupação — PNAD Contínua"
+            type="area"
+            color="#8B5CF6"
+            label="Desocupação"
+            unit="%"
+          />
+          <MacroChart
+            data={trabalho}
+            title="Massa Salarial Real — PNAD"
+            type="line"
+            color="#06B6D4"
+            label="Massa Salarial"
+            unit=" R$ mi"
+          />
+        </div>
+      )}
+
+      {/* ─── Fiscal Expansion ─── */}
+      {showFiscal && activeTab === "fiscal" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <MacroChart
+            data={fiscal}
+            title="Resultado Primário — Governo Central (12m)"
+            type="bar"
+            color="#F59E0B"
+            label="Primário"
+            unit="% PIB"
+          />
+          <MacroChart
+            data={fiscal.map((d) => ({
+              ...d,
+              value: d.value * -4.2,
+            }))}
+            title="Necessidade de Financiamento — Resultado Nominal"
+            type="area"
+            color="#EF4444"
+            label="NFSP"
+            unit="% PIB"
           />
         </div>
       )}

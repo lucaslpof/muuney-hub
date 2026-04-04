@@ -172,6 +172,10 @@ export const MACRO_SAMPLE: LatestCard[] = [
   { serie_code: "ptax_compra", category: "cambio", display_name: "PTAX Compra", description: "Câmbio USD/BRL", unit: "R$", source: "BACEN SGS 1", last_value: 5.73, last_date: "2026-03-28", change_pct: -0.34, trend: "down" },
   { serie_code: "pib_var", category: "pib", display_name: "PIB Var. %", description: "Crescimento trimestral", unit: "%", source: "BACEN SGS 4380", last_value: 3.20, last_date: "2025-12-01", change_pct: 0.50, trend: "up" },
   { serie_code: "divida_pib", category: "divida", display_name: "Dívida/PIB", description: "Dívida líquida do setor público", unit: "%", source: "BACEN SGS 4503", last_value: 62.60, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
+  { serie_code: "24369", category: "trabalho", display_name: "Desocupação", description: "Taxa de desocupação PNAD Contínua", unit: "%", source: "BACEN SGS 24369", last_value: 5.80, last_date: "2026-02-01", change_pct: -0.30, trend: "down" },
+  { serie_code: "28544", category: "trabalho", display_name: "Massa Salarial Real", description: "Massa de rendimento real habitual PNAD", unit: "R$ mi", source: "BACEN SGS 28544", last_value: 412288.00, last_date: "2026-01-01", change_pct: 0.17, trend: "up" },
+  { serie_code: "5364", category: "fiscal", display_name: "Resultado Primário", description: "Resultado primário governo central 12m", unit: "% PIB", source: "BACEN SGS 5364", last_value: 1.57, last_date: "2026-02-01", change_pct: 0.10, trend: "up" },
+  { serie_code: "4505", category: "fiscal", display_name: "NFSP Nominal", description: "Necessidade de financiamento resultado nominal", unit: "% PIB", source: "BACEN SGS 4505", last_value: -1.47, last_date: "2026-02-01", change_pct: -0.08, trend: "down" },
 ];
 
 export const CREDITO_SAMPLE: LatestCard[] = [

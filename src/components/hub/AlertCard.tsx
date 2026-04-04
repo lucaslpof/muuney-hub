@@ -118,8 +118,10 @@ function evaluateCreditAlerts(kpis: KPIData[]): Alert[] {
 function evaluateMacroAlerts(kpis: KPIData[]): Alert[] {
   const alerts: Alert[] = [];
 
-  const selic = kpis.find((k) => k.serie_code === "selic_meta");
-  const ipca = kpis.find((k) => k.category?.includes("ipca") && k.serie_code === "ipca_12m");
+  const selic = kpis.find((k) => k.serie_code === "selic_meta" || (k.category === "selic" && k.display_name?.includes("Meta")));
+  const ipca = kpis.find((k) => k.category?.includes("ipca") && (k.serie_code === "ipca_12m" || k.display_name?.includes("12m")));
+  const desocupacao = kpis.find((k) => k.category === "trabalho" && k.display_name?.includes("Desocupação"));
+  const resultadoPrimario = kpis.find((k) => k.category === "fiscal" && k.display_name?.includes("Primário"));
 
   if (selic && selic.last_value >= 14) {
     alerts.push({
@@ -140,6 +142,32 @@ function evaluateMacroAlerts(kpis: KPIData[]): Alert[] {
       message: `Inflação acumulada em ${ipca.last_value.toFixed(2)}%, acima do teto de 4,5% da meta de inflação.`,
       metric: ipca.display_name,
       value: `${ipca.last_value.toFixed(2)}%`,
+    });
+  }
+
+  /* Rule: Desocupação alta (>8%) */
+  if (desocupacao && desocupacao.last_value > 8) {
+    alerts.push({
+      id: "desocupacao_high",
+      severity: desocupacao.last_value > 10 ? "critical" : "warning",
+      title: "Desocupação acima da média",
+      message: `Taxa de desocupação em ${desocupacao.last_value.toFixed(1)}%. ${
+        desocupacao.trend === "up" ? "Tendência de alta — possível pressão sobre consumo e inadimplência." : "Porém com tendência de estabilização."
+      }`,
+      metric: desocupacao.display_name,
+      value: `${desocupacao.last_value.toFixed(1)}%`,
+    });
+  }
+
+  /* Rule: Resultado primário negativo */
+  if (resultadoPrimario && resultadoPrimario.last_value < -1.0) {
+    alerts.push({
+      id: "deficit_primario",
+      severity: resultadoPrimario.last_value < -2.0 ? "critical" : "warning",
+      title: "Déficit primário persistente",
+      message: `Resultado primário em ${resultadoPrimario.last_value.toFixed(1)}% do PIB. Atenção à trajetória fiscal e impacto nos juros longos.`,
+      metric: resultadoPrimario.display_name,
+      value: `${resultadoPrimario.last_value.toFixed(1)}% PIB`,
     });
   }
 
