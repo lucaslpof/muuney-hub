@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 
 interface SparklinePoint {
   value: number;
@@ -88,7 +89,10 @@ export const KPICard = ({
       : "bg-zinc-500/10";
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       onClick={onClick}
       className={`group bg-[#111111] border border-[#1a1a1a] hover:border-[#0B6C3E]/40 rounded-md px-3 py-2.5 transition-all duration-150 ${
         onClick ? "cursor-pointer" : ""
@@ -130,6 +134,6 @@ export const KPICard = ({
           <Sparkline data={sparklineData} trend={trend} />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

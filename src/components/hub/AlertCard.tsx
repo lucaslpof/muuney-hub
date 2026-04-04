@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, ShieldAlert, Info } from "lucide-react";
 
 interface KPIData {
   serie_code: string;
@@ -32,7 +33,8 @@ function evaluateCreditAlerts(kpis: KPIData[]): Alert[] {
   const inadTotal = kpis.find((k) => k.serie_code === "inadimplencia_total");
   const inadPF = kpis.find((k) => k.serie_code === "inadimplencia_pf");
   const spreadPF = kpis.find((k) => k.serie_code === "spread_pf");
-  const spreadPJ = kpis.find((k) => k.serie_code === "spread_pj");
+  // spreadPJ reserved for future alert rules
+  void kpis.find((k) => k.serie_code === "spread_pj");
   const taxaPF = kpis.find((k) => k.serie_code === "taxa_pf");
   const creditoPIB = kpis.find((k) => k.serie_code === "credito_pib");
 
@@ -200,13 +202,18 @@ export const AlertCard = ({ kpis, module = "credito" }: AlertCardProps) => {
 
   return (
     <div className="space-y-2">
-      {alerts.map((alert) => {
+      <AnimatePresence>
+      {alerts.map((alert, index) => {
         const config = severityConfig[alert.severity];
         const Icon = config.icon;
 
         return (
-          <div
+          <motion.div
             key={alert.id}
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.3, delay: index * 0.08 }}
             className={`${config.bg} border ${config.border} rounded-lg px-4 py-3 transition-all`}
           >
             <div className="flex items-start gap-3">
@@ -226,9 +233,10 @@ export const AlertCard = ({ kpis, module = "credito" }: AlertCardProps) => {
                 <p className="text-xs text-zinc-500 leading-relaxed">{alert.message}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         );
       })}
+      </AnimatePresence>
       <p className="text-[8px] text-zinc-700 font-mono px-1">
         Alertas gerados automaticamente com base nos últimos dados disponíveis. Não constitui recomendação.
       </p>

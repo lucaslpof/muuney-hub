@@ -1,5 +1,5 @@
 import { useHubIngestionStatus } from "@/hooks/useHubData";
-import { Activity, CheckCircle, AlertCircle, Clock, Database } from "lucide-react";
+import { CheckCircle, AlertCircle, Clock, Database } from "lucide-react";
 
 interface IngestionModule {
   module: string;

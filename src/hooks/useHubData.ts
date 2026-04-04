@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 
 const HUB_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-macro-api";
 
-interface SeriesDataPoint {
+export interface SeriesDataPoint {
   date: string;
   value: number;
 }
 
-interface LatestCard {
+export interface LatestCard {
   serie_code: string;
   category: string;
   display_name: string;
@@ -20,7 +20,7 @@ interface LatestCard {
   trend: "up" | "down" | "stable";
 }
 
-interface OverviewItem {
+export interface OverviewItem {
   serie_code: string;
   category: string;
   display_name: string;
@@ -29,20 +29,70 @@ interface OverviewItem {
   last_date: string;
 }
 
-async function fetchHub(endpoint: string, params: Record<string, string> = {}) {
+/* ─── API response shapes ─── */
+interface ApiIndicatorLatest {
+  code: string | number;
+  category: string;
+  name: string;
+  unit: string;
+  current_value?: number;
+  current_date?: string;
+  change_percent?: number;
+  trend?: "up" | "down" | "stable";
+}
+
+interface ApiIndicatorOverview {
+  code: string | number;
+  category: string;
+  name: string;
+  unit: string;
+  latest_value?: number;
+  latest_date?: string;
+}
+
+interface ApiLatestResponse {
+  indicators?: ApiIndicatorLatest[];
+}
+
+interface ApiOverviewResponse {
+  indicators?: ApiIndicatorOverview[];
+}
+
+interface ApiSeriesItem {
+  data?: SeriesDataPoint[];
+}
+
+interface ApiSeriesResponse {
+  series?: ApiSeriesItem[];
+}
+
+interface IngestionModule {
+  module: string;
+  total_series: number;
+  last_success: string | null;
+  records_today: number;
+  errors_today: number;
+}
+
+export interface IngestionStatusResponse {
+  modules?: IngestionModule[];
+}
+
+async function fetchHub(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
   const url = new URL(HUB_API);
   url.searchParams.set("endpoint", endpoint);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Hub API error: ${res.status}`);
-  return res.json();
+  return res.json() as Promise<unknown>;
 }
 
 /* Map API "latest" response → LatestCard[] expected by frontend */
-function mapLatestResponse(apiData: any): LatestCard[] {
-  const indicators = apiData?.indicators || [];
-  return indicators.map((ind: any) => ({
+function mapLatestResponse(apiData: unknown): LatestCard[] {
+  const response = apiData as ApiLatestResponse;
+  const indicators = response?.indicators || [];
+  return indicators.map((ind) => ({
     serie_code: String(ind.code),
     category: ind.category,
     display_name: ind.name,
@@ -57,9 +107,10 @@ function mapLatestResponse(apiData: any): LatestCard[] {
 }
 
 /* Map API "overview" response → OverviewItem[] */
-function mapOverviewResponse(apiData: any): OverviewItem[] {
-  const indicators = apiData?.indicators || [];
-  return indicators.map((ind: any) => ({
+function mapOverviewResponse(apiData: unknown): OverviewItem[] {
+  const response = apiData as ApiOverviewResponse;
+  const indicators = response?.indicators || [];
+  return indicators.map((ind) => ({
     serie_code: String(ind.code),
     category: ind.category,
     display_name: ind.name,
@@ -70,10 +121,10 @@ function mapOverviewResponse(apiData: any): OverviewItem[] {
 }
 
 /* Map API "series" response → SeriesDataPoint[] (flattened, first serie) */
-function mapSeriesResponse(apiData: any): SeriesDataPoint[] {
-  const series = apiData?.series || [];
+function mapSeriesResponse(apiData: unknown): SeriesDataPoint[] {
+  const response = apiData as ApiSeriesResponse;
+  const series = response?.series || [];
   if (series.length === 0) return [];
-  // Flatten all series data points, keeping the first serie's data
   return series[0].data || [];
 }
 
@@ -81,7 +132,7 @@ export function useHubLatest(module: "macro" | "credito" = "macro") {
   return useQuery<LatestCard[]>({
     queryKey: ["hub", "latest", module],
     queryFn: async () => mapLatestResponse(await fetchHub("latest", { module })),
-    staleTime: 30 * 60 * 1000, // 30 min cache
+    staleTime: 30 * 60 * 1000,
     retry: 2,
   });
 }
@@ -106,9 +157,9 @@ export function useHubSeries(category: string, period: string = "1y", module: "m
 }
 
 export function useHubIngestionStatus() {
-  return useQuery({
+  return useQuery<IngestionStatusResponse>({
     queryKey: ["hub", "ingestion_status"],
-    queryFn: () => fetchHub("ingestion_status"),
+    queryFn: () => fetchHub("ingestion_status") as Promise<IngestionStatusResponse>,
     staleTime: 5 * 60 * 1000,
   });
 }

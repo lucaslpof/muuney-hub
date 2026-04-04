@@ -1,0 +1,72 @@
+# Supabase Project Configuration
+# Project: muuney-hub (yheopprbuimsunqfaqbp)
+# Generated: 2026-04-03
+
+[project]
+project_id = "yheopprbuimsunqfaqbp"
+project_name = "muuney-hub"
+region = "us-east-1"
+
+# API Configuration
+[api]
+enabled = true
+max_rows = 1000
+
+# Database Configuration
+[database]
+major_version = 15
+test_seed = "supabase/seed.sql"
+
+# Auth Configuration
+[auth]
+# Supabase Auth is enabled by default
+enable_signup = true
+enable_anonymous_signups = true
+jwt_expiry_secs = 3600
+enable_refresh_token_rotation = true
+
+# Email Configuration
+# Uses Resend API via Edge Functions
+[email]
+enabled = true
+provider = "resend"
+sender_name = "Muuney"
+sender_email = "noreply@muuney.com.br"
+
+# Vector/Embeddings Configuration
+[vector]
+enabled = false
+
+# Storage Configuration
+[storage]
+enabled = true
+max_file_size = 52428800
+
+# Cron Job Configuration
+[cron_jobs]
+# Health check runs every 5 minutes
+enabled = true
+
+# Realtime Configuration
+[realtime]
+enabled = true
+max_bytes_per_second = 1048576
+
+# Schema Validation
+[postgres]
+max_connections = 20
+statement_timeout = "15s"
+work_mem = "256MB"
+log_statement = "all"
+log_duration = true
+
+# Security
+[security]
+enforce_row_level_security = true
+enable_column_encryption = true
+
+# Backup Configuration
+[backup]
+enabled = true
+frequency = "daily"
+retention_days = 30

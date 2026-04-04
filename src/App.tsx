@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { HubLayout } from "@/components/hub/HubLayout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /* Lazy-loaded pages */
 const HubLanding = React.lazy(() => import("./pages/HubLanding"));
@@ -16,28 +17,30 @@ const Loading = () => (
 );
 
 const App = () => (
-  <Suspense fallback={<Loading />}>
-    <Routes>
-      {/* Landing page — public */}
-      <Route path="/" element={<HubLanding />} />
+  <ErrorBoundary>
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        {/* Landing page — public */}
+        <Route path="/" element={<HubLanding />} />
 
-      {/* Dashboard + Modules — inside HubLayout (sidebar + header) */}
-      <Route element={<HubLayout />}>
-        <Route path="/dashboard" element={<HubDashboard />} />
-        <Route path="/macro" element={<HubMacro />} />
-        <Route path="/credito" element={<HubCredito />} />
-      </Route>
+        {/* Dashboard + Modules — inside HubLayout (sidebar + header) */}
+        <Route element={<HubLayout />}>
+          <Route path="/dashboard" element={<HubDashboard />} />
+          <Route path="/macro" element={<HubMacro />} />
+          <Route path="/credito" element={<HubCredito />} />
+        </Route>
 
-      {/* Backward compat: /hub/* redirects from old muuney-landing routes */}
-      <Route path="/hub" element={<Navigate to="/" replace />} />
-      <Route path="/hub/dashboard" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/hub/macro" element={<Navigate to="/macro" replace />} />
-      <Route path="/hub/credito" element={<Navigate to="/credito" replace />} />
+        {/* Backward compat: /hub/* redirects from old muuney-landing routes */}
+        <Route path="/hub" element={<Navigate to="/" replace />} />
+        <Route path="/hub/dashboard" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/hub/macro" element={<Navigate to="/macro" replace />} />
+        <Route path="/hub/credito" element={<Navigate to="/credito" replace />} />
 
-      {/* 404 */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </Suspense>
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
+  </ErrorBoundary>
 );
 
 export default App;

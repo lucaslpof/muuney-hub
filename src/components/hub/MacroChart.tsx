@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useMemo, useRef, useState, useCallback, type ReactNode } from "react";
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  ReferenceArea, ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 import { Download, ZoomIn, RotateCcw } from "lucide-react";
 
@@ -10,6 +10,10 @@ interface DataPoint {
   date: string;
   value: number;
   value2?: number;
+}
+
+interface FormattedDataPoint extends DataPoint {
+  dateLabel: string;
 }
 
 interface MacroChartProps {
@@ -26,15 +30,26 @@ interface MacroChartProps {
 }
 
 /* ───── Rich Tooltip with crosshair styling ───── */
-const RichTooltip = ({ active, payload, label, unit }: any) => {
+interface TooltipPayloadEntry {
+  value: number | string;
+  name: string;
+  color: string;
+}
+
+interface RichTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+  unit?: string;
+}
+
+const RichTooltip = ({ active, payload, label, unit }: RichTooltipProps) => {
   if (!active || !payload?.length) return null;
-  const main = payload[0];
-  const val = typeof main.value === "number" ? main.value : 0;
 
   return (
     <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-md px-3 py-2 shadow-xl shadow-black/40 min-w-[140px]">
       <p className="text-[10px] text-zinc-500 font-mono mb-1.5 border-b border-[#1a1a1a] pb-1">{label}</p>
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -100,6 +115,11 @@ function exportPNG(chartRef: React.RefObject<HTMLDivElement | null>, title: stri
   img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
 }
 
+/* ───── Recharts mouse event shape ───── */
+interface ChartMouseEvent {
+  activeLabel?: string;
+}
+
 /* ───── Main Chart Component ───── */
 export const MacroChart = ({
   data, title, type = "line", color = "#0B6C3E", color2 = "#10B981",
@@ -111,7 +131,7 @@ export const MacroChart = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
 
-  const formattedData = useMemo(
+  const formattedData: FormattedDataPoint[] = useMemo(
     () =>
       data.map((d) => ({
         ...d,
@@ -125,7 +145,7 @@ export const MacroChart = ({
     return formattedData.slice(zoomDomain[0], zoomDomain[1] + 1);
   }, [formattedData, zoomDomain]);
 
-  const handleMouseDown = useCallback((e: any) => {
+  const handleMouseDown = useCallback((e: ChartMouseEvent) => {
     if (e?.activeLabel) {
       setZoomLeft(e.activeLabel);
       setIsSelecting(true);
@@ -133,7 +153,7 @@ export const MacroChart = ({
   }, []);
 
   const handleMouseMove = useCallback(
-    (e: any) => {
+    (e: ChartMouseEvent) => {
       if (isSelecting && e?.activeLabel) {
         setZoomRight(e.activeLabel);
       }
@@ -213,7 +233,11 @@ export const MacroChart = ({
     );
   };
 
-  const chartContent = (ChartComponent: any, children: React.ReactNode) => (
+  /* Generic chart wrapper using React element type */
+  const chartContent = (
+    ChartComponent: typeof AreaChart | typeof BarChart | typeof LineChart,
+    children: ReactNode
+  ) => (
     <ChartComponent {...chartProps}>
       <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
       <XAxis {...axisProps.xAxis} />
