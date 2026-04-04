@@ -166,16 +166,41 @@ export function useHubIngestionStatus() {
 
 // Sample data fallback for when API has no data yet
 export const MACRO_SAMPLE: LatestCard[] = [
+  // Selic / Monetária
   { serie_code: "selic_meta", category: "selic", display_name: "Selic Meta", description: "Taxa básica de juros", unit: "% a.a.", source: "BACEN SGS 432", last_value: 14.25, last_date: "2026-03-19", change_pct: 0.00, trend: "stable" },
+  { serie_code: "4189", category: "monetaria", display_name: "Selic Diária", description: "Taxa Selic diária anualizada", unit: "% a.a.", source: "BACEN SGS 4189", last_value: 14.15, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
+  { serie_code: "27813", category: "monetaria", display_name: "M1", description: "Agregado monetário M1", unit: "R$ bi", source: "BACEN SGS 27813", last_value: 652.40, last_date: "2026-02-01", change_pct: 1.20, trend: "up" },
+  { serie_code: "27814", category: "monetaria", display_name: "M2", description: "Agregado monetário M2", unit: "R$ bi", source: "BACEN SGS 27814", last_value: 4832.10, last_date: "2026-02-01", change_pct: 0.80, trend: "up" },
+  // IPCA / Inflação
   { serie_code: "ipca_mensal", category: "ipca", display_name: "IPCA Mensal", description: "Inflação oficial", unit: "%", source: "BACEN SGS 433", last_value: 0.56, last_date: "2026-02-01", change_pct: 0.12, trend: "up" },
   { serie_code: "ipca_12m", category: "ipca", display_name: "IPCA 12m", description: "Inflação acumulada 12 meses", unit: "%", source: "BACEN SGS 13522", last_value: 5.06, last_date: "2026-02-01", change_pct: -0.20, trend: "down" },
-  { serie_code: "ptax_compra", category: "cambio", display_name: "PTAX Compra", description: "Câmbio USD/BRL", unit: "R$", source: "BACEN SGS 1", last_value: 5.73, last_date: "2026-03-28", change_pct: -0.34, trend: "down" },
+  { serie_code: "188", category: "inflacao", display_name: "INPC", description: "INPC mensal", unit: "%", source: "BACEN SGS 188", last_value: 0.48, last_date: "2026-02-01", change_pct: 0.05, trend: "up" },
+  { serie_code: "16121", category: "inflacao", display_name: "IPCA Ano", description: "IPCA acumulado no ano", unit: "%", source: "BACEN SGS 16121", last_value: 1.12, last_date: "2026-02-01", change_pct: 0.56, trend: "up" },
+  // Atividade
   { serie_code: "pib_var", category: "pib", display_name: "PIB Var. %", description: "Crescimento trimestral", unit: "%", source: "BACEN SGS 4380", last_value: 3.20, last_date: "2025-12-01", change_pct: 0.50, trend: "up" },
+  { serie_code: "24363", category: "atividade", display_name: "IBC-Br", description: "Índice de Atividade Econômica", unit: "Índice", source: "BACEN SGS 24363", last_value: 152.30, last_date: "2026-01-01", change_pct: 0.40, trend: "up" },
+  { serie_code: "11064", category: "atividade", display_name: "Prod. Industrial", description: "Produção industrial geral", unit: "%", source: "BACEN SGS 11064", last_value: 1.80, last_date: "2026-01-01", change_pct: -0.30, trend: "down" },
+  { serie_code: "22089", category: "atividade", display_name: "PIB Serviços", description: "PIB setor serviços", unit: "R$ bi", source: "BACEN SGS 22089", last_value: 1842.50, last_date: "2025-12-01", change_pct: 0.60, trend: "up" },
+  // Câmbio / Externo
+  { serie_code: "ptax_compra", category: "cambio", display_name: "PTAX Compra", description: "Câmbio USD/BRL", unit: "R$", source: "BACEN SGS 1", last_value: 5.73, last_date: "2026-03-28", change_pct: -0.34, trend: "down" },
+  { serie_code: "3546", category: "externo", display_name: "Reservas Int.", description: "Reservas internacionais", unit: "US$ bi", source: "BACEN SGS 3546", last_value: 355.20, last_date: "2026-02-01", change_pct: 0.15, trend: "up" },
+  { serie_code: "29641", category: "externo", display_name: "IDP", description: "Investimento direto no país", unit: "US$ mi", source: "BACEN SGS 29641", last_value: 6820.00, last_date: "2026-01-01", change_pct: -2.10, trend: "down" },
+  // Dívida / Fiscal
   { serie_code: "divida_pib", category: "divida", display_name: "Dívida/PIB", description: "Dívida líquida do setor público", unit: "%", source: "BACEN SGS 4503", last_value: 62.60, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
-  { serie_code: "24369", category: "trabalho", display_name: "Desocupação", description: "Taxa de desocupação PNAD Contínua", unit: "%", source: "BACEN SGS 24369", last_value: 5.80, last_date: "2026-02-01", change_pct: -0.30, trend: "down" },
-  { serie_code: "28544", category: "trabalho", display_name: "Massa Salarial Real", description: "Massa de rendimento real habitual PNAD", unit: "R$ mi", source: "BACEN SGS 28544", last_value: 412288.00, last_date: "2026-01-01", change_pct: 0.17, trend: "up" },
   { serie_code: "5364", category: "fiscal", display_name: "Resultado Primário", description: "Resultado primário governo central 12m", unit: "% PIB", source: "BACEN SGS 5364", last_value: 1.57, last_date: "2026-02-01", change_pct: 0.10, trend: "up" },
   { serie_code: "4505", category: "fiscal", display_name: "NFSP Nominal", description: "Necessidade de financiamento resultado nominal", unit: "% PIB", source: "BACEN SGS 4505", last_value: -1.47, last_date: "2026-02-01", change_pct: -0.08, trend: "down" },
+  // Trabalho
+  { serie_code: "24369", category: "trabalho", display_name: "Desocupação", description: "Taxa de desocupação PNAD Contínua", unit: "%", source: "BACEN SGS 24369", last_value: 5.80, last_date: "2026-02-01", change_pct: -0.30, trend: "down" },
+  { serie_code: "28544", category: "trabalho", display_name: "Massa Salarial Real", description: "Massa de rendimento real habitual PNAD", unit: "R$ mi", source: "BACEN SGS 28544", last_value: 412288.00, last_date: "2026-01-01", change_pct: 0.17, trend: "up" },
+  { serie_code: "28763", category: "trabalho", display_name: "Saldo CAGED", description: "Saldo empregos formais CAGED", unit: "mil", source: "BACEN SGS 28763", last_value: 132.50, last_date: "2026-02-01", change_pct: -15.30, trend: "down" },
+  { serie_code: "24376", category: "trabalho", display_name: "Rend. Médio Real", description: "Rendimento médio real habitual", unit: "R$", source: "BACEN SGS 24376", last_value: 3280.00, last_date: "2026-01-01", change_pct: 0.90, trend: "up" },
+  // Focus
+  { serie_code: "990001", category: "focus", display_name: "IPCA Esperado 2026", description: "Expectativa mediana IPCA 2026", unit: "%", source: "BACEN Focus", last_value: 4.31, last_date: "2026-03-28", change_pct: 0.05, trend: "up" },
+  { serie_code: "990002", category: "focus", display_name: "Selic Esperada 2026", description: "Expectativa mediana Selic 2026", unit: "% a.a.", source: "BACEN Focus", last_value: 12.50, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
+  { serie_code: "990003", category: "focus", display_name: "PIB Esperado 2026", description: "Expectativa mediana PIB 2026", unit: "%", source: "BACEN Focus", last_value: 1.85, last_date: "2026-03-28", change_pct: -0.02, trend: "down" },
+  { serie_code: "990004", category: "focus", display_name: "Câmbio Esperado 2026", description: "Expectativa mediana câmbio 2026", unit: "R$/US$", source: "BACEN Focus", last_value: 5.40, last_date: "2026-03-28", change_pct: 0.01, trend: "up" },
+  { serie_code: "990011", category: "focus", display_name: "IPCA Esperado 2027", description: "Expectativa mediana IPCA 2027", unit: "%", source: "BACEN Focus", last_value: 3.84, last_date: "2026-03-28", change_pct: -0.01, trend: "down" },
+  { serie_code: "990012", category: "focus", display_name: "Selic Esperada 2027", description: "Expectativa mediana Selic 2027", unit: "% a.a.", source: "BACEN Focus", last_value: 10.50, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
 ];
 
 export const CREDITO_SAMPLE: LatestCard[] = [
