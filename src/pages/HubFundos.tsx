@@ -4,12 +4,16 @@ import {
   QuotaCompareChart, PLEvolutionChart, FlowChart, ClasseDistribution,
 } from "@/components/hub/FundCompareChart";
 import {
+  FundMetricsSummary, DrawdownChart, VolatilityChart, MetricsCompareTable,
+} from "@/components/hub/FundMetricsPanel";
+import {
   useFundCatalog, useFundDetail, useFundRankings, useFundStats,
   formatPL, formatPct, shortCnpj,
 } from "@/hooks/useHubFundos";
+import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
 import {
   LayoutGrid, Trophy, TrendingUp, Wallet, PieChart, GitCompareArrows,
-  Brain, Search, X, BarChart3,
+  Brain, Search, X, BarChart3, Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,6 +23,7 @@ const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
 const SUBCATEGORIES = [
   { id: "all", label: "Visão Geral", icon: LayoutGrid },
   { id: "rankings", label: "Rankings", icon: Trophy },
+  { id: "metricas", label: "Métricas", icon: Activity },
   { id: "patrimonio", label: "Patrimônio", icon: Wallet },
   { id: "captacao", label: "Captação", icon: TrendingUp },
   { id: "classes", label: "Classes", icon: PieChart },
@@ -72,27 +77,60 @@ const FundDetailPanel = ({
         </button>
       </div>
 
-      {/* Metrics row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-3 border-b border-[#1a1a1a]">
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase font-mono">PL</div>
-          <div className="text-sm font-bold text-zinc-100 font-mono">{formatPL(met.latest_pl)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase font-mono">Retorno ({met.period})</div>
-          <div className={`text-sm font-bold font-mono ${(met.return_period ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {formatPct(met.return_period)}
-          </div>
-        </div>
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase font-mono">Tx Adm</div>
-          <div className="text-sm font-bold text-zinc-300 font-mono">{m.taxa_adm != null ? `${m.taxa_adm.toFixed(2)}%` : "—"}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-zinc-600 uppercase font-mono">Gestor</div>
-          <div className="text-[11px] text-zinc-400 truncate">{m.gestor_nome || "—"}</div>
-        </div>
-      </div>
+      {/* Metrics rows */}
+      {(() => {
+        const fm = data.daily.length > 5 ? computeFundMetrics(data.daily) : null;
+        const sl = fm ? sharpeLabel(fm.sharpe) : null;
+        return (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-3 border-b border-[#1a1a1a]">
+              <div>
+                <div className="text-[9px] text-zinc-600 uppercase font-mono">PL</div>
+                <div className="text-sm font-bold text-zinc-100 font-mono">{formatPL(met.latest_pl)}</div>
+              </div>
+              <div>
+                <div className="text-[9px] text-zinc-600 uppercase font-mono">Retorno ({met.period})</div>
+                <div className={`text-sm font-bold font-mono ${(met.return_period ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {formatPct(met.return_period)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[9px] text-zinc-600 uppercase font-mono">Tx Adm</div>
+                <div className="text-sm font-bold text-zinc-300 font-mono">{m.taxa_adm != null ? `${m.taxa_adm.toFixed(2)}%` : "—"}</div>
+              </div>
+              <div>
+                <div className="text-[9px] text-zinc-600 uppercase font-mono">Gestor</div>
+                <div className="text-[11px] text-zinc-400 truncate">{m.gestor_nome || "—"}</div>
+              </div>
+            </div>
+            {/* Advanced metrics row */}
+            {fm && (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 px-4 py-2.5 border-b border-[#1a1a1a] bg-[#0d0d0d]">
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Vol (a.a.)</div>
+                  <div className="text-[11px] font-bold text-zinc-300 font-mono">{fmtMetric(fm.volatility)}%</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Sharpe</div>
+                  <div className={`text-[11px] font-bold font-mono ${sl?.color || "text-zinc-300"}`}>{fmtMetric(fm.sharpe)}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Sortino</div>
+                  <div className={`text-[11px] font-bold font-mono ${metricColor(fm.sortino)}`}>{fmtMetric(fm.sortino)}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Max DD</div>
+                  <div className={`text-[11px] font-bold font-mono ${metricColor(fm.max_drawdown, false)}`}>{fmtMetric(fm.max_drawdown)}%</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Dias +</div>
+                  <div className="text-[11px] font-bold text-zinc-300 font-mono">{fmtMetric(fm.positive_days_pct, 0)}%</div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Charts */}
       {data.daily.length > 0 && (
@@ -219,13 +257,26 @@ const ComparadorSection = ({ period }: { period: string }) => {
         <QuotaCompareChart funds={fundSeries} title="Rentabilidade Indexada (base 100)" height={320} />
       )}
 
-      {/* Comparison table */}
+      {/* Advanced metrics comparison */}
+      {(() => {
+        const metricsData = fundDetails
+          .filter((f) => f.data?.daily?.length && f.data.daily.length > 5)
+          .map((f) => ({
+            name: f.data!.meta?.denom_social || shortCnpj(f.data!.meta?.cnpj_fundo || ""),
+            metrics: computeFundMetrics(f.data!.daily),
+          }));
+        return metricsData.length >= 2 ? (
+          <MetricsCompareTable funds={metricsData} />
+        ) : null;
+      })()}
+
+      {/* Basic info table */}
       {fundDetails.filter((f) => f.data?.meta).length >= 2 && (
         <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-x-auto">
           <table className="w-full text-[10px] font-mono">
             <thead>
               <tr className="border-b border-[#1a1a1a] text-zinc-600">
-                <th className="text-left px-3 py-2">Métrica</th>
+                <th className="text-left px-3 py-2">Info</th>
                 {fundDetails.map((f, i) => (
                   <th key={i} className="text-right px-3 py-2 max-w-[150px] truncate">
                     {f.data?.meta?.denom_social?.slice(0, 20) || "—"}
@@ -238,14 +289,6 @@ const ComparadorSection = ({ period }: { period: string }) => {
                 <td className="px-3 py-1.5 text-zinc-500">PL</td>
                 {fundDetails.map((f, i) => (
                   <td key={i} className="px-3 py-1.5 text-right">{formatPL(f.data?.metrics.latest_pl)}</td>
-                ))}
-              </tr>
-              <tr className="border-b border-[#141414]">
-                <td className="px-3 py-1.5 text-zinc-500">Retorno ({period})</td>
-                {fundDetails.map((f, i) => (
-                  <td key={i} className={`px-3 py-1.5 text-right ${(f.data?.metrics.return_period ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {formatPct(f.data?.metrics.return_period)}
-                  </td>
                 ))}
               </tr>
               <tr className="border-b border-[#141414]">
@@ -306,7 +349,7 @@ const HubFundos = () => {
   }, [stats, catalog]);
 
   const show = (tabs: string[]) =>
-    (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "comparador";
+    (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "comparador" && activeTab !== "metricas";
 
   return (
     <div className="space-y-4 max-w-[1400px]">
@@ -430,6 +473,39 @@ const HubFundos = () => {
           </div>
         </div>
       )}
+
+      {/* ─── Métricas Tab ─── */}
+      {activeTab === "metricas" && !selectedFund && (
+        <div className="space-y-3">
+          <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+            <p className="text-[11px] text-zinc-500 font-mono mb-3">
+              Selecione um fundo para ver Sharpe, Sortino, volatilidade, drawdown e mais.
+            </p>
+            <FundRankingTable
+              funds={rankings?.funds || []}
+              loading={rankingsLoading}
+              onSelectFund={setSelectedFund}
+              title="Selecione um fundo"
+            />
+          </div>
+        </div>
+      )}
+      {activeTab === "metricas" && selectedFund && (() => {
+        const MetricasDetail = () => {
+          const { data: fundData } = useFundDetail(selectedFund, period);
+          if (!fundData?.daily?.length) return null;
+          return (
+            <div className="space-y-3">
+              <FundMetricsSummary daily={fundData.daily} title={`Métricas — ${fundData.meta?.denom_social || shortCnpj(selectedFund)}`} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <DrawdownChart daily={fundData.daily} />
+                <VolatilityChart daily={fundData.daily} />
+              </div>
+            </div>
+          );
+        };
+        return <MetricasDetail />;
+      })()}
 
       {/* ─── Classes Tab ─── */}
       {(activeTab === "classes" || (activeTab === "all" && !selectedFund)) && stats?.by_classe && (
