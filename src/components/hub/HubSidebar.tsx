@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   BarChart3, TrendingUp, Landmark, Building2, GraduationCap,
-  LayoutDashboard, ChevronLeft, ChevronRight, X, Menu,
+  LayoutDashboard, ChevronLeft, ChevronRight, X, Menu, Banknote,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react";
 import { getMainSiteUrl } from "@/lib/domain";
@@ -92,6 +92,7 @@ const MODULES = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/macro", label: "Panorama Macro", icon: TrendingUp },
   { path: "/credito", label: "Overview Crédito", icon: BarChart3 },
+  { path: "/renda-fixa", label: "Renda Fixa", icon: Banknote },
   { path: "#", label: "Fundos", icon: Landmark, disabled: true, badge: "Q3" },
   { path: "#", label: "Empresas", icon: Building2, disabled: true, badge: "Q3" },
   { path: "#", label: "Educacional", icon: GraduationCap, disabled: true, badge: "Q3" },

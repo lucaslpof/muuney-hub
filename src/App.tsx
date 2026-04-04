@@ -8,6 +8,7 @@ const HubLanding = React.lazy(() => import("./pages/HubLanding"));
 const HubDashboard = React.lazy(() => import("./pages/HubDashboard"));
 const HubMacro = React.lazy(() => import("./pages/HubMacro"));
 const HubCredito = React.lazy(() => import("./pages/HubCredito"));
+const HubRendaFixa = React.lazy(() => import("./pages/HubRendaFixa"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const Loading = () => (
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/dashboard" element={<HubDashboard />} />
           <Route path="/macro" element={<HubMacro />} />
           <Route path="/credito" element={<HubCredito />} />
+          <Route path="/renda-fixa" element={<HubRendaFixa />} />
         </Route>
 
         {/* Backward compat: /hub/* redirects from old muuney-landing routes */}
@@ -35,6 +37,7 @@ const App = () => (
         <Route path="/hub/dashboard" element={<Navigate to="/dashboard" replace />} />
         <Route path="/hub/macro" element={<Navigate to="/macro" replace />} />
         <Route path="/hub/credito" element={<Navigate to="/credito" replace />} />
+        <Route path="/hub/renda-fixa" element={<Navigate to="/renda-fixa" replace />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />

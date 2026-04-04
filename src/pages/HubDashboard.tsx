@@ -27,7 +27,8 @@ const useModules = () => {
   return [
     { path: `${prefix}/macro`, label: "Panorama Macro", desc: "Selic, IPCA, câmbio, PIB, dívida", icon: TrendingUp, color: "#0B6C3E", active: true },
     { path: `${prefix}/credito`, label: "Overview Crédito", desc: "Spreads, inadimplência, concessões", icon: BarChart3, color: "#10B981", active: true },
-    { path: "#", label: "Fundos", desc: "Performance, Sharpe, captação", icon: Landmark, color: "#6366F1", active: false },
+    { path: `${prefix}/renda-fixa`, label: "Renda Fixa", desc: "Curva DI, NTN-B, Tesouro, crédito privado", icon: TrendingUp, color: "#6366F1", active: true },
+    { path: "#", label: "Fundos", desc: "Performance, Sharpe, captação", icon: Landmark, color: "#F59E0B", active: false },
     { path: "#", label: "Empresas", desc: "P/L, ROE, EV/EBITDA", icon: Building2, color: "#F59E0B", active: false },
     { path: "#", label: "Educacional", desc: "Glossário, calculadoras", icon: GraduationCap, color: "#EC4899", active: false },
   ];

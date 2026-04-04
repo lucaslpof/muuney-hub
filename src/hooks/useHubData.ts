@@ -322,6 +322,47 @@ export const CREDITO_SAMPLE: LatestCard[] = [
   { serie_code: "29039", category: "alavancagem", display_name: "Comprometimento Renda", description: "Comprometimento da renda das famílias com serviço da dívida", unit: "%", source: "BACEN SGS 29039", last_value: 26.80, last_date: "2026-01-01", change_pct: -0.10, trend: "down" },
 ];
 
+/* ═══ Renda Fixa (H1.3) ═══ */
+export const RENDA_FIXA_SAMPLE: LatestCard[] = [
+  // Taxas de referência
+  { serie_code: "432", category: "taxa_ref", display_name: "Selic Meta", description: "Taxa básica de juros — meta Copom", unit: "% a.a.", source: "BACEN SGS 432", last_value: 14.25, last_date: "2026-03-19", change_pct: 0.00, trend: "stable" },
+  { serie_code: "4189", category: "taxa_ref", display_name: "Selic Over (diária)", description: "Taxa Selic diária anualizada", unit: "% a.a.", source: "BACEN SGS 4189", last_value: 14.15, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
+  { serie_code: "4392", category: "taxa_ref", display_name: "CDI", description: "Taxa DI over (CETIP)", unit: "% a.a.", source: "BACEN SGS 4392", last_value: 14.15, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
+  { serie_code: "226", category: "taxa_ref", display_name: "TR", description: "Taxa Referencial mensal", unit: "%", source: "BACEN SGS 226", last_value: 0.18, last_date: "2026-03-01", change_pct: 0.02, trend: "up" },
+  { serie_code: "27547", category: "taxa_ref", display_name: "TLP", description: "Taxa de Longo Prazo", unit: "% a.a.", source: "BACEN SGS 27547", last_value: 7.10, last_date: "2026-04-01", change_pct: 0.05, trend: "up" },
+  { serie_code: "256", category: "taxa_ref", display_name: "TJLP", description: "Taxa de Juros de Longo Prazo", unit: "% a.a.", source: "BACEN SGS 256", last_value: 7.50, last_date: "2026-01-01", change_pct: 0.00, trend: "stable" },
+  // Curva DI — Swaps Pré x DI (vértices)
+  { serie_code: "7813", category: "curva_di", display_name: "DI Pré 30d", description: "Swap DI x Pré 30 dias", unit: "% a.a.", source: "BACEN SGS 7813", last_value: 14.18, last_date: "2026-03-28", change_pct: -0.02, trend: "down" },
+  { serie_code: "7814", category: "curva_di", display_name: "DI Pré 60d", description: "Swap DI x Pré 60 dias", unit: "% a.a.", source: "BACEN SGS 7814", last_value: 14.32, last_date: "2026-03-28", change_pct: 0.05, trend: "up" },
+  { serie_code: "7815", category: "curva_di", display_name: "DI Pré 90d", description: "Swap DI x Pré 90 dias", unit: "% a.a.", source: "BACEN SGS 7815", last_value: 14.48, last_date: "2026-03-28", change_pct: 0.08, trend: "up" },
+  { serie_code: "7816", category: "curva_di", display_name: "DI Pré 180d", description: "Swap DI x Pré 180 dias", unit: "% a.a.", source: "BACEN SGS 7816", last_value: 14.65, last_date: "2026-03-28", change_pct: 0.10, trend: "up" },
+  { serie_code: "7817", category: "curva_di", display_name: "DI Pré 360d", description: "Swap DI x Pré 360 dias", unit: "% a.a.", source: "BACEN SGS 7817", last_value: 14.82, last_date: "2026-03-28", change_pct: 0.12, trend: "up" },
+  { serie_code: "7818", category: "curva_di", display_name: "DI Pré 720d", description: "Swap DI x Pré 720 dias", unit: "% a.a.", source: "BACEN SGS 7818", last_value: 14.55, last_date: "2026-03-28", change_pct: -0.05, trend: "down" },
+  { serie_code: "7819", category: "curva_di", display_name: "DI Pré 1080d", description: "Swap DI x Pré 1080 dias", unit: "% a.a.", source: "BACEN SGS 7819", last_value: 14.20, last_date: "2026-03-28", change_pct: -0.10, trend: "down" },
+  { serie_code: "7820", category: "curva_di", display_name: "DI Pré 1440d", description: "Swap DI x Pré 1440 dias", unit: "% a.a.", source: "BACEN SGS 7820", last_value: 13.90, last_date: "2026-03-28", change_pct: -0.15, trend: "down" },
+  { serie_code: "7821", category: "curva_di", display_name: "DI Pré 1800d", description: "Swap DI x Pré 1800 dias", unit: "% a.a.", source: "BACEN SGS 7821", last_value: 13.65, last_date: "2026-03-28", change_pct: -0.20, trend: "down" },
+  // NTN-B (IPCA+) implícita
+  { serie_code: "12460", category: "ntnb", display_name: "NTNB 2029 (IPCA+)", description: "Taxa indicativa NTN-B 2029", unit: "% a.a.", source: "ANBIMA", last_value: 7.25, last_date: "2026-03-28", change_pct: 0.08, trend: "up" },
+  { serie_code: "12461", category: "ntnb", display_name: "NTNB 2035 (IPCA+)", description: "Taxa indicativa NTN-B 2035", unit: "% a.a.", source: "ANBIMA", last_value: 7.10, last_date: "2026-03-28", change_pct: 0.05, trend: "up" },
+  { serie_code: "12462", category: "ntnb", display_name: "NTNB 2045 (IPCA+)", description: "Taxa indicativa NTN-B 2045", unit: "% a.a.", source: "ANBIMA", last_value: 6.85, last_date: "2026-03-28", change_pct: 0.03, trend: "up" },
+  { serie_code: "12463", category: "ntnb", display_name: "NTNB 2055 (IPCA+)", description: "Taxa indicativa NTN-B 2055", unit: "% a.a.", source: "ANBIMA", last_value: 6.70, last_date: "2026-03-28", change_pct: 0.02, trend: "up" },
+  // Inflação implícita (breakeven)
+  { serie_code: "990101", category: "breakeven", display_name: "Inflação Implícita 1a", description: "Breakeven inflation 1 ano (Pré − NTN-B)", unit: "%", source: "Calculado", last_value: 5.82, last_date: "2026-03-28", change_pct: 0.10, trend: "up" },
+  { serie_code: "990102", category: "breakeven", display_name: "Inflação Implícita 3a", description: "Breakeven inflation 3 anos", unit: "%", source: "Calculado", last_value: 5.35, last_date: "2026-03-28", change_pct: 0.05, trend: "up" },
+  { serie_code: "990103", category: "breakeven", display_name: "Inflação Implícita 5a", description: "Breakeven inflation 5 anos", unit: "%", source: "Calculado", last_value: 5.10, last_date: "2026-03-28", change_pct: -0.02, trend: "down" },
+  // Poupança
+  { serie_code: "195", category: "poupanca", display_name: "Poupança (nova regra)", description: "Rendimento poupança (70% Selic)", unit: "% a.a.", source: "BACEN SGS 195", last_value: 7.45, last_date: "2026-03-01", change_pct: 0.00, trend: "stable" },
+  // Tesouro Direto — estoque e operações
+  { serie_code: "990201", category: "tesouro", display_name: "Estoque TD", description: "Estoque Tesouro Direto total", unit: "R$ bi", source: "Tesouro Nacional", last_value: 142.50, last_date: "2026-02-01", change_pct: 1.20, trend: "up" },
+  { serie_code: "990202", category: "tesouro", display_name: "Vendas Líquidas TD", description: "Vendas líquidas Tesouro Direto mensal", unit: "R$ bi", source: "Tesouro Nacional", last_value: 3.85, last_date: "2026-02-01", change_pct: -5.20, trend: "down" },
+  { serie_code: "990203", category: "tesouro", display_name: "Investidores Ativos TD", description: "Número de investidores ativos TD", unit: "mi", source: "Tesouro Nacional", last_value: 2.85, last_date: "2026-02-01", change_pct: 0.80, trend: "up" },
+  // Crédito Privado — spreads
+  { serie_code: "990301", category: "credpriv", display_name: "Spread DI AA", description: "Spread médio debêntures AA sobre CDI", unit: "p.p.", source: "ANBIMA", last_value: 1.35, last_date: "2026-03-28", change_pct: -0.05, trend: "down" },
+  { serie_code: "990302", category: "credpriv", display_name: "Spread DI A", description: "Spread médio debêntures A sobre CDI", unit: "p.p.", source: "ANBIMA", last_value: 2.10, last_date: "2026-03-28", change_pct: 0.08, trend: "up" },
+  { serie_code: "990303", category: "credpriv", display_name: "Emissões Debêntures", description: "Volume emissões debêntures mensal", unit: "R$ bi", source: "ANBIMA", last_value: 28.40, last_date: "2026-02-01", change_pct: 3.50, trend: "up" },
+  { serie_code: "990304", category: "credpriv", display_name: "CRA + CRI Estoque", description: "Estoque CRA + CRI (securitizados)", unit: "R$ bi", source: "ANBIMA", last_value: 410.20, last_date: "2026-02-01", change_pct: 1.80, trend: "up" },
+];
+
 // Sample series data for charts (fallback)
 export function generateSampleSeries(baseValue: number, points: number = 24, volatility: number = 0.02): SeriesDataPoint[] {
   const data: SeriesDataPoint[] = [];
