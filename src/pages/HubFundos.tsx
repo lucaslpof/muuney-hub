@@ -1,0 +1,546 @@
+import { useState, useMemo } from "react";
+import { FundRankingTable } from "@/components/hub/FundRankingTable";
+import {
+  QuotaCompareChart, PLEvolutionChart, FlowChart, ClasseDistribution,
+} from "@/components/hub/FundCompareChart";
+import {
+  useFundCatalog, useFundDetail, useFundRankings, useFundStats,
+  formatPL, formatPct, shortCnpj,
+} from "@/hooks/useHubFundos";
+import {
+  LayoutGrid, Trophy, TrendingUp, Wallet, PieChart, GitCompareArrows,
+  Brain, Search, X, BarChart3,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+/* ─── Period & Tab configs ─── */
+const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
+
+const SUBCATEGORIES = [
+  { id: "all", label: "Visão Geral", icon: LayoutGrid },
+  { id: "rankings", label: "Rankings", icon: Trophy },
+  { id: "patrimonio", label: "Patrimônio", icon: Wallet },
+  { id: "captacao", label: "Captação", icon: TrendingUp },
+  { id: "classes", label: "Classes", icon: PieChart },
+  { id: "comparador", label: "Comparador", icon: GitCompareArrows },
+  { id: "analytics", label: "Analytics", icon: Brain },
+] as const;
+
+/* ─── Fund Detail Panel ─── */
+const FundDetailPanel = ({
+  cnpj, period, onClose,
+}: {
+  cnpj: string; period: string; onClose: () => void;
+}) => {
+  const { data, isLoading } = useFundDetail(cnpj, period);
+
+  if (isLoading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
+        <div className="h-5 bg-[#1a1a1a] rounded w-1/2 mb-3" />
+        <div className="h-40 bg-[#1a1a1a] rounded" />
+      </motion.div>
+    );
+  }
+
+  if (!data?.meta) return null;
+
+  const m = data.meta;
+  const met = data.metrics;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="bg-[#111111] border border-[#0B6C3E]/20 rounded-lg overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between px-4 py-3 border-b border-[#1a1a1a]">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-zinc-100 truncate">
+            {m.denom_social || shortCnpj(m.cnpj_fundo)}
+          </h3>
+          <div className="flex items-center gap-3 mt-1 text-[9px] text-zinc-600 font-mono">
+            <span>{m.cnpj_fundo}</span>
+            {m.classe && <span className="px-1 py-0.5 bg-[#1a1a1a] rounded">{m.classe}</span>}
+            {m.classe_anbima && <span className="px-1 py-0.5 bg-[#1a1a1a] rounded">{m.classe_anbima}</span>}
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-600 hover:text-zinc-300">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Metrics row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-3 border-b border-[#1a1a1a]">
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase font-mono">PL</div>
+          <div className="text-sm font-bold text-zinc-100 font-mono">{formatPL(met.latest_pl)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase font-mono">Retorno ({met.period})</div>
+          <div className={`text-sm font-bold font-mono ${(met.return_period ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            {formatPct(met.return_period)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase font-mono">Tx Adm</div>
+          <div className="text-sm font-bold text-zinc-300 font-mono">{m.taxa_adm != null ? `${m.taxa_adm.toFixed(2)}%` : "—"}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase font-mono">Gestor</div>
+          <div className="text-[11px] text-zinc-400 truncate">{m.gestor_nome || "—"}</div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      {data.daily.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+          <div className="p-3 border-r border-[#1a1a1a]">
+            <PLEvolutionChart daily={data.daily} title="Evolução PL" height={180} />
+          </div>
+          <div className="p-3">
+            <FlowChart daily={data.daily} title="Fluxo Diário" height={180} />
+          </div>
+        </div>
+      )}
+
+      {/* Meta details */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-3 border-t border-[#1a1a1a] text-[9px] font-mono text-zinc-600">
+        <div><span className="text-zinc-700">Condomínio:</span> <span className="text-zinc-400">{m.condom || "—"}</span></div>
+        <div><span className="text-zinc-700">Fundo Cotas:</span> <span className="text-zinc-400">{m.fundo_cotas || "N"}</span></div>
+        <div><span className="text-zinc-700">Exclusivo:</span> <span className="text-zinc-400">{m.fundo_exclusivo || "N"}</span></div>
+        <div><span className="text-zinc-700">Constituição:</span> <span className="text-zinc-400">{m.dt_const || "—"}</span></div>
+      </div>
+    </motion.div>
+  );
+};
+
+/* ─── Comparador Tab ─── */
+const ComparadorSection = ({ period }: { period: string }) => {
+  const [searchQ, setSearchQ] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const { data: catalog } = useFundCatalog({ limit: 200, search: searchQ || undefined });
+
+  // Load detail for each selected fund
+  const fund0 = useFundDetail(selected[0] || null, period);
+  const fund1 = useFundDetail(selected[1] || null, period);
+  const fund2 = useFundDetail(selected[2] || null, period);
+  const fund3 = useFundDetail(selected[3] || null, period);
+  const fundDetails = [fund0, fund1, fund2, fund3].filter((_, i) => i < selected.length);
+
+  const fundSeries = useMemo(() =>
+    fundDetails
+      .filter((f) => f.data?.daily?.length)
+      .map((f) => ({
+        cnpj: f.data!.meta?.cnpj_fundo || "",
+        name: f.data!.meta?.denom_social || shortCnpj(f.data!.meta?.cnpj_fundo || ""),
+        daily: f.data!.daily,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fund0.data, fund1.data, fund2.data, fund3.data]
+  );
+
+  const toggleFund = (cnpj: string) => {
+    setSelected((prev) =>
+      prev.includes(cnpj) ? prev.filter((c) => c !== cnpj) : prev.length < 4 ? [...prev, cnpj] : prev
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Selector */}
+      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
+            Selecione até 4 fundos
+          </h3>
+          {selected.length > 0 && (
+            <button onClick={() => setSelected([])} className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono">
+              Limpar
+            </button>
+          )}
+        </div>
+        <div className="relative mb-2">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
+          <input
+            type="text"
+            placeholder="Buscar por nome ou CNPJ..."
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            className="w-full pl-6 pr-2 py-1.5 text-[10px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+          />
+        </div>
+        {/* Selected chips */}
+        {selected.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {selected.map((cnpj) => {
+              const fund = catalog?.funds.find((f) => f.cnpj_fundo === cnpj);
+              return (
+                <span key={cnpj} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0B6C3E]/10 border border-[#0B6C3E]/20 rounded text-[9px] text-[#0B6C3E] font-mono">
+                  {fund?.denom_social ? fund.denom_social.slice(0, 25) : shortCnpj(cnpj)}
+                  <button onClick={() => toggleFund(cnpj)} className="hover:text-white">
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+        {/* Fund list */}
+        <div className="max-h-40 overflow-y-auto space-y-0.5">
+          {catalog?.funds
+            .filter((f) => !selected.includes(f.cnpj_fundo))
+            .slice(0, 20)
+            .map((f) => (
+              <button
+                key={f.cnpj_fundo}
+                onClick={() => toggleFund(f.cnpj_fundo)}
+                disabled={selected.length >= 4}
+                className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-[#0B6C3E]/5 transition-colors disabled:opacity-30"
+              >
+                <div className="min-w-0">
+                  <div className="text-[10px] text-zinc-300 font-mono truncate">
+                    {f.denom_social || shortCnpj(f.cnpj_fundo)}
+                  </div>
+                  <div className="text-[8px] text-zinc-700 font-mono">{shortCnpj(f.cnpj_fundo)}</div>
+                </div>
+                <span className="text-[9px] text-zinc-600 font-mono flex-shrink-0 ml-2">
+                  {formatPL(f.vl_patrim_liq)}
+                </span>
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {/* Comparison chart */}
+      {fundSeries.length >= 2 && (
+        <QuotaCompareChart funds={fundSeries} title="Rentabilidade Indexada (base 100)" height={320} />
+      )}
+
+      {/* Comparison table */}
+      {fundDetails.filter((f) => f.data?.meta).length >= 2 && (
+        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-x-auto">
+          <table className="w-full text-[10px] font-mono">
+            <thead>
+              <tr className="border-b border-[#1a1a1a] text-zinc-600">
+                <th className="text-left px-3 py-2">Métrica</th>
+                {fundDetails.map((f, i) => (
+                  <th key={i} className="text-right px-3 py-2 max-w-[150px] truncate">
+                    {f.data?.meta?.denom_social?.slice(0, 20) || "—"}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="text-zinc-300">
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">PL</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right">{formatPL(f.data?.metrics.latest_pl)}</td>
+                ))}
+              </tr>
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Retorno ({period})</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className={`px-3 py-1.5 text-right ${(f.data?.metrics.return_period ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatPct(f.data?.metrics.return_period)}
+                  </td>
+                ))}
+              </tr>
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Tx Adm</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right">
+                    {f.data?.meta?.taxa_adm != null ? `${f.data.meta.taxa_adm.toFixed(2)}%` : "—"}
+                  </td>
+                ))}
+              </tr>
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Tx Perfm</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right">
+                    {f.data?.meta?.taxa_perfm != null ? `${f.data.meta.taxa_perfm.toFixed(2)}%` : "—"}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="px-3 py-1.5 text-zinc-500">Gestor</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right truncate max-w-[120px]">
+                    {f.data?.meta?.gestor_nome || "—"}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN COMPONENT — HubFundos (H1.4)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const HubFundos = () => {
+  const [period, setPeriod] = useState<string>("3m");
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [selectedFund, setSelectedFund] = useState<string | null>(null);
+
+  /* ─── Data ─── */
+  const { data: catalog } = useFundCatalog({ limit: 50 });
+  const { data: stats } = useFundStats();
+  const { data: rankings, isLoading: rankingsLoading } = useFundRankings(undefined, 30);
+
+  /* ─── Overview KPIs ─── */
+  const overviewKPIs = useMemo(() => {
+    if (!stats || !catalog) return [];
+    const totalPL = Object.values(stats.by_classe).reduce((acc, c) => acc + c.pl_total, 0);
+    return [
+      { title: "Fundos Ativos", value: String(stats.total_funds), unit: "", icon: BarChart3 },
+      { title: "PL Total", value: formatPL(totalPL), unit: "", icon: Wallet },
+      { title: "Classes", value: String(Object.keys(stats.by_classe).length), unit: "", icon: PieChart },
+      { title: "Top PL", value: formatPL(catalog.funds[0]?.vl_patrim_liq), unit: "", icon: Trophy },
+    ];
+  }, [stats, catalog]);
+
+  const show = (tabs: string[]) =>
+    (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "comparador";
+
+  return (
+    <div className="space-y-4 max-w-[1400px]">
+      {/* ─── Sticky Header ─── */}
+      <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-4 px-4 py-2 border-b border-[#141414]">
+        {/* Period selector */}
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-base font-bold text-zinc-100 tracking-tight">Módulo Fundos</h1>
+            <p className="text-[9px] text-zinc-600 font-mono">
+              CVM &middot; {stats?.total_funds || "—"} fundos &middot; Dados diários
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all ${
+                  period === p
+                    ? "bg-[#0B6C3E]/15 text-[#0B6C3E] border border-[#0B6C3E]/30"
+                    : "text-zinc-600 hover:text-zinc-400 border border-transparent"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sub-category tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+          {SUBCATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => { setActiveTab(cat.id); setSelectedFund(null); }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] whitespace-nowrap transition-all ${
+                activeTab === cat.id
+                  ? "bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/20"
+                  : "text-zinc-600 hover:text-zinc-400 border border-transparent hover:border-[#1a1a1a]"
+              }`}
+            >
+              <cat.icon className="w-3 h-3" />
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Fund Detail Panel (overlay) ─── */}
+      <AnimatePresence>
+        {selectedFund && (
+          <FundDetailPanel
+            cnpj={selectedFund}
+            period={period}
+            onClose={() => setSelectedFund(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ─── KPI Cards ─── */}
+      {show(["all"]) && !selectedFund && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {overviewKPIs.map((kpi) => (
+            <motion.div
+              key={kpi.title}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#111111] border border-[#1a1a1a] rounded-md px-3 py-2.5"
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <kpi.icon className="w-3 h-3 text-[#0B6C3E]" />
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">{kpi.title}</span>
+              </div>
+              <div className="text-lg font-bold text-zinc-100 font-mono">{kpi.value}</div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── Rankings ─── */}
+      {show(["all", "rankings"]) && !selectedFund && (
+        <FundRankingTable
+          funds={rankings?.funds || []}
+          loading={rankingsLoading}
+          onSelectFund={setSelectedFund}
+          title={`Top Fundos por PL${rankings?.classe ? ` — ${rankings.classe}` : ""}`}
+        />
+      )}
+
+      {/* ─── Patrimônio Tab ─── */}
+      {activeTab === "patrimonio" && !selectedFund && (
+        <div className="space-y-3">
+          <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+            <p className="text-[11px] text-zinc-500 font-mono mb-3">
+              Selecione um fundo na tabela para ver a evolução do patrimônio líquido.
+            </p>
+            <FundRankingTable
+              funds={rankings?.funds || []}
+              loading={rankingsLoading}
+              onSelectFund={setSelectedFund}
+              title="Selecione um fundo"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Captação Tab ─── */}
+      {activeTab === "captacao" && !selectedFund && (
+        <div className="space-y-3">
+          <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+            <p className="text-[11px] text-zinc-500 font-mono mb-3">
+              Selecione um fundo na tabela para ver o fluxo de captação e resgate.
+            </p>
+            <FundRankingTable
+              funds={rankings?.funds || []}
+              loading={rankingsLoading}
+              onSelectFund={setSelectedFund}
+              title="Selecione um fundo"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Classes Tab ─── */}
+      {(activeTab === "classes" || (activeTab === "all" && !selectedFund)) && stats?.by_classe && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <ClasseDistribution byClasse={stats.by_classe} mode="pl" title="PL por Classe" />
+          <ClasseDistribution byClasse={stats.by_classe} mode="count" title="Fundos por Classe" />
+        </div>
+      )}
+
+      {/* ─── Comparador Tab ─── */}
+      {activeTab === "comparador" && (
+        <ComparadorSection period={period} />
+      )}
+
+      {/* ─── Analytics Tab ─── */}
+      {activeTab === "analytics" && (
+        <div className="space-y-4">
+          {/* Benchmarks */}
+          <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+            <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
+              Benchmarks vs Metas
+            </h3>
+            <div className="space-y-3">
+              {[
+                { label: "Fundos catalogados", current: stats?.total_funds || 0, target: 500, unit: "" },
+                { label: "Classes com dados", current: Object.keys(stats?.by_classe || {}).length, target: 15, unit: "" },
+                { label: "Dados diários (dias)", current: 22, target: 60, unit: "" },
+              ].map((b) => (
+                <div key={b.label}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-zinc-500 font-mono">{b.label}</span>
+                    <span className="text-[10px] text-zinc-300 font-mono">
+                      {b.current}{b.unit} / {b.target}{b.unit}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#0B6C3E] rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((b.current / b.target) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Insights */}
+          <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+            <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
+              Insights
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  title: "CVM Resolução 175",
+                  desc: "CNPJ_FUNDO_CLASSE diverge de CNPJ_FUNDO para ~83% dos fundos. Pipeline adaptado para match por ambos campos.",
+                  color: "#F59E0B",
+                },
+                {
+                  title: "Concentração de PL",
+                  desc: `Top 10 fundos concentram a maior parte do PL total. ${stats?.total_funds || 0} fundos catalogados de ~40.000 ativos na CVM.`,
+                  color: "#6366F1",
+                },
+                {
+                  title: "Dados Diários",
+                  desc: "Cobertura: março/2026 (22 dias úteis). Próximo passo: ingestão retroativa + pg_cron automático.",
+                  color: "#0B6C3E",
+                },
+                {
+                  title: "Cross-module",
+                  desc: "Correlação fundos × Selic: fundos RF tendem a captar mais em ciclos de alta. Monitorar spread DI vs cota.",
+                  color: "#EC4899",
+                },
+              ].map((insight) => (
+                <div key={insight.title} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: insight.color }} />
+                    <span className="text-[10px] text-zinc-300 font-mono font-medium">{insight.title}</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-600 leading-relaxed">{insight.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Full Catalog (on Visão Geral, below rankings) ─── */}
+      {activeTab === "all" && !selectedFund && catalog?.funds && (
+        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
+              Catálogo Completo <span className="text-zinc-700">({catalog.total} fundos)</span>
+            </h3>
+          </div>
+          <p className="text-[9px] text-zinc-600 font-mono">
+            Fonte: CVM (cad_fi + inf_diario) &middot; Última ingestão: {stats?.last_updated ? new Date(stats.last_updated).toLocaleDateString("pt-BR") : "—"}
+          </p>
+        </div>
+      )}
+
+      {/* ─── CVM Disclaimer ─── */}
+      <div className="border-t border-[#141414] pt-3">
+        <p className="text-[8px] text-zinc-700 leading-relaxed max-w-3xl">
+          <strong className="text-zinc-600">Aviso legal:</strong> Dados de fontes primárias oficiais (CVM).
+          Caráter exclusivamente informativo. Não constitui oferta, recomendação ou aconselhamento de investimento.
+          Rentabilidade passada não é garantia de resultados futuros.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default HubFundos;

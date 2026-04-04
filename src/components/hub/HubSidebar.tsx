@@ -93,7 +93,7 @@ const MODULES = [
   { path: "/macro", label: "Panorama Macro", icon: TrendingUp },
   { path: "/credito", label: "Overview Crédito", icon: BarChart3 },
   { path: "/renda-fixa", label: "Renda Fixa", icon: Banknote },
-  { path: "#", label: "Fundos", icon: Landmark, disabled: true, badge: "Q3" },
+  { path: "/fundos", label: "Fundos", icon: Landmark },
   { path: "#", label: "Empresas", icon: Building2, disabled: true, badge: "Q3" },
   { path: "#", label: "Educacional", icon: GraduationCap, disabled: true, badge: "Q3" },
 ];
