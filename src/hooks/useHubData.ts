@@ -204,16 +204,44 @@ export const MACRO_SAMPLE: LatestCard[] = [
 ];
 
 export const CREDITO_SAMPLE: LatestCard[] = [
-  { serie_code: "spread_pf", category: "spread", display_name: "Spread PF", description: "Spread bancário pessoa física", unit: "p.p.", source: "BACEN SGS 20783", last_value: 30.20, last_date: "2026-01-01", change_pct: -0.50, trend: "down" },
-  { serie_code: "spread_pj", category: "spread", display_name: "Spread PJ", description: "Spread bancário pessoa jurídica", unit: "p.p.", source: "BACEN SGS 20784", last_value: 10.80, last_date: "2026-01-01", change_pct: 0.20, trend: "up" },
-  { serie_code: "inadimplencia_total", category: "inadimplencia", display_name: "Inadimplência Total", description: "Taxa de inadimplência", unit: "%", source: "BACEN SGS 21082", last_value: 3.30, last_date: "2026-01-01", change_pct: 0.10, trend: "up" },
-  { serie_code: "inadimplencia_pf", category: "inadimplencia", display_name: "Inadimplência PF", description: "Inadimplência pessoa física", unit: "%", source: "BACEN SGS 21083", last_value: 4.10, last_date: "2026-01-01", change_pct: 0.05, trend: "up" },
-  { serie_code: "taxa_pf", category: "taxas", display_name: "Taxa Média PF", description: "Taxa média empréstimos PF", unit: "% a.a.", source: "BACEN SGS 20714", last_value: 52.60, last_date: "2026-01-01", change_pct: 0.40, trend: "up" },
-  { serie_code: "credito_pib", category: "credito_pib", display_name: "Crédito/PIB", description: "Relação crédito sobre PIB", unit: "%", source: "BACEN SGS 20539", last_value: 54.20, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
-  { serie_code: "concessao_pf", category: "concessoes", display_name: "Concessões PF", description: "Concessões de crédito pessoa física", unit: "R$ bi", source: "BACEN SGS 20631", last_value: 254.30, last_date: "2026-01-01", change_pct: 1.20, trend: "up" },
-  { serie_code: "concessao_pj", category: "concessoes", display_name: "Concessões PJ", description: "Concessões de crédito pessoa jurídica", unit: "R$ bi", source: "BACEN SGS 20632", last_value: 198.70, last_date: "2026-01-01", change_pct: -0.80, trend: "down" },
-  { serie_code: "estoque_total", category: "estoque", display_name: "Estoque Total", description: "Estoque de crédito do SFN", unit: "R$ tri", source: "BACEN SGS 20539", last_value: 6.12, last_date: "2026-01-01", change_pct: 0.90, trend: "up" },
-  { serie_code: "inadimplencia_pj", category: "inadimplencia", display_name: "Inadimplência PJ", description: "Inadimplência pessoa jurídica", unit: "%", source: "BACEN SGS 21084", last_value: 2.40, last_date: "2026-01-01", change_pct: -0.15, trend: "down" },
+  // Saldos (H1.1b-1)
+  { serie_code: "20539", category: "saldo_credito", display_name: "Crédito/PIB", description: "Relação crédito total sobre PIB", unit: "%", source: "BACEN SGS 20539", last_value: 54.20, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
+  { serie_code: "20540", category: "saldo_credito", display_name: "Saldo Total SFN", description: "Saldo de crédito total do SFN", unit: "R$ tri", source: "BACEN SGS 20540", last_value: 6.12, last_date: "2026-01-01", change_pct: 0.90, trend: "up" },
+  { serie_code: "20541", category: "saldo_credito", display_name: "Saldo PF Total", description: "Saldo crédito PF total", unit: "R$ bi", source: "BACEN SGS 20541", last_value: 3580.00, last_date: "2026-01-01", change_pct: 0.65, trend: "up" },
+  { serie_code: "28848", category: "saldo_credito", display_name: "Saldo PF Livres", description: "Saldo crédito PF recursos livres", unit: "R$ bi", source: "BACEN SGS 28848", last_value: 1942.00, last_date: "2026-01-01", change_pct: 0.80, trend: "up" },
+  { serie_code: "28860", category: "saldo_credito", display_name: "Saldo PJ Livres", description: "Saldo crédito PJ recursos livres", unit: "R$ bi", source: "BACEN SGS 28860", last_value: 1240.00, last_date: "2026-01-01", change_pct: 0.45, trend: "up" },
+  { serie_code: "20581", category: "saldo_credito", display_name: "Veículos PF", description: "Saldo crédito veículos PF", unit: "R$ bi", source: "BACEN SGS 20581", last_value: 312.40, last_date: "2026-01-01", change_pct: 1.10, trend: "up" },
+  { serie_code: "20590", category: "saldo_credito", display_name: "Cartão PF", description: "Saldo cartão de crédito PF", unit: "R$ bi", source: "BACEN SGS 20590", last_value: 548.60, last_date: "2026-01-01", change_pct: 2.30, trend: "up" },
+  { serie_code: "25891", category: "saldo_credito", display_name: "PME Peq. Porte", description: "Crédito PME pequeno porte", unit: "R$ bi", source: "BACEN SGS 25891", last_value: 285.10, last_date: "2026-01-01", change_pct: 0.50, trend: "up" },
+  // Concessões (H1.1b-2)
+  { serie_code: "20631", category: "concessao", display_name: "Concessões PF", description: "Concessões de crédito PF", unit: "R$ bi", source: "BACEN SGS 20631", last_value: 254.30, last_date: "2026-01-01", change_pct: 1.20, trend: "up" },
+  { serie_code: "20632", category: "concessao", display_name: "Concessões PJ", description: "Concessões de crédito PJ", unit: "R$ bi", source: "BACEN SGS 20632", last_value: 198.70, last_date: "2026-01-01", change_pct: -0.80, trend: "down" },
+  { serie_code: "20671", category: "concessao", display_name: "Consignado PF", description: "Crédito pessoal consignado PF", unit: "R$ bi", source: "BACEN SGS 20671", last_value: 38.50, last_date: "2026-01-01", change_pct: 0.60, trend: "up" },
+  // Taxas (H1.1b-3)
+  { serie_code: "20714", category: "taxa", display_name: "Taxa Média PF", description: "Taxa média empréstimos PF", unit: "% a.a.", source: "BACEN SGS 20714", last_value: 52.60, last_date: "2026-01-01", change_pct: 0.40, trend: "up" },
+  { serie_code: "20715", category: "taxa", display_name: "Taxa Média PJ", description: "Taxa média empréstimos PJ", unit: "% a.a.", source: "BACEN SGS 20715", last_value: 23.80, last_date: "2026-01-01", change_pct: 0.15, trend: "up" },
+  { serie_code: "20740", category: "taxa", display_name: "Taxa PF Livres", description: "Taxa média PF recursos livres", unit: "% a.a.", source: "BACEN SGS 20740", last_value: 58.40, last_date: "2026-01-01", change_pct: 0.55, trend: "up" },
+  { serie_code: "20749", category: "taxa", display_name: "Taxa Veículos PF", description: "Taxa financiamento veículos PF", unit: "% a.a.", source: "BACEN SGS 20749", last_value: 26.30, last_date: "2026-01-01", change_pct: -0.20, trend: "down" },
+  { serie_code: "20763", category: "taxa", display_name: "Taxa Direcionados PJ", description: "Taxa crédito direcionado PJ", unit: "% a.a.", source: "BACEN SGS 20763", last_value: 14.20, last_date: "2026-01-01", change_pct: 0.10, trend: "up" },
+  { serie_code: "26428", category: "taxa", display_name: "Taxa Microempresas", description: "Taxa média microempresas", unit: "% a.a.", source: "BACEN SGS 26428", last_value: 44.10, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
+  // Inadimplência (H1.1b-4)
+  { serie_code: "21082", category: "inadimplencia", display_name: "Inadimplência Total", description: "Taxa inadimplência >90 dias", unit: "%", source: "BACEN SGS 21082", last_value: 3.30, last_date: "2026-01-01", change_pct: 0.10, trend: "up" },
+  { serie_code: "21083", category: "inadimplencia", display_name: "Inadimplência PF", description: "Inadimplência PF >90 dias", unit: "%", source: "BACEN SGS 21083", last_value: 4.10, last_date: "2026-01-01", change_pct: 0.05, trend: "up" },
+  { serie_code: "21084", category: "inadimplencia", display_name: "Inadimplência PJ", description: "Inadimplência PJ >90 dias", unit: "%", source: "BACEN SGS 21084", last_value: 2.40, last_date: "2026-01-01", change_pct: -0.15, trend: "down" },
+  { serie_code: "12948", category: "inadimplencia", display_name: "Inadim. SFN Agregada", description: "Inadimplência agregada SFN", unit: "%", source: "BACEN SGS 12948", last_value: 3.05, last_date: "2026-01-01", change_pct: 0.08, trend: "up" },
+  { serie_code: "13685", category: "inadimplencia", display_name: "Inadim. Priv. Nacional", description: "Inadimplência IFs privadas nacionais", unit: "%", source: "BACEN SGS 13685", last_value: 3.80, last_date: "2026-01-01", change_pct: 0.12, trend: "up" },
+  { serie_code: "13667", category: "inadimplencia", display_name: "Inadim. Público", description: "Inadimplência IFs controle público", unit: "%", source: "BACEN SGS 13667", last_value: 2.60, last_date: "2026-01-01", change_pct: -0.05, trend: "down" },
+  { serie_code: "21154", category: "inadimplencia", display_name: "Inadim. Direcionados PF", description: "Inadimplência direcionados PF", unit: "%", source: "BACEN SGS 21154", last_value: 1.85, last_date: "2026-01-01", change_pct: 0.03, trend: "up" },
+  // Spreads (H1.1b-5)
+  { serie_code: "20783", category: "spread", display_name: "Spread PF", description: "Spread bancário PF", unit: "p.p.", source: "BACEN SGS 20783", last_value: 30.20, last_date: "2026-01-01", change_pct: -0.50, trend: "down" },
+  { serie_code: "20784", category: "spread", display_name: "Spread PJ", description: "Spread bancário PJ", unit: "p.p.", source: "BACEN SGS 20784", last_value: 10.80, last_date: "2026-01-01", change_pct: 0.20, trend: "up" },
+  { serie_code: "20785", category: "spread", display_name: "Spread Livres PF", description: "Spread recursos livres PF", unit: "p.p.", source: "BACEN SGS 20785", last_value: 35.60, last_date: "2026-01-01", change_pct: -0.30, trend: "down" },
+  { serie_code: "20786", category: "spread", display_name: "Spread Livres PJ", description: "Spread recursos livres PJ", unit: "p.p.", source: "BACEN SGS 20786", last_value: 12.40, last_date: "2026-01-01", change_pct: 0.15, trend: "up" },
+  { serie_code: "20787", category: "spread", display_name: "Spread Direcionados", description: "Spread direcionados total", unit: "p.p.", source: "BACEN SGS 20787", last_value: 5.20, last_date: "2026-01-01", change_pct: -0.10, trend: "down" },
+  { serie_code: "20826", category: "spread", display_name: "Spread Pós-fixadas", description: "Spread operações pós-fixadas", unit: "p.p.", source: "BACEN SGS 20826", last_value: 22.10, last_date: "2026-01-01", change_pct: 0.25, trend: "up" },
+  { serie_code: "20837", category: "spread", display_name: "Spread Pré-fixadas", description: "Spread operações pré-fixadas", unit: "p.p.", source: "BACEN SGS 20837", last_value: 28.40, last_date: "2026-01-01", change_pct: -0.40, trend: "down" },
+  // Outros (H1.1b-6)
+  { serie_code: "25147", category: "cartoes", display_name: "Cartões Emitidos", description: "Cartões de crédito emitidos", unit: "mi", source: "BACEN SGS 25147", last_value: 215.80, last_date: "2026-01-01", change_pct: 1.50, trend: "up" },
 ];
 
 // Sample series data for charts (fallback)
