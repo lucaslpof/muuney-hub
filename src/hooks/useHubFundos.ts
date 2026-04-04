@@ -192,6 +192,210 @@ export function useFundCompare(cnpjs: string[], period: string = "3m") {
   });
 }
 
+/* ─── Monthly Data Types ─── */
+export interface FundMonthly {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  rentab_fundo: number | null;
+  captc_dia: number | null;
+  resg_dia: number | null;
+  captc_liquida_mes: number | null;
+  nr_cotst: number | null;
+  vl_patrim_liq: number | null;
+  benchmark: string | null;
+  rentab_benchmark: number | null;
+}
+
+export interface MonthlyRankingItem {
+  cnpj_fundo: string;
+  denom_social: string;
+  classe: string | null;
+  classe_anbima: string | null;
+  gestor_nome: string | null;
+  dt_comptc: string;
+  rentab_fundo: number | null;
+  vl_patrim_liq: number | null;
+  captc_liquida_mes: number | null;
+  nr_cotst: number | null;
+  benchmark: string | null;
+  rentab_benchmark: number | null;
+}
+
+export interface MonthlyOverviewItem {
+  month: string;
+  funds: number;
+  avg_rentab: number | null;
+  median_rentab: number | null;
+  total_pl: number;
+  total_captacao_liquida: number;
+}
+
+/** Monthly data for a single fund */
+export function useFundMonthly(cnpj: string | null, months: number = 24) {
+  return useQuery<{ cnpj: string; months: FundMonthly[]; count: number }>({
+    queryKey: ["fundos", "monthly", cnpj, months],
+    queryFn: () => fetchCvm("monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; months: FundMonthly[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** Monthly rankings (top performers for a given month) */
+export function useMonthlyRankings(period: string, opts: { classe?: string; limit?: number; orderBy?: string; order?: string } = {}) {
+  const { classe, limit = 20, orderBy = "rentab_fundo", order = "desc" } = opts;
+  return useQuery<{ period: string; classe: string; funds: MonthlyRankingItem[]; count: number }>({
+    queryKey: ["fundos", "monthly_rankings", period, classe, limit, orderBy, order],
+    queryFn: () => {
+      const params: Record<string, string> = { period, limit: String(limit), order_by: orderBy, order };
+      if (classe) params.classe = classe;
+      return fetchCvm("monthly_rankings", params) as Promise<{ period: string; classe: string; funds: MonthlyRankingItem[]; count: number }>;
+    },
+    enabled: !!period,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** Monthly overview (aggregated across all funds) */
+export function useMonthlyOverview(months: number = 12) {
+  return useQuery<{ months: MonthlyOverviewItem[]; count: number }>({
+    queryKey: ["fundos", "monthly_overview", months],
+    queryFn: () => fetchCvm("monthly_overview", { months: String(months) }) as Promise<{ months: MonthlyOverviewItem[]; count: number }>,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/* ─── CDA (Composição de Carteira) Types ─── */
+export interface FundCdaItem {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  tp_ativo: string;
+  cd_ativo: string;
+  ds_ativo: string | null;
+  vl_merc_pos_final: number | null;
+  vl_custo_pos_final: number | null;
+  qt_pos_final: number | null;
+  pct_pl: number | null;
+  emissor: string | null;
+  dt_venc: string | null;
+  bloco: string;
+}
+
+export interface FundCdaSummary {
+  bloco: string;
+  count: number;
+  vl_total: number;
+  pct_pl: number;
+}
+
+/** CDA — asset-level composition for a single fund */
+export function useFundComposition(cnpj: string | null) {
+  return useQuery<{ cnpj: string; assets: FundCdaItem[]; count: number }>({
+    queryKey: ["fundos", "composition", cnpj],
+    queryFn: () => fetchCvm("composition", { cnpj: cnpj! }) as Promise<{ cnpj: string; assets: FundCdaItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** CDA Summary — grouped by bloco */
+export function useFundCompositionSummary(cnpj: string | null) {
+  return useQuery<{ cnpj: string; summary: FundCdaSummary[]; total_pl: number }>({
+    queryKey: ["fundos", "composition_summary", cnpj],
+    queryFn: () => fetchCvm("composition_summary", { cnpj: cnpj! }) as Promise<{ cnpj: string; summary: FundCdaSummary[]; total_pl: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/* ─── FIDC (Fundo de Direitos Creditórios) Types ─── */
+export interface FidcMonthlyItem {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  vl_cota_senior: number | null;
+  vl_cota_subordinada: number | null;
+  qt_cota_senior: number | null;
+  qt_cota_subordinada: number | null;
+  vl_pl_senior: number | null;
+  vl_pl_subordinada: number | null;
+  vl_pl_total: number | null;
+  indice_subordinacao: number | null;
+  vl_carteira_direitos: number | null;
+  vl_carteira_a_vencer: number | null;
+  vl_carteira_inadimplente: number | null;
+  vl_pdd: number | null;
+  indice_pdd_cobertura: number | null;
+  taxa_inadimplencia: number | null;
+  rentab_senior: number | null;
+  rentab_subordinada: number | null;
+  rentab_fundo: number | null;
+  nr_cedentes: number | null;
+  concentracao_cedente: number | null;
+}
+
+export interface FidcRankingItem {
+  cnpj_fundo: string;
+  denom_social: string;
+  dt_comptc: string;
+  vl_pl_total: number | null;
+  indice_subordinacao: number | null;
+  taxa_inadimplencia: number | null;
+  indice_pdd_cobertura: number | null;
+  rentab_fundo: number | null;
+  vl_carteira_direitos: number | null;
+}
+
+export interface FidcOverviewItem {
+  total_fidcs: number;
+  total_pl: number;
+  avg_inadimplencia: number | null;
+  avg_subordinacao: number | null;
+  avg_rentab: number | null;
+  avg_pdd_cobertura: number | null;
+}
+
+/** FIDC monthly time series for a single fund */
+export function useFidcMonthly(cnpj: string | null, months: number = 24) {
+  return useQuery<{ cnpj: string; months: FidcMonthlyItem[]; count: number }>({
+    queryKey: ["fundos", "fidc_monthly", cnpj, months],
+    queryFn: () => fetchCvm("fidc_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; months: FidcMonthlyItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FIDC rankings (sorted by metric) */
+export function useFidcRankings(opts: { orderBy?: string; order?: string; limit?: number; minPl?: number } = {}) {
+  const { orderBy = "vl_pl_total", order = "desc", limit = 50, minPl = 0 } = opts;
+  return useQuery<{ funds: FidcRankingItem[]; count: number }>({
+    queryKey: ["fundos", "fidc_rankings", orderBy, order, limit, minPl],
+    queryFn: () => {
+      const params: Record<string, string> = {
+        order_by: orderBy, order, limit: String(limit),
+      };
+      if (minPl > 0) params.min_pl = String(minPl);
+      return fetchCvm("fidc_rankings", params) as Promise<{ funds: FidcRankingItem[]; count: number }>;
+    },
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FIDC market overview (aggregates) */
+export function useFidcOverview() {
+  return useQuery<FidcOverviewItem>({
+    queryKey: ["fundos", "fidc_overview"],
+    queryFn: () => fetchCvm("fidc_overview") as Promise<FidcOverviewItem>,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
 /* ─── Formatting Helpers ─── */
 export function formatPL(value: number | null | undefined): string {
   if (value == null) return "—";

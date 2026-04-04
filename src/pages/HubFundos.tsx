@@ -7,13 +7,22 @@ import {
   FundMetricsSummary, DrawdownChart, VolatilityChart, MetricsCompareTable,
 } from "@/components/hub/FundMetricsPanel";
 import {
+  MonthlyOverviewChart, MonthlyRankingsTable, FundMonthlyDetail,
+} from "@/components/hub/FundMonthlyPanel";
+import {
   useFundCatalog, useFundDetail, useFundRankings, useFundStats,
   formatPL, formatPct, shortCnpj,
 } from "@/hooks/useHubFundos";
 import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
 import {
+  CompositionSummary, CompositionDetailTable,
+} from "@/components/hub/FundCompositionPanel";
+import {
+  FIDCOverviewKPIs, FIDCRankingTable, FIDCSubordinationChart,
+} from "@/components/hub/FIDCPanel";
+import {
   LayoutGrid, Trophy, TrendingUp, Wallet, PieChart, GitCompareArrows,
-  Brain, Search, X, BarChart3, Activity,
+  Brain, Search, X, BarChart3, Activity, CalendarDays, Shield, Layers,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -24,6 +33,9 @@ const SUBCATEGORIES = [
   { id: "all", label: "Visão Geral", icon: LayoutGrid },
   { id: "rankings", label: "Rankings", icon: Trophy },
   { id: "metricas", label: "Métricas", icon: Activity },
+  { id: "mensal", label: "Mensal", icon: CalendarDays },
+  { id: "fidc", label: "FIDC", icon: Shield },
+  { id: "composicao", label: "Composição", icon: Layers },
   { id: "patrimonio", label: "Patrimônio", icon: Wallet },
   { id: "captacao", label: "Captação", icon: TrendingUp },
   { id: "classes", label: "Classes", icon: PieChart },
@@ -349,7 +361,7 @@ const HubFundos = () => {
   }, [stats, catalog]);
 
   const show = (tabs: string[]) =>
-    (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "comparador" && activeTab !== "metricas";
+    (activeTab === "all" || tabs.includes(activeTab)) && !["comparador", "metricas", "mensal"].includes(activeTab);
 
   return (
     <div className="space-y-4 max-w-[1400px]">
@@ -507,6 +519,17 @@ const HubFundos = () => {
         return <MetricasDetail />;
       })()}
 
+      {/* ─── Mensal Tab ─── */}
+      {activeTab === "mensal" && !selectedFund && (
+        <div className="space-y-4">
+          <MonthlyOverviewChart months={11} />
+          <MonthlyRankingsTable onSelectFund={setSelectedFund} />
+        </div>
+      )}
+      {activeTab === "mensal" && selectedFund && (
+        <FundMonthlyDetail cnpj={selectedFund} />
+      )}
+
       {/* ─── Classes Tab ─── */}
       {(activeTab === "classes" || (activeTab === "all" && !selectedFund)) && stats?.by_classe && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -518,6 +541,30 @@ const HubFundos = () => {
       {/* ─── Comparador Tab ─── */}
       {activeTab === "comparador" && (
         <ComparadorSection period={period} />
+      )}
+
+      {/* ─── FIDC Tab ─── */}
+      {activeTab === "fidc" && (
+        <div className="space-y-4">
+          <FIDCOverviewKPIs />
+          <FIDCRankingTable onSelectFund={(cnpj) => setSelectedFund(cnpj)} />
+          <FIDCSubordinationChart />
+        </div>
+      )}
+
+      {/* ─── Composição Tab ─── */}
+      {activeTab === "composicao" && selectedFund && (
+        <div className="space-y-4">
+          <CompositionSummary cnpj={selectedFund} />
+          <CompositionDetailTable cnpj={selectedFund} />
+        </div>
+      )}
+      {activeTab === "composicao" && !selectedFund && (
+        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-8 text-center">
+          <Layers className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+          <p className="text-sm text-zinc-500">Selecione um fundo para ver a composição da carteira</p>
+          <p className="text-[10px] text-zinc-700 mt-1">Use a busca acima ou a aba Rankings para escolher um fundo</p>
+        </div>
       )}
 
       {/* ─── Analytics Tab ─── */}
