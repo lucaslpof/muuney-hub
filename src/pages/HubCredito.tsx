@@ -8,6 +8,7 @@ import { SpreadMonitor } from "@/components/hub/SpreadMonitor";
 import { CreditCorrelationPanel } from "@/components/hub/CreditCorrelationPanel";
 import { CreditOverviewMensal } from "@/components/hub/CreditOverviewMensal";
 import { CreditProductPanel } from "@/components/hub/CreditProductPanel";
+import { CreditOperationsPanel } from "@/components/hub/CreditOperationsPanel";
 import {
   useHubLatest,
   useHubSeries,
@@ -18,6 +19,7 @@ import { percentChange, sma } from "@/lib/statistics";
 import {
   LayoutGrid, ShieldAlert, ArrowLeftRight, Percent,
   Banknote, Warehouse, CreditCard, Brain, CalendarRange, ShoppingBag,
+  Filter,
 } from "lucide-react";
 
 /* ─── Period & Subcategory configs ─── */
@@ -32,6 +34,7 @@ const SUBCATEGORIES = [
   { id: "inadimplencia", label: "Inadimplência", icon: ShieldAlert },
   { id: "spreads", label: "Spreads", icon: ArrowLeftRight },
   { id: "produtos", label: "Produtos", icon: ShoppingBag },
+  { id: "operacoes", label: "Operações", icon: Filter },
   { id: "outros", label: "Outros", icon: CreditCard },
   { id: "analytics", label: "Analytics", icon: Brain },
 ] as const;
@@ -60,7 +63,7 @@ const HubCredito = () => {
   const [period, setPeriod] = useState<string>("1y");
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  const show = (tabs: string[]) => (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "overview" && activeTab !== "produtos";
+  const show = (tabs: string[]) => (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "overview" && activeTab !== "produtos" && activeTab !== "operacoes";
 
   /* KPI Cards */
   const { data: cards, isLoading: cardsLoading } = useHubLatest("credito");
@@ -176,7 +179,7 @@ const HubCredito = () => {
 
   /* ── Filter KPIs ── */
   const filteredKPIs = useMemo(() => {
-    if (activeTab === "all" || activeTab === "analytics" || activeTab === "overview" || activeTab === "produtos") return kpis;
+    if (activeTab === "all" || activeTab === "analytics" || activeTab === "overview" || activeTab === "produtos" || activeTab === "operacoes") return kpis;
     return kpis.filter((k) =>
       catMap[activeTab]?.some((c) => k.category.includes(c) || k.serie_code.includes(c))
     );
@@ -184,7 +187,7 @@ const HubCredito = () => {
 
   /* Tab counts */
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: kpis.length, analytics: kpis.length, overview: 75, produtos: 20 };
+    const counts: Record<string, number> = { all: kpis.length, analytics: kpis.length, overview: 75, produtos: 20, operacoes: 20 };
     Object.entries(catMap).forEach(([tab, cats]) => {
       counts[tab] = kpis.filter((k) =>
         cats.some((c) => k.category.includes(c) || k.serie_code.includes(c))
@@ -262,7 +265,7 @@ const HubCredito = () => {
       </div>
 
       {/* ─── Dynamic Alerts ─── */}
-      {activeTab !== "overview" && activeTab !== "produtos" && <AlertCard kpis={kpis} module="credito" />}
+      {activeTab !== "overview" && activeTab !== "produtos" && activeTab !== "operacoes" && <AlertCard kpis={kpis} module="credito" />}
 
       {/* ─── Overview Mensal (full-page view) ─── */}
       {activeTab === "overview" && <CreditOverviewMensal period={period} />}
@@ -270,8 +273,11 @@ const HubCredito = () => {
       {/* ─── Produtos (full-page view) ─── */}
       {activeTab === "produtos" && <CreditProductPanel />}
 
+      {/* ─── Operações de Crédito (query builder) ─── */}
+      {activeTab === "operacoes" && <CreditOperationsPanel />}
+
       {/* ─── KPI Cards Grid ─── */}
-      {activeTab !== "overview" && activeTab !== "produtos" && <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+      {activeTab !== "overview" && activeTab !== "produtos" && activeTab !== "operacoes" && <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
         {filteredKPIs.map((card) => (
           <KPICard
             key={card.serie_code}
