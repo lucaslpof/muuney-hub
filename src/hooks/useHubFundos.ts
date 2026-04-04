@@ -396,6 +396,136 @@ export function useFidcOverview() {
   });
 }
 
+/* ─── FII (Fundos Imobiliários) Types ─── */
+export interface FiiMonthlyItem {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  nome_fundo: string | null;
+  segmento: string | null;
+  mandato: string | null;
+  tipo_gestao: string | null;
+  publico_alvo: string | null;
+  patrimonio_liquido: number | null;
+  cotas_emitidas: number | null;
+  valor_patrimonial_cota: number | null;
+  rentabilidade_efetiva_mes: number | null;
+  rentabilidade_patrimonial_mes: number | null;
+  dividend_yield_mes: number | null;
+  nr_cotistas: number | null;
+  pct_despesas_adm: number | null;
+}
+
+export interface FiiOverviewResponse {
+  date: string;
+  total_fiis: number;
+  total_pl: number;
+  total_cotistas: number;
+  avg_dividend_yield: number | null;
+  avg_rentabilidade: number | null;
+  by_segmento: { segmento: string; count: number; pl: number; avg_dy: number | null; pct_pl: number }[];
+}
+
+/** FII monthly time series for a single fund */
+export function useFiiMonthly(cnpj: string | null, months: number = 24) {
+  return useQuery<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>({
+    queryKey: ["fundos", "fii_monthly", cnpj, months],
+    queryFn: () => fetchCvm("fii_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FII rankings (sorted by metric) */
+export function useFiiRankings(opts: { orderBy?: string; order?: string; limit?: number; segmento?: string } = {}) {
+  const { orderBy = "patrimonio_liquido", order = "desc", limit = 50, segmento } = opts;
+  return useQuery<{ date: string; funds: FiiMonthlyItem[]; count: number }>({
+    queryKey: ["fundos", "fii_rankings", orderBy, order, limit, segmento],
+    queryFn: () => {
+      const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit) };
+      if (segmento) params.segmento = segmento;
+      return fetchCvm("fii_rankings", params) as Promise<{ date: string; funds: FiiMonthlyItem[]; count: number }>;
+    },
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FII market overview (aggregates) */
+export function useFiiOverview() {
+  return useQuery<FiiOverviewResponse>({
+    queryKey: ["fundos", "fii_overview"],
+    queryFn: () => fetchCvm("fii_overview") as Promise<FiiOverviewResponse>,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/* ─── FIP (Fundos de Investimento em Participações) Types ─── */
+export interface FipQuarterlyItem {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  nome_fundo: string | null;
+  tp_fundo_classe: string | null;
+  publico_alvo: string | null;
+  patrimonio_liquido: number | null;
+  qt_cota: number | null;
+  valor_patrimonial_cota: number | null;
+  nr_cotistas: number | null;
+  vl_cap_comprom: number | null;
+  vl_cap_subscr: number | null;
+  vl_cap_integr: number | null;
+  vl_invest_fip_cota: number | null;
+}
+
+export interface FipOverviewResponse {
+  date: string;
+  total_fips: number;
+  total_pl: number;
+  total_cotistas: number;
+  total_capital_comprometido: number;
+  total_capital_subscrito: number;
+  total_capital_integralizado: number;
+  pct_integralizacao: number | null;
+  by_tipo: { tp_fundo_classe: string; count: number; pl: number; pct_pl: number }[];
+}
+
+/** FIP quarterly time series for a single fund */
+export function useFipQuarterly(cnpj: string | null) {
+  return useQuery<{ cnpj: string; data: FipQuarterlyItem[]; count: number }>({
+    queryKey: ["fundos", "fip_quarterly", cnpj],
+    queryFn: () => fetchCvm("fip_quarterly", { cnpj: cnpj! }) as Promise<{ cnpj: string; data: FipQuarterlyItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FIP rankings (sorted by metric) */
+export function useFipRankings(opts: { orderBy?: string; order?: string; limit?: number; tp_fundo_classe?: string } = {}) {
+  const { orderBy = "patrimonio_liquido", order = "desc", limit = 50, tp_fundo_classe } = opts;
+  return useQuery<{ date: string; funds: FipQuarterlyItem[]; count: number }>({
+    queryKey: ["fundos", "fip_rankings", orderBy, order, limit, tp_fundo_classe],
+    queryFn: () => {
+      const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit) };
+      if (tp_fundo_classe) params.tp_fundo_classe = tp_fundo_classe;
+      return fetchCvm("fip_rankings", params) as Promise<{ date: string; funds: FipQuarterlyItem[]; count: number }>;
+    },
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+/** FIP market overview (aggregates) */
+export function useFipOverview() {
+  return useQuery<FipOverviewResponse>({
+    queryKey: ["fundos", "fip_overview"],
+    queryFn: () => fetchCvm("fip_overview") as Promise<FipOverviewResponse>,
+    staleTime: 30 * 60 * 1000,
+    retry: 2,
+  });
+}
+
 /* ─── Formatting Helpers ─── */
 export function formatPL(value: number | null | undefined): string {
   if (value == null) return "—";

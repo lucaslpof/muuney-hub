@@ -21,8 +21,15 @@ import {
   FIDCOverviewKPIs, FIDCRankingTable, FIDCSubordinationChart,
 } from "@/components/hub/FIDCPanel";
 import {
+  FIIOverviewKPIs, FIIRankingTable, FIISegmentoChart, FIITopPerformers,
+} from "@/components/hub/FIIPanel";
+import {
+  FIPOverviewKPIs, FIPRankingTable, FIPCapitalPipeline, FIPTypeDistribution,
+} from "@/components/hub/FIPPanel";
+import {
   LayoutGrid, Trophy, TrendingUp, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, CalendarDays, Shield, Layers,
+  Building2, Landmark,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -35,6 +42,8 @@ const SUBCATEGORIES = [
   { id: "metricas", label: "Métricas", icon: Activity },
   { id: "mensal", label: "Mensal", icon: CalendarDays },
   { id: "fidc", label: "FIDC", icon: Shield },
+  { id: "fii", label: "FII", icon: Building2 },
+  { id: "fip", label: "FIP", icon: Landmark },
   { id: "composicao", label: "Composição", icon: Layers },
   { id: "patrimonio", label: "Patrimônio", icon: Wallet },
   { id: "captacao", label: "Captação", icon: TrendingUp },
@@ -549,6 +558,30 @@ const HubFundos = () => {
           <FIDCOverviewKPIs />
           <FIDCRankingTable onSelectFund={(cnpj) => setSelectedFund(cnpj)} />
           <FIDCSubordinationChart />
+        </div>
+      )}
+
+      {/* ─── FII Tab ─── */}
+      {activeTab === "fii" && (
+        <div className="space-y-4">
+          <FIIOverviewKPIs />
+          <FIIRankingTable onSelectFund={(cnpj) => setSelectedFund(cnpj)} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <FIISegmentoChart />
+            <FIITopPerformers />
+          </div>
+        </div>
+      )}
+
+      {/* ─── FIP Tab ─── */}
+      {activeTab === "fip" && (
+        <div className="space-y-4">
+          <FIPOverviewKPIs />
+          <FIPRankingTable onSelectFund={(cnpj) => setSelectedFund(cnpj)} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <FIPCapitalPipeline />
+            <FIPTypeDistribution />
+          </div>
         </div>
       )}
 
