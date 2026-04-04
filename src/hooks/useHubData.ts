@@ -164,6 +164,42 @@ export function useHubIngestionStatus() {
   });
 }
 
+/* ─── Credit Products (dynamic from Supabase) ─── */
+export interface CreditProduct {
+  id: number;
+  tipo: "PF" | "PJ";
+  nome: string;
+  taxa_aa: number;
+  taxa_am: number;
+  spread_aa: number;
+  spread_am: number;
+  inadimplencia: number;
+  sgs_taxa: number;
+  sgs_spread: number;
+  sgs_inadim: number;
+  updated_at: string;
+}
+
+interface ProductsResponse {
+  products?: CreditProduct[];
+  count?: number;
+  updated_at?: string;
+}
+
+export function useProductData(tipo?: "PF" | "PJ") {
+  return useQuery<CreditProduct[]>({
+    queryKey: ["hub", "products", tipo || "all"],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (tipo) params.tipo = tipo;
+      const raw = (await fetchHub("products", params)) as ProductsResponse;
+      return raw?.products || [];
+    },
+    staleTime: 60 * 60 * 1000, // 1h — product data changes monthly
+    retry: 2,
+  });
+}
+
 // Sample data fallback for when API has no data yet
 export const MACRO_SAMPLE: LatestCard[] = [
   // Selic / Monetária
@@ -242,6 +278,48 @@ export const CREDITO_SAMPLE: LatestCard[] = [
   { serie_code: "20837", category: "spread", display_name: "Spread Pré-fixadas", description: "Spread operações pré-fixadas", unit: "p.p.", source: "BACEN SGS 20837", last_value: 28.40, last_date: "2026-01-01", change_pct: -0.40, trend: "down" },
   // Outros (H1.1b-6)
   { serie_code: "25147", category: "cartoes", display_name: "Cartões Emitidos", description: "Cartões de crédito emitidos", unit: "mi", source: "BACEN SGS 25147", last_value: 215.80, last_date: "2026-01-01", change_pct: 1.50, trend: "up" },
+  // ── Overview Mensal — Saldos extras ──
+  { serie_code: "20542", category: "saldo_credito", display_name: "Saldo PJ Total", description: "Saldo crédito PJ total", unit: "R$ bi", source: "BACEN SGS 20542", last_value: 2340.00, last_date: "2026-01-01", change_pct: 0.55, trend: "up" },
+  { serie_code: "20543", category: "saldo_credito", display_name: "Saldo Livres Total", description: "Saldo crédito recursos livres", unit: "R$ bi", source: "BACEN SGS 20543", last_value: 3520.00, last_date: "2026-01-01", change_pct: 0.72, trend: "up" },
+  { serie_code: "20544", category: "saldo_credito", display_name: "Saldo Direcionados Total", description: "Saldo crédito recursos direcionados", unit: "R$ bi", source: "BACEN SGS 20544", last_value: 2600.00, last_date: "2026-01-01", change_pct: 0.48, trend: "up" },
+  // ── Overview Mensal — PF por modalidade ──
+  { serie_code: "20570", category: "saldo_pf_modal", display_name: "Pessoal Não Consignado", description: "Crédito pessoal não consignado PF", unit: "R$ bi", source: "BACEN SGS 20570", last_value: 428.50, last_date: "2026-01-01", change_pct: 1.80, trend: "up" },
+  { serie_code: "20572", category: "saldo_pf_modal", display_name: "Consignado INSS", description: "Crédito consignado INSS PF", unit: "R$ bi", source: "BACEN SGS 20572", last_value: 582.10, last_date: "2026-01-01", change_pct: 0.45, trend: "up" },
+  { serie_code: "20593", category: "saldo_pf_modal", display_name: "Rural PF", description: "Crédito rural PF direcionado", unit: "R$ bi", source: "BACEN SGS 20593", last_value: 384.20, last_date: "2026-01-01", change_pct: 0.90, trend: "up" },
+  { serie_code: "20599", category: "saldo_pf_modal", display_name: "Habitacional PF", description: "Financiamento habitacional PF", unit: "R$ bi", source: "BACEN SGS 20599", last_value: 892.60, last_date: "2026-01-01", change_pct: 0.65, trend: "up" },
+  { serie_code: "20606", category: "saldo_pf_modal", display_name: "BNDES Repasses PF", description: "Repasses BNDES PF", unit: "R$ bi", source: "BACEN SGS 20606", last_value: 42.30, last_date: "2026-01-01", change_pct: -0.20, trend: "down" },
+  // ── Overview Mensal — PJ por modalidade ──
+  { serie_code: "20551", category: "saldo_pj_modal", display_name: "Capital de Giro", description: "Capital de giro PJ livres", unit: "R$ bi", source: "BACEN SGS 20551", last_value: 498.70, last_date: "2026-01-01", change_pct: 0.60, trend: "up" },
+  { serie_code: "20553", category: "saldo_pj_modal", display_name: "Desc. Duplicatas", description: "Desconto de duplicatas PJ", unit: "R$ bi", source: "BACEN SGS 20553", last_value: 142.30, last_date: "2026-01-01", change_pct: 0.35, trend: "up" },
+  { serie_code: "20556", category: "saldo_pj_modal", display_name: "Conta Garantida", description: "Conta garantida / cheque especial PJ", unit: "R$ bi", source: "BACEN SGS 20556", last_value: 54.80, last_date: "2026-01-01", change_pct: -1.20, trend: "down" },
+  { serie_code: "20560", category: "saldo_pj_modal", display_name: "Comércio Exterior", description: "ACC/ACE comércio exterior PJ", unit: "R$ bi", source: "BACEN SGS 20560", last_value: 112.40, last_date: "2026-01-01", change_pct: 2.10, trend: "up" },
+  { serie_code: "20564", category: "saldo_pj_modal", display_name: "Financ. Exportações", description: "Financiamento a exportações PJ", unit: "R$ bi", source: "BACEN SGS 20564", last_value: 68.90, last_date: "2026-01-01", change_pct: 1.50, trend: "up" },
+  { serie_code: "20611", category: "saldo_pj_modal", display_name: "Rural PJ", description: "Crédito rural PJ direcionado", unit: "R$ bi", source: "BACEN SGS 20611", last_value: 412.50, last_date: "2026-01-01", change_pct: 0.80, trend: "up" },
+  { serie_code: "20614", category: "saldo_pj_modal", display_name: "Habitacional PJ", description: "Financiamento habitacional PJ", unit: "R$ bi", source: "BACEN SGS 20614", last_value: 98.20, last_date: "2026-01-01", change_pct: 0.30, trend: "up" },
+  { serie_code: "20622", category: "saldo_pj_modal", display_name: "BNDES Repasses PJ", description: "Repasses BNDES PJ", unit: "R$ bi", source: "BACEN SGS 20622", last_value: 310.40, last_date: "2026-01-01", change_pct: -0.40, trend: "down" },
+  // ── Overview Mensal — Concessões extras ──
+  { serie_code: "20633", category: "concessao", display_name: "Concessões PF Livres", description: "Concessões PF recursos livres", unit: "R$ bi", source: "BACEN SGS 20633", last_value: 198.40, last_date: "2026-01-01", change_pct: 1.40, trend: "up" },
+  { serie_code: "20634", category: "concessao", display_name: "Concessões PJ Livres", description: "Concessões PJ recursos livres", unit: "R$ bi", source: "BACEN SGS 20634", last_value: 165.20, last_date: "2026-01-01", change_pct: -0.60, trend: "down" },
+  // ── Overview Mensal — Inadimplência detalhada ──
+  { serie_code: "21085", category: "inadim_detalhe", display_name: "Inadim. Livres", description: "Inadimplência >90d recursos livres", unit: "%", source: "BACEN SGS 21085", last_value: 4.50, last_date: "2026-01-01", change_pct: 0.08, trend: "up" },
+  { serie_code: "21086", category: "inadim_detalhe", display_name: "Inadim. Direcionados", description: "Inadimplência >90d direcionados", unit: "%", source: "BACEN SGS 21086", last_value: 1.60, last_date: "2026-01-01", change_pct: -0.05, trend: "down" },
+  { serie_code: "21087", category: "inadim_detalhe", display_name: "Inadim. PF Livres", description: "Inadimplência >90d PF livres", unit: "%", source: "BACEN SGS 21087", last_value: 5.80, last_date: "2026-01-01", change_pct: 0.12, trend: "up" },
+  { serie_code: "21088", category: "inadim_detalhe", display_name: "Inadim. PJ Livres", description: "Inadimplência >90d PJ livres", unit: "%", source: "BACEN SGS 21088", last_value: 2.80, last_date: "2026-01-01", change_pct: -0.10, trend: "down" },
+  { serie_code: "21089", category: "inadim_detalhe", display_name: "Inadim. PF Direcionados", description: "Inadimplência >90d PF direcionados", unit: "%", source: "BACEN SGS 21089", last_value: 1.90, last_date: "2026-01-01", change_pct: 0.03, trend: "up" },
+  { serie_code: "21090", category: "inadim_detalhe", display_name: "Inadim. PJ Direcionados", description: "Inadimplência >90d PJ direcionados", unit: "%", source: "BACEN SGS 21090", last_value: 1.20, last_date: "2026-01-01", change_pct: -0.08, trend: "down" },
+  // ── Overview Mensal — Inadimplência 15-90 dias ──
+  { serie_code: "21128", category: "inadim_15_90", display_name: "15-90d Total", description: "Inadimplência 15-90 dias total", unit: "%", source: "BACEN SGS 21128", last_value: 4.20, last_date: "2026-01-01", change_pct: 0.05, trend: "up" },
+  { serie_code: "21129", category: "inadim_15_90", display_name: "15-90d PF", description: "Inadimplência 15-90 dias PF", unit: "%", source: "BACEN SGS 21129", last_value: 5.10, last_date: "2026-01-01", change_pct: 0.08, trend: "up" },
+  { serie_code: "21130", category: "inadim_15_90", display_name: "15-90d PJ", description: "Inadimplência 15-90 dias PJ", unit: "%", source: "BACEN SGS 21130", last_value: 2.90, last_date: "2026-01-01", change_pct: -0.12, trend: "down" },
+  { serie_code: "21131", category: "inadim_15_90", display_name: "15-90d Livres", description: "Inadimplência 15-90 dias livres", unit: "%", source: "BACEN SGS 21131", last_value: 5.60, last_date: "2026-01-01", change_pct: 0.10, trend: "up" },
+  { serie_code: "21132", category: "inadim_15_90", display_name: "15-90d Direcionados", description: "Inadimplência 15-90 dias direcionados", unit: "%", source: "BACEN SGS 21132", last_value: 2.10, last_date: "2026-01-01", change_pct: -0.06, trend: "down" },
+  // ── Overview Mensal — Taxas extras ──
+  { serie_code: "20751", category: "taxa", display_name: "Taxa PJ Livres", description: "Taxa média PJ recursos livres", unit: "% a.a.", source: "BACEN SGS 20751", last_value: 25.60, last_date: "2026-01-01", change_pct: 0.20, trend: "up" },
+  { serie_code: "20760", category: "taxa", display_name: "Taxa PF Direcionados", description: "Taxa média PF direcionados", unit: "% a.a.", source: "BACEN SGS 20760", last_value: 10.80, last_date: "2026-01-01", change_pct: 0.10, trend: "up" },
+  // ── Overview Mensal — Alavancagem PF ──
+  { serie_code: "29037", category: "alavancagem", display_name: "Endiv. Famílias (excl. hab.)", description: "Endividamento famílias excl. habitacional / renda disponível", unit: "%", source: "BACEN SGS 29037", last_value: 32.40, last_date: "2026-01-01", change_pct: 0.15, trend: "up" },
+  { serie_code: "29038", category: "alavancagem", display_name: "Endiv. Famílias (com hab.)", description: "Endividamento famílias com habitacional / renda disponível", unit: "%", source: "BACEN SGS 29038", last_value: 48.20, last_date: "2026-01-01", change_pct: 0.20, trend: "up" },
+  { serie_code: "29039", category: "alavancagem", display_name: "Comprometimento Renda", description: "Comprometimento da renda das famílias com serviço da dívida", unit: "%", source: "BACEN SGS 29039", last_value: 26.80, last_date: "2026-01-01", change_pct: -0.10, trend: "down" },
 ];
 
 // Sample series data for charts (fallback)

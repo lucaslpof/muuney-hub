@@ -29,7 +29,7 @@ const SUBCATEGORIES = [
   { id: "externo", label: "Externo", icon: Globe },
   { id: "fiscal", label: "Fiscal", icon: Landmark },
   { id: "trabalho", label: "Trabalho", icon: Users },
-  { id: "focus", label: "Focus", icon: Target },
+  { id: "focus", label: "Expectativas", icon: Target },
   { id: "analytics", label: "Analytics", icon: Brain },
 ] as const;
 

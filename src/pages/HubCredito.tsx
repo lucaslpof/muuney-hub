@@ -6,6 +6,8 @@ import { InterestCalculator } from "@/components/hub/InterestCalculator";
 import { DefaultRadar } from "@/components/hub/DefaultRadar";
 import { SpreadMonitor } from "@/components/hub/SpreadMonitor";
 import { CreditCorrelationPanel } from "@/components/hub/CreditCorrelationPanel";
+import { CreditOverviewMensal } from "@/components/hub/CreditOverviewMensal";
+import { CreditProductPanel } from "@/components/hub/CreditProductPanel";
 import {
   useHubLatest,
   useHubSeries,
@@ -15,7 +17,7 @@ import {
 import { percentChange, sma } from "@/lib/statistics";
 import {
   LayoutGrid, ShieldAlert, ArrowLeftRight, Percent,
-  Banknote, Warehouse, CreditCard, Brain,
+  Banknote, Warehouse, CreditCard, Brain, CalendarRange, ShoppingBag,
 } from "lucide-react";
 
 /* ─── Period & Subcategory configs ─── */
@@ -23,11 +25,13 @@ const PERIODS = ["3m", "6m", "1y", "2y", "5y"] as const;
 
 const SUBCATEGORIES = [
   { id: "all", label: "Visão Geral", icon: LayoutGrid },
+  { id: "overview", label: "Overview Mensal", icon: CalendarRange },
   { id: "saldos", label: "Saldos", icon: Warehouse },
   { id: "concessoes", label: "Concessões", icon: Banknote },
   { id: "taxas", label: "Taxas", icon: Percent },
   { id: "inadimplencia", label: "Inadimplência", icon: ShieldAlert },
   { id: "spreads", label: "Spreads", icon: ArrowLeftRight },
+  { id: "produtos", label: "Produtos", icon: ShoppingBag },
   { id: "outros", label: "Outros", icon: CreditCard },
   { id: "analytics", label: "Analytics", icon: Brain },
 ] as const;
@@ -56,7 +60,7 @@ const HubCredito = () => {
   const [period, setPeriod] = useState<string>("1y");
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  const show = (tabs: string[]) => activeTab === "all" || tabs.includes(activeTab);
+  const show = (tabs: string[]) => (activeTab === "all" || tabs.includes(activeTab)) && activeTab !== "overview" && activeTab !== "produtos";
 
   /* KPI Cards */
   const { data: cards, isLoading: cardsLoading } = useHubLatest("credito");
@@ -172,7 +176,7 @@ const HubCredito = () => {
 
   /* ── Filter KPIs ── */
   const filteredKPIs = useMemo(() => {
-    if (activeTab === "all" || activeTab === "analytics") return kpis;
+    if (activeTab === "all" || activeTab === "analytics" || activeTab === "overview" || activeTab === "produtos") return kpis;
     return kpis.filter((k) =>
       catMap[activeTab]?.some((c) => k.category.includes(c) || k.serie_code.includes(c))
     );
@@ -180,7 +184,7 @@ const HubCredito = () => {
 
   /* Tab counts */
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: kpis.length, analytics: kpis.length };
+    const counts: Record<string, number> = { all: kpis.length, analytics: kpis.length, overview: 75, produtos: 20 };
     Object.entries(catMap).forEach(([tab, cats]) => {
       counts[tab] = kpis.filter((k) =>
         cats.some((c) => k.category.includes(c) || k.serie_code.includes(c))
@@ -258,10 +262,16 @@ const HubCredito = () => {
       </div>
 
       {/* ─── Dynamic Alerts ─── */}
-      <AlertCard kpis={kpis} module="credito" />
+      {activeTab !== "overview" && activeTab !== "produtos" && <AlertCard kpis={kpis} module="credito" />}
+
+      {/* ─── Overview Mensal (full-page view) ─── */}
+      {activeTab === "overview" && <CreditOverviewMensal period={period} />}
+
+      {/* ─── Produtos (full-page view) ─── */}
+      {activeTab === "produtos" && <CreditProductPanel />}
 
       {/* ─── KPI Cards Grid ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+      {activeTab !== "overview" && activeTab !== "produtos" && <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
         {filteredKPIs.map((card) => (
           <KPICard
             key={card.serie_code}
@@ -277,7 +287,7 @@ const HubCredito = () => {
             sparklineData={sparklineMap[card.serie_code]}
           />
         ))}
-      </div>
+      </div>}
 
       {/* ════════════════════════════════════════════════════════════════ */}
       {/* H1.1b-1 — SALDOS DA CARTEIRA DE CRÉDITO                      */}
