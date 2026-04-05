@@ -76,7 +76,7 @@ export const MacroSidebar = ({
   onNavigate: (id: string) => void;
 }) => {
   return (
-    <nav className="sticky top-32 space-y-0.5 pr-3 hidden lg:block">
+    <nav className="sticky top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto space-y-0.5 pr-3 hidden md:block scrollbar-none">
       {items.map((item) => {
         const isActive = activeId === item.id;
         const Icon = item.icon;
@@ -84,6 +84,7 @@ export const MacroSidebar = ({
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
+            data-sidebar-id={item.id}
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left transition-all text-[11px] font-mono ${
               isActive
                 ? "bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/20"

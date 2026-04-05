@@ -93,9 +93,10 @@ const HubCredito = () => {
     setSearchParams(next, { replace: true });
   }, [period, activeSection, setSearchParams]);
 
-  /* ─── IntersectionObserver for section tracking ─── */
+  /* ─── IntersectionObserver: preload (generous margin) + active tracking ─── */
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    // Observer 1: Preload — triggers data fetch well before section enters viewport
+    const preloadObserver = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
@@ -104,23 +105,38 @@ const HubCredito = () => {
               if (prev.has(id)) return prev;
               return new Set([...prev, id]);
             });
-            setActiveSection(id);
           }
         }
       },
-      { rootMargin: "-30% 0px -60% 0px", threshold: 0.1 }
+      { rootMargin: "0px 0px 300px 0px", threshold: 0 }
+    );
+
+    // Observer 2: Active section — narrow band near top for sidebar highlight
+    const activeObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
     );
 
     // Observe all section refs
     const timer = setTimeout(() => {
       Object.values(sectionRefs.current).forEach((el) => {
-        if (el) observer.observe(el);
+        if (el) {
+          preloadObserver.observe(el);
+          activeObserver.observe(el);
+        }
       });
     }, 200);
 
     return () => {
       clearTimeout(timer);
-      observer.disconnect();
+      preloadObserver.disconnect();
+      activeObserver.disconnect();
     };
   }, []);
 
@@ -154,8 +170,8 @@ const HubCredito = () => {
   const saldoTotal = pickSeries(saldoBundle, "20540");
   const saldoPF = pickSeries(saldoBundle, "28848");
   const saldoPJLivres = pickSeries(saldoBundle, "28860");
-  const veiculos = pickSeries(saldoPfBundle, "20581");
-  const cartaoCredito = pickSeries(saldoPfBundle, "20590");
+  const veiculos = pickSeries(saldoBundle, "20581");
+  const cartaoCredito = pickSeries(saldoBundle, "20590");
   // saldoPME available via: pickSeries(saldoPjBundle, "25891")
 
   const concessaoPF = pickSeries(concessaoBundle, "20631");
@@ -170,7 +186,7 @@ const HubCredito = () => {
   const inadTotal = pickSeries(inadBundle, "21082");
   const inadPF = pickSeries(inadBundle, "21083");
   const inadPJ = pickSeries(inadBundle, "21084");
-  const inadSFN = pickSeries(inadDetalheBundle, "12948");
+  const inadLivres = pickSeries(inadDetalheBundle, "21085");
 
   const spreadPF = pickSeries(spreadBundle, "20783");
   const spreadPJ = pickSeries(spreadBundle, "20784");
@@ -253,7 +269,7 @@ const HubCredito = () => {
       {/* ─── Main layout: sidebar + content ─── */}
       <div className="flex gap-6 mt-4">
         {/* Sidebar navigation */}
-        <div className="w-44 flex-shrink-0">
+        <div className="hidden md:block w-44 flex-shrink-0">
           <MacroSidebar
             items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
             activeId={activeSection}
@@ -585,11 +601,11 @@ const HubCredito = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <MacroChart
-                  data={inadSFN}
-                  title="Inadimplência SFN Agregada"
+                  data={inadLivres}
+                  title="Inadimplência — Recursos Livres"
                   type="area"
                   color="#F59E0B"
-                  label="SFN"
+                  label="Livres"
                   unit="%"
                 />
                 <MacroChart

@@ -86,20 +86,31 @@ const HubRendaFixa = () => {
     SECTIONS.forEach((sec) => {
       const el = sectionRefs.current[sec.id];
       if (!el) return;
-      const obs = new IntersectionObserver(
+      // Preload observer — triggers data fetch well before section enters viewport
+      const preloadObs = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
-            setActiveSection(sec.id as SectionId);
             setVisitedSections((prev) => {
               if (prev.has(sec.id as SectionId)) return prev;
               return new Set(prev).add(sec.id as SectionId);
             });
           }
         },
-        { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+        { rootMargin: "0px 0px 300px 0px", threshold: 0 }
       );
-      obs.observe(el);
-      observers.push(obs);
+      preloadObs.observe(el);
+      observers.push(preloadObs);
+      // Active section observer — narrow band near top for sidebar highlight
+      const activeObs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveSection(sec.id as SectionId);
+          }
+        },
+        { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
+      );
+      activeObs.observe(el);
+      observers.push(activeObs);
     });
     return () => observers.forEach((o) => o.disconnect());
   }, []);

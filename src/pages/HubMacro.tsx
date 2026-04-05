@@ -245,7 +245,7 @@ const HubMacro = () => {
       {/* ═══ Layout: sidebar + content ═══ */}
       <div className="flex gap-6 mt-4">
         {/* Sidebar nav */}
-        <div className="w-40 flex-shrink-0">
+        <div className="hidden md:block w-40 flex-shrink-0">
           <MacroSidebar
             items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
             activeId={activeSection}
