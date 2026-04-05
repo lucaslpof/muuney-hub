@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
         const orderBy = url.searchParams.get('order_by') || 'vl_patrim_liq'
         const search = url.searchParams.get('search')
         let query = supabase.from('hub_fundos_meta').select('*', { count: 'exact' }).eq('is_active', true).order(orderBy, { ascending: false, nullsFirst: false }).range(offset, offset + limit - 1)
-        if (classe) query = query.eq('classe', classe)
+        if (classe) query = query.eq('classe_rcvm175', classe)
         if (classeRcvm) query = query.eq('classe_rcvm175', classeRcvm)
         if (tp) query = query.eq('tp_fundo', tp)
         if (search) {
@@ -527,7 +527,7 @@ Deno.serve(async (req) => {
         const classe = url.searchParams.get('classe')
         const limit = parseInt(url.searchParams.get('limit') || '20')
         let query = supabase.from('hub_fundos_meta').select('cnpj_fundo_classe, cnpj_fundo, denom_social, classe, classe_anbima, classe_rcvm175, slug, vl_patrim_liq, taxa_adm, taxa_perfm, gestor_nome, nr_cotistas, publico_alvo, tributacao').eq('is_active', true).order('vl_patrim_liq', { ascending: false, nullsFirst: false }).limit(limit)
-        if (classe) query = query.eq('classe', classe)
+        if (classe) query = query.eq('classe_rcvm175', classe)
         const { data } = await query
         result = { classe: classe || 'all', funds: data || [], count: data?.length || 0 }
         break
@@ -562,7 +562,7 @@ Deno.serve(async (req) => {
         if (!period) throw new Error('period parameter required (YYYY-MM-01)')
         let query = supabase.from('hub_fundos_mensal').select('cnpj_fundo, dt_comptc, rentab_fundo, vl_patrim_liq, captc_liquida_mes, nr_cotst, benchmark, rentab_benchmark').eq('dt_comptc', period).not('rentab_fundo', 'is', null).order(orderBy, { ascending, nullsFirst: false }).limit(limit)
         if (classe) {
-          const { data: metaFunds } = await supabase.from('hub_fundos_meta').select('cnpj_fundo').eq('classe', classe).eq('is_active', true)
+          const { data: metaFunds } = await supabase.from('hub_fundos_meta').select('cnpj_fundo').eq('classe_rcvm175', classe).eq('is_active', true)
           const cnpjList = (metaFunds || []).map((f: any) => f.cnpj_fundo)
           if (cnpjList.length > 0) query = query.in('cnpj_fundo', cnpjList)
           else { result = { period, classe, funds: [], count: 0 }; break }

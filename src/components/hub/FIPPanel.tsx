@@ -331,7 +331,7 @@ export const FIPTypeDistribution = () => {
                     <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-2 text-[10px]">
                       <div className="text-zinc-300 font-semibold mb-1">{d.name}</div>
                       <div className="text-zinc-400">PL: {formatPL(d.value)}</div>
-                      <div className="text-zinc-500">{d.count} FIPs ({d.pct}%)</div>
+                      <div className="text-zinc-500">{String(d.count ?? 0)} FIPs ({String(d.pct ?? 0)}%)</div>
                     </div>
                   );
                 }}
@@ -348,7 +348,7 @@ export const FIPTypeDistribution = () => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-zinc-300 font-mono">{formatPL(d.value)}</span>
-                <span className="text-[9px] text-zinc-600 font-mono w-8 text-right">{d.pct}%</span>
+                <span className="text-[9px] text-zinc-600 font-mono w-8 text-right">{String(d.pct ?? 0)}%</span>
               </div>
             </div>
           ))}
