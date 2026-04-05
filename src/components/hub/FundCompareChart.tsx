@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import type { FundDaily } from "@/hooks/useHubFundos";
 import { formatPL, shortCnpj } from "@/hooks/useHubFundos";
 
-const COLORS = ["#0B6C3E", "#6366F1", "#F59E0B", "#EF4444", "#EC4899"];
+const COLORS = ["#0B6C3E", "#6366F1", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6"];
 
 /* ─── Tooltip ─── */
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {

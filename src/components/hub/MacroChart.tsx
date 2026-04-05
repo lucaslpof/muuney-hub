@@ -92,6 +92,8 @@ function smartFormat(v: number, range: number): string {
 /* ───── Smart X-axis date label formatter ───── */
 function formatDateLabel(date: string, totalPoints: number): string {
   const d = new Date(date);
+  // If date string is not a valid date (e.g. tenor labels "30d", "2029"), return as-is
+  if (isNaN(d.getTime())) return date;
   if (totalPoints > 365) {
     // Years only for very long series
     return d.toLocaleDateString("pt-BR", { year: "numeric" });

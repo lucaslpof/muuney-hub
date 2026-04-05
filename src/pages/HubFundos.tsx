@@ -186,17 +186,40 @@ const FundDetailPanel = ({
   );
 };
 
-/* ─── Comparador Section ─── */
+/* ─── Class badge helper ─── */
+const CLASS_COLORS: Record<string, { bg: string; text: string }> = {
+  FIDC: { bg: "#F59E0B15", text: "#F59E0B" },
+  FII: { bg: "#8B5CF615", text: "#8B5CF6" },
+  FIP: { bg: "#EC489915", text: "#EC4899" },
+};
+function classBadge(classe: string | null | undefined) {
+  const key = classe?.toUpperCase().trim();
+  const c = key && CLASS_COLORS[key];
+  if (!c) return null;
+  return (
+    <span className="text-[7px] font-bold font-mono px-1 py-0.5 rounded" style={{ backgroundColor: c.bg, color: c.text }}>
+      {key}
+    </span>
+  );
+}
+
+/* ─── Comparador Section v2 (cross-class, up to 6 funds) ─── */
+const MAX_COMPARE = 6;
 const ComparadorSection = ({ period }: { period: string }) => {
   const [searchQ, setSearchQ] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
+  const [showScores, setShowScores] = useState(true);
   const { data: catalog } = useFundCatalog({ limit: 200, search: searchQ || undefined });
 
+  // Fetch details for up to 6 selected funds
   const fund0 = useFundDetail(selected[0] || null, period);
   const fund1 = useFundDetail(selected[1] || null, period);
   const fund2 = useFundDetail(selected[2] || null, period);
   const fund3 = useFundDetail(selected[3] || null, period);
-  const fundDetails = [fund0, fund1, fund2, fund3].filter((_, i) => i < selected.length);
+  const fund4 = useFundDetail(selected[4] || null, period);
+  const fund5 = useFundDetail(selected[5] || null, period);
+  const allFundQueries = [fund0, fund1, fund2, fund3, fund4, fund5];
+  const fundDetails = allFundQueries.filter((_, i) => i < selected.length);
 
   const fundSeries = useMemo(() =>
     fundDetails
@@ -207,25 +230,55 @@ const ComparadorSection = ({ period }: { period: string }) => {
         daily: f.data!.daily,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fund0.data, fund1.data, fund2.data, fund3.data]
+    [fund0.data, fund1.data, fund2.data, fund3.data, fund4.data, fund5.data]
   );
+
+  // Compute Fund Scores for all loaded funds (with peer normalization)
+  const fundScores = useMemo(() => {
+    const loaded = fundDetails.filter((f) => f.data?.meta && f.data?.daily?.length && f.data.daily.length > 5);
+    if (loaded.length < 1) return [];
+
+    // Build peer arrays from all loaded funds
+    const allMetrics = loaded.map((f) => computeFundMetrics(f.data!.daily));
+    const peerMetrics = {
+      returns: allMetrics.map((m) => m.return_annualized),
+      volatilities: allMetrics.map((m) => m.volatility),
+      sharpes: allMetrics.map((m) => m.sharpe),
+      drawdowns: allMetrics.map((m) => m.max_drawdown),
+      taxasAdm: loaded.map((f) => f.data!.meta!.taxa_adm),
+      taxasPerfm: loaded.map((f) => f.data!.meta!.taxa_perfm),
+      plValues: loaded.map((f) => f.data!.meta!.vl_patrim_liq),
+      cotistas: loaded.map((f) => f.data!.meta!.nr_cotistas),
+    };
+
+    return loaded.map((f) => ({
+      cnpj: f.data!.meta!.cnpj_fundo,
+      name: f.data!.meta!.denom_social || shortCnpj(f.data!.meta!.cnpj_fundo),
+      classe: f.data!.meta!.classe || f.data!.meta!.tp_fundo,
+      score: computeFundScore(f.data!.meta!, f.data!.daily, peerMetrics),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fund0.data, fund1.data, fund2.data, fund3.data, fund4.data, fund5.data]);
 
   const toggleFund = (cnpj: string) => {
     setSelected((prev) =>
-      prev.includes(cnpj) ? prev.filter((c) => c !== cnpj) : prev.length < 4 ? [...prev, cnpj] : prev
+      prev.includes(cnpj) ? prev.filter((c) => c !== cnpj) : prev.length < MAX_COMPARE ? [...prev, cnpj] : prev
     );
   };
 
+  const isLoading = fundDetails.some((f) => f.isLoading);
+
   return (
     <div className="space-y-4">
+      {/* Selection panel */}
       <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
-            Selecione até 4 fundos
+            Selecione até {MAX_COMPARE} fundos <span className="text-zinc-700">(FIDC, FII, FIP ou regular)</span>
           </h3>
           {selected.length > 0 && (
             <button onClick={() => setSelected([])} className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono">
-              Limpar
+              Limpar ({selected.length})
             </button>
           )}
         </div>
@@ -239,14 +292,17 @@ const ComparadorSection = ({ period }: { period: string }) => {
             className="w-full pl-6 pr-2 py-1.5 text-[10px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
           />
         </div>
+
+        {/* Selected chips with class badges */}
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {selected.map((cnpj) => {
               const fund = catalog?.funds.find((f) => f.cnpj_fundo === cnpj);
               return (
                 <span key={cnpj} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0B6C3E]/10 border border-[#0B6C3E]/20 rounded text-[9px] text-[#0B6C3E] font-mono">
-                  {fund?.denom_social ? fund.denom_social.slice(0, 25) : shortCnpj(cnpj)}
-                  <button onClick={() => toggleFund(cnpj)} className="hover:text-white">
+                  {classBadge(fund?.classe || fund?.tp_fundo)}
+                  {fund?.denom_social ? fund.denom_social.slice(0, 22) : shortCnpj(cnpj)}
+                  <button onClick={() => toggleFund(cnpj)} className="hover:text-white ml-0.5">
                     <X className="w-2.5 h-2.5" />
                   </button>
                 </span>
@@ -254,6 +310,8 @@ const ComparadorSection = ({ period }: { period: string }) => {
             })}
           </div>
         )}
+
+        {/* Fund list */}
         <div className="max-h-40 overflow-y-auto space-y-0.5">
           {catalog?.funds
             .filter((f) => !selected.includes(f.cnpj_fundo))
@@ -262,14 +320,17 @@ const ComparadorSection = ({ period }: { period: string }) => {
               <button
                 key={f.cnpj_fundo}
                 onClick={() => toggleFund(f.cnpj_fundo)}
-                disabled={selected.length >= 4}
+                disabled={selected.length >= MAX_COMPARE}
                 className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-[#0B6C3E]/5 transition-colors disabled:opacity-30"
               >
-                <div className="min-w-0">
-                  <div className="text-[10px] text-zinc-300 font-mono truncate">
-                    {f.denom_social || shortCnpj(f.cnpj_fundo)}
+                <div className="min-w-0 flex items-center gap-1.5">
+                  {classBadge(f.classe || f.tp_fundo)}
+                  <div>
+                    <div className="text-[10px] text-zinc-300 font-mono truncate">
+                      {f.denom_social || shortCnpj(f.cnpj_fundo)}
+                    </div>
+                    <div className="text-[8px] text-zinc-700 font-mono">{shortCnpj(f.cnpj_fundo)}</div>
                   </div>
-                  <div className="text-[8px] text-zinc-700 font-mono">{shortCnpj(f.cnpj_fundo)}</div>
                 </div>
                 <span className="text-[9px] text-zinc-600 font-mono flex-shrink-0 ml-2">
                   {formatPL(f.vl_patrim_liq)}
@@ -279,10 +340,114 @@ const ComparadorSection = ({ period }: { period: string }) => {
         </div>
       </div>
 
+      {/* Loading indicator */}
+      {isLoading && selected.length > 0 && (
+        <div className="text-[10px] text-zinc-600 font-mono text-center py-2">Carregando dados dos fundos...</div>
+      )}
+
+      {/* Indexed performance chart */}
       {fundSeries.length >= 2 && (
         <QuotaCompareChart funds={fundSeries} title="Rentabilidade Indexada (base 100)" height={320} />
       )}
 
+      {/* Muuney Fund Score™ comparison */}
+      {fundScores.length >= 2 && (
+        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
+              Muuney Fund Score™ Comparado
+            </h3>
+            <button
+              onClick={() => setShowScores(!showScores)}
+              className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono"
+            >
+              {showScores ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+          <AnimatePresence>
+            {showScores && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                {/* Score bar comparison */}
+                <div className="space-y-2 mb-4">
+                  {fundScores
+                    .sort((a, b) => b.score.score - a.score.score)
+                    .map((f) => (
+                      <div key={f.cnpj} className="flex items-center gap-2">
+                        <div className="w-[140px] flex-shrink-0">
+                          <div className="text-[9px] text-zinc-400 font-mono truncate flex items-center gap-1">
+                            {classBadge(f.classe)} {f.name.slice(0, 18)}
+                          </div>
+                        </div>
+                        <div className="flex-1 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${f.score.score}%`, backgroundColor: f.score.color }}
+                          />
+                        </div>
+                        <div className="w-12 text-right">
+                          <span className="text-[10px] font-bold font-mono" style={{ color: f.score.color }}>
+                            {f.score.score.toFixed(0)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Pillar comparison table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px] font-mono">
+                    <thead>
+                      <tr className="border-b border-[#1a1a1a] text-zinc-600">
+                        <th className="text-left px-2 py-1.5">Pilar</th>
+                        {fundScores.map((f) => (
+                          <th key={f.cnpj} className="text-right px-2 py-1.5 max-w-[100px] truncate">
+                            {f.name.slice(0, 14)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="text-zinc-300">
+                      {(["rentabilidade", "risco", "liquidez", "custos"] as const).map((pilar) => {
+                        const vals = fundScores.map((f) => f.score.pilares[pilar]);
+                        const maxVal = Math.max(...vals);
+                        return (
+                          <tr key={pilar} className="border-b border-[#141414]">
+                            <td className="px-2 py-1 text-zinc-500 capitalize">{pilar}</td>
+                            {fundScores.map((f) => {
+                              const v = f.score.pilares[pilar];
+                              const isBest = v === maxVal && vals.filter((x) => x === maxVal).length === 1;
+                              return (
+                                <td key={f.cnpj} className={`px-2 py-1 text-right ${isBest ? "text-emerald-400 font-bold" : ""}`}>
+                                  {v}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                      <tr className="border-t border-[#1a1a1a]">
+                        <td className="px-2 py-1.5 text-zinc-400 font-bold">Score</td>
+                        {fundScores.map((f) => (
+                          <td key={f.cnpj} className="px-2 py-1.5 text-right font-bold" style={{ color: f.score.color }}>
+                            {f.score.score.toFixed(0)}
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Metrics comparison table */}
       {(() => {
         const metricsData = fundDetails
           .filter((f) => f.data?.daily?.length && f.data.daily.length > 5)
@@ -295,6 +460,7 @@ const ComparadorSection = ({ period }: { period: string }) => {
         ) : null;
       })()}
 
+      {/* Fund info comparison table */}
       {fundDetails.filter((f) => f.data?.meta).length >= 2 && (
         <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-x-auto">
           <table className="w-full text-[10px] font-mono">
@@ -302,17 +468,36 @@ const ComparadorSection = ({ period }: { period: string }) => {
               <tr className="border-b border-[#1a1a1a] text-zinc-600">
                 <th className="text-left px-3 py-2">Info</th>
                 {fundDetails.map((f, i) => (
-                  <th key={i} className="text-right px-3 py-2 max-w-[150px] truncate">
-                    {f.data?.meta?.denom_social?.slice(0, 20) || "—"}
+                  <th key={i} className="text-right px-3 py-2 max-w-[130px]">
+                    <div className="flex items-center justify-end gap-1">
+                      {classBadge(f.data?.meta?.classe || f.data?.meta?.tp_fundo)}
+                      <span className="truncate">{f.data?.meta?.denom_social?.slice(0, 16) || "—"}</span>
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="text-zinc-300">
               <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Classe</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right text-[9px]">
+                    {f.data?.meta?.classe || f.data?.meta?.tp_fundo || "—"}
+                  </td>
+                ))}
+              </tr>
+              <tr className="border-b border-[#141414]">
                 <td className="px-3 py-1.5 text-zinc-500">PL</td>
                 {fundDetails.map((f, i) => (
                   <td key={i} className="px-3 py-1.5 text-right">{formatPL(f.data?.metrics.latest_pl)}</td>
+                ))}
+              </tr>
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Cotistas</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right">
+                    {f.data?.meta?.nr_cotistas != null ? f.data.meta.nr_cotistas.toLocaleString("pt-BR") : "—"}
+                  </td>
                 ))}
               </tr>
               <tr className="border-b border-[#141414]">
@@ -331,10 +516,16 @@ const ComparadorSection = ({ period }: { period: string }) => {
                   </td>
                 ))}
               </tr>
+              <tr className="border-b border-[#141414]">
+                <td className="px-3 py-1.5 text-zinc-500">Condomínio</td>
+                {fundDetails.map((f, i) => (
+                  <td key={i} className="px-3 py-1.5 text-right">{f.data?.meta?.condom || "—"}</td>
+                ))}
+              </tr>
               <tr>
                 <td className="px-3 py-1.5 text-zinc-500">Gestor</td>
                 {fundDetails.map((f, i) => (
-                  <td key={i} className="px-3 py-1.5 text-right truncate max-w-[120px]">
+                  <td key={i} className="px-3 py-1.5 text-right truncate max-w-[110px]">
                     {f.data?.meta?.gestor_nome || "—"}
                   </td>
                 ))}
