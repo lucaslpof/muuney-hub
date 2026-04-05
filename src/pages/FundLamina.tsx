@@ -13,6 +13,7 @@ import { computeFundScore } from "@/lib/fundScore";
 import { ClasseBadge, HierarquiaBadges } from "@/lib/rcvm175";
 import { FundScoreCard } from "@/components/hub/FundScoreCard";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+import { FundInsightsSection } from "@/components/hub/InsightsFeed";
 import {
   CompositionSummary, CompositionDetailTable,
 } from "@/components/hub/FundCompositionPanel";
@@ -316,6 +317,9 @@ export default function FundLamina() {
             </motion.div>
           </SectionErrorBoundary>
         )}
+
+        {/* === Section 3.5: Alertas / Insights === */}
+        <FundInsightsSection identifier={slug || null} />
 
         {/* === Section 4: Informações === */}
         <SectionErrorBoundary sectionName="Informações">

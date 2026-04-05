@@ -36,6 +36,7 @@ import {
 } from "@/components/hub/FIPPanel";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+import { InsightsFeed } from "@/components/hub/InsightsFeed";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
@@ -880,6 +881,9 @@ const HubFundos = () => {
                   </motion.div>
                 ))}
               </div>
+
+              {/* Insights Feed — Últimas Movimentações */}
+              <InsightsFeed limit={10} days={30} title="Últimas Movimentações" />
 
               {/* Rankings */}
               <FundRankingTable

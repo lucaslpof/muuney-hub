@@ -656,3 +656,106 @@ export function useFundSearch(query: string, opts?: { limit?: number; enabled?: 
     enabled: (opts?.enabled !== false) && trimmed.length >= 2,
   });
 }
+
+/* ═══ Insights (Fase 4) ═══ */
+
+export type InsightType = "pl_drop" | "drawdown" | "taxa_change" | "flow_anomaly" | "new_fund" | "cancelled_fund" | "cotistas_drop" | "gestor_change";
+export type InsightSeverity = "info" | "warning" | "critical";
+
+export interface FundInsight {
+  id: number;
+  cnpj_fundo: string;
+  cnpj_fundo_classe: string | null;
+  denom_social: string | null;
+  slug: string | null;
+  classe_rcvm175: string | null;
+  tipo: InsightType;
+  severidade: InsightSeverity;
+  titulo: string;
+  detalhe: string | null;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  referencia_data: string | null;
+  detectado_em: string;
+  is_read: boolean;
+}
+
+export interface InsightsFeedResponse {
+  insights: FundInsight[];
+  total: number;
+  summary: {
+    by_type: Record<string, number>;
+    by_severity: Record<string, number>;
+  };
+  limit: number;
+  offset: number;
+}
+
+export function useInsightsFeed(opts?: {
+  tipo?: InsightType;
+  severidade?: InsightSeverity;
+  classe?: string;
+  days?: number;
+  limit?: number;
+  enabled?: boolean;
+}) {
+  const params: Record<string, string> = {};
+  if (opts?.tipo) params.tipo = opts.tipo;
+  if (opts?.severidade) params.severidade = opts.severidade;
+  if (opts?.classe) params.classe = opts.classe;
+  if (opts?.days) params.days = String(opts.days);
+  if (opts?.limit) params.limit = String(opts.limit);
+
+  return useQuery<InsightsFeedResponse>({
+    queryKey: ["cvm", "insights", params],
+    queryFn: () => fetchCvm("insights", params) as Promise<InsightsFeedResponse>,
+    staleTime: 10 * 60_000,
+    enabled: opts?.enabled !== false,
+  });
+}
+
+export function useInsightsForFund(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  const params: Record<string, string> = {};
+  if (identifier) {
+    if (isSlug) params.slug = identifier;
+    else params.cnpj = identifier;
+  }
+
+  return useQuery<{ insights: FundInsight[]; cnpj: string }>({
+    queryKey: ["cvm", "insights_for_fund", identifier],
+    queryFn: () => fetchCvm("insights_for_fund", params) as Promise<{ insights: FundInsight[]; cnpj: string }>,
+    staleTime: 10 * 60_000,
+    enabled: !!identifier,
+  });
+}
+
+/* ─── Insight display helpers ─── */
+
+export const INSIGHT_TYPE_LABELS: Record<InsightType, string> = {
+  pl_drop: "Queda de PL",
+  drawdown: "Drawdown",
+  taxa_change: "Mudança de Taxa",
+  flow_anomaly: "Fluxo Atípico",
+  new_fund: "Novo Fundo",
+  cancelled_fund: "Fundo Cancelado",
+  cotistas_drop: "Perda de Cotistas",
+  gestor_change: "Mudança de Gestor",
+};
+
+export const INSIGHT_TYPE_ICONS: Record<InsightType, string> = {
+  pl_drop: "📉",
+  drawdown: "⚠️",
+  taxa_change: "💰",
+  flow_anomaly: "🌊",
+  new_fund: "🆕",
+  cancelled_fund: "🚫",
+  cotistas_drop: "👥",
+  gestor_change: "🔄",
+};
+
+export const INSIGHT_SEVERITY_COLORS: Record<InsightSeverity, { bg: string; text: string; border: string }> = {
+  info: { bg: "#3B82F610", text: "#3B82F6", border: "#3B82F630" },
+  warning: { bg: "#F59E0B10", text: "#F59E0B", border: "#F59E0B30" },
+  critical: { bg: "#EF444410", text: "#EF4444", border: "#EF444430" },
+};

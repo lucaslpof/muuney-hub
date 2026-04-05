@@ -884,8 +884,75 @@ Deno.serve(async (req) => {
         result = { logs: data }
         break
       }
+
+      // ─── Insights Feed (Fase 4) ───
+      case 'insights': {
+        const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200)
+        const offset = parseInt(url.searchParams.get('offset') || '0')
+        const tipo = url.searchParams.get('tipo')  // filter by type
+        const severidade = url.searchParams.get('severidade')  // filter by severity
+        const classe = url.searchParams.get('classe')  // filter by classe_rcvm175
+        const days = parseInt(url.searchParams.get('days') || '30')  // lookback window
+
+        const since = new Date()
+        since.setDate(since.getDate() - days)
+
+        let query = supabase.from('hub_fundos_insights')
+          .select('*', { count: 'exact' })
+          .gte('detectado_em', since.toISOString())
+          .order('detectado_em', { ascending: false })
+          .range(offset, offset + limit - 1)
+
+        if (tipo) query = query.eq('tipo', tipo)
+        if (severidade) query = query.eq('severidade', severidade)
+        if (classe) query = query.eq('classe_rcvm175', classe)
+
+        const { data, count, error } = await query
+        if (error) throw error
+
+        // Also get summary counts by type
+        const { data: summary } = await supabase.from('hub_fundos_insights')
+          .select('tipo, severidade')
+          .gte('detectado_em', since.toISOString())
+
+        const byType: Record<string, number> = {}
+        const bySeveridade: Record<string, number> = {}
+        for (const row of summary || []) {
+          byType[row.tipo] = (byType[row.tipo] || 0) + 1
+          bySeveridade[row.severidade] = (bySeveridade[row.severidade] || 0) + 1
+        }
+
+        result = { insights: data, total: count, summary: { by_type: byType, by_severity: bySeveridade }, limit, offset }
+        break
+      }
+      case 'insights_for_fund': {
+        const cnpj = url.searchParams.get('cnpj')
+        const slug = url.searchParams.get('slug')
+        if (!cnpj && !slug) throw new Error('cnpj or slug parameter required')
+
+        let targetCnpj = cnpj
+        if (slug && !cnpj) {
+          const { data: meta } = await supabase.from('hub_fundos_meta')
+            .select('cnpj_fundo_classe')
+            .eq('slug', slug)
+            .limit(1)
+            .single()
+          if (meta) targetCnpj = meta.cnpj_fundo_classe
+        }
+
+        const { data, error } = await supabase.from('hub_fundos_insights')
+          .select('*')
+          .or(`cnpj_fundo.eq.${targetCnpj},cnpj_fundo_classe.eq.${targetCnpj}`)
+          .order('detectado_em', { ascending: false })
+          .limit(20)
+
+        if (error) throw error
+        result = { insights: data, cnpj: targetCnpj }
+        break
+      }
+
       default:
-        result = { error: 'Unknown endpoint', available: ['catalog','fund','fund_by_slug','compare','overview','composition','composition_summary','rankings','stats','monthly','monthly_rankings','monthly_overview','fidc_monthly','fidc_rankings','fidc_overview','fii_monthly','fii_rankings','fii_overview','fip_quarterly','fip_rankings','fip_overview','gestora_rankings','admin_rankings','fund_search','ingest_catalog','ingest_daily','ingest_mensal','ingest_mensal_backfill','ingest_cda','ingest_fidc_mensal','ingestion_status'] }
+        result = { error: 'Unknown endpoint', available: ['catalog','fund','fund_by_slug','compare','overview','composition','composition_summary','rankings','stats','monthly','monthly_rankings','monthly_overview','fidc_monthly','fidc_rankings','fidc_overview','fii_monthly','fii_rankings','fii_overview','fip_quarterly','fip_rankings','fip_overview','gestora_rankings','admin_rankings','fund_search','insights','insights_for_fund','ingest_catalog','ingest_daily','ingest_mensal','ingest_mensal_backfill','ingest_cda','ingest_fidc_mensal','ingestion_status'] }
     }
     return new Response(JSON.stringify(result, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err) {
