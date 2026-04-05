@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import type { FundRankingItem } from "@/hooks/useHubFundos";
 import { formatPL, shortCnpj } from "@/hooks/useHubFundos";
+import { ClasseBadge } from "@/lib/rcvm175";
 
 type SortKey = "vl_patrim_liq" | "taxa_adm" | "nr_cotistas" | "denom_social";
 
@@ -117,7 +119,9 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
             </tr>
           </thead>
           <tbody>
-            {filtered.map((fund, idx) => (
+            {filtered.map((fund, idx) => {
+              const fundPath = `/fundos/${fund.slug || fund.cnpj_fundo_classe || fund.cnpj_fundo}`;
+              return (
               <tr
                 key={fund.cnpj_fundo}
                 onClick={() => onSelectFund?.(fund.cnpj_fundo)}
@@ -125,15 +129,22 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
               >
                 <td className="px-3 py-2 text-zinc-700">{idx + 1}</td>
                 <td className="px-3 py-2 max-w-[280px]">
-                  <div className="flex items-center gap-1.5">
-                    <div className="min-w-0">
+                  <Link
+                    to={fundPath}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 hover:no-underline"
+                  >
+                    <div className="min-w-0 flex-1">
                       <div className="text-zinc-300 truncate group-hover:text-[#0B6C3E] transition-colors">
                         {fund.denom_social || shortCnpj(fund.cnpj_fundo)}
                       </div>
-                      <div className="text-[8px] text-zinc-700">{shortCnpj(fund.cnpj_fundo)}</div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <ClasseBadge classe={fund.classe_rcvm175 || fund.classe} size="sm" />
+                        <span className="text-[8px] text-zinc-700">{shortCnpj(fund.cnpj_fundo)}</span>
+                      </div>
                     </div>
                     <ExternalLink className="w-3 h-3 text-zinc-800 group-hover:text-[#0B6C3E] flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
-                  </div>
+                  </Link>
                 </td>
                 <td className="px-3 py-2 text-right text-zinc-300 whitespace-nowrap">
                   {formatPL(fund.vl_patrim_liq)}
@@ -148,7 +159,8 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
                   {fund.gestor_nome || "—"}
                 </td>
               </tr>
-            ))}
+            );
+            })}
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-zinc-700">

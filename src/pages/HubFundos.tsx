@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
+import { FundCategoryRankings } from "@/components/hub/FundCategoryRankings";
+import { FundScreener } from "@/components/hub/FundScreener";
 import {
   QuotaCompareChart, PLEvolutionChart, FlowChart, ClasseDistribution,
 } from "@/components/hub/FundCompareChart";
@@ -887,6 +889,9 @@ const HubFundos = () => {
                 title={`Top Fundos por PL${rankings?.classe ? ` — ${rankings.classe}` : ""}`}
               />
 
+              {/* Category Rankings */}
+              <FundCategoryRankings />
+
               {/* Classes distribution */}
               {stats?.by_classe && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1052,6 +1057,9 @@ const HubFundos = () => {
             >
               {sectionVisible("composicao-comparador") ? (
                 <div className="space-y-6">
+                  {/* Screener */}
+                  <FundScreener onSelectFund={setSelectedFund} />
+
                   {/* Composition */}
                   {selectedFund ? (
                     <div className="space-y-3">
