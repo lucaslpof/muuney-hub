@@ -235,7 +235,7 @@ const HubCredito = () => {
   ], [inadTotal, inadPF, inadPJ]);
 
   return (
-    <div className="max-w-[1400px]">
+    <div className="w-full">
       {/* ─── Sticky header bar ─── */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4 flex-wrap">

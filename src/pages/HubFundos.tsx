@@ -794,7 +794,7 @@ const HubFundos = () => {
   }, []);
 
   return (
-    <div className="max-w-[1400px]">
+    <div className="w-full">
       {/* ─── Sticky Header ─── */}
       <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-4 px-4 py-2 border-b border-[#141414] mb-4">
         <div className="flex items-center justify-between mb-2">

@@ -77,7 +77,7 @@ const HubDashboard = () => {
   const allKPIs = useMemo(() => [...macro, ...credito], [macro, credito]);
 
   return (
-    <div className="space-y-4 max-w-[1400px]">
+    <div className="space-y-4 w-full">
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between">
         <div>

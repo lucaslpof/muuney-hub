@@ -265,7 +265,7 @@ const HubRendaFixa = () => {
   }, []);
 
   return (
-    <div className="flex gap-4 max-w-[1400px]">
+    <div className="flex gap-4 w-full">
       {/* ─── Sidebar ─── */}
       <MacroSidebar
         items={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))}
