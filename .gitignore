@@ -21,3 +21,4 @@ dist/
 npm-debug.log*
 .vercel
 .env*.local
+vite.config.ts.timestamp-*

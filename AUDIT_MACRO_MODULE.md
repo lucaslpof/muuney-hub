@@ -169,23 +169,23 @@ Zoom drag-to-select, CSV/PNG export, RichTooltip, dark theme consistente.
 
 ## 7. PRIORIZAÇÃO DE AÇÕES
 
-| # | Ação | Severidade | Esforço | Impacto |
-|---|------|-----------|---------|---------|
-| 1 | Eliminar dados fake (usar séries reais individuais) | P0 | Alto | Crítico |
-| 2 | Fix hook mapSeriesResponse → retornar todas as séries | P0 | Médio | Crítico |
-| 3 | Corrigir mapeamento unit/name em hub_macro_series_meta | P0 | Baixo | Alto |
-| 4 | Fix Focus data range (truncada em Dec 2025) | P0 | Baixo | Alto |
-| 5 | Lazy-load queries por tab | P1 | Médio | Performance |
-| 6 | Deep-linking (URL state para tab + period) | P1 | Baixo | UX |
-| 7 | KPI overflow (ticker ou top-6 + expand) | P1 | Médio | UX |
-| 8 | Error boundaries por seção | P1 | Baixo | Estabilidade |
-| 9 | Overlay SMA/EMA/Trendline no MacroChart | P2 | Médio | Valor analítico |
-| 10 | Calculadoras: enriquecer com cenários, multi-índice | P2 | Médio | Valor |
-| 11 | Yield curve com vértices reais DI×Pré | P2 | Alto | Precisão |
-| 12 | Insights gerados dinamicamente (trend + anomaly) | P2 | Alto | Diferenciação |
-| 13 | Macro Scorecard / Regime Detection | P2 | Alto | Bloomberg-tier |
-| 14 | Event overlay (COPOM, FOMC) | P2 | Médio | Pro feature |
-| 15 | Export PDF do módulo completo | P2 | Alto | Enterprise |
+| # | Ação | Severidade | Esforço | Impacto | Status |
+|---|------|-----------|---------|---------|--------|
+| 1 | Eliminar dados fake (usar séries reais individuais) | P0 | Alto | Crítico | ✅ DONE — Fase A: Backfill 24 séries reais (7,304 rows, 4 categorias: atividade, inflacao, monetaria, externo). Hook refatorado para `useHubSeriesBundle` + `pickSeries`. Zero dados fabricados. |
+| 2 | Fix hook mapSeriesResponse → retornar todas as séries | P0 | Médio | Crítico | ✅ DONE — Fase A: `mapSeriesBundleResponse` retorna `SeriesBundle` (Record<code, {name,unit,category,data}>). HubMacro usa `pickSeries(bundle, code)` para cada indicador. |
+| 3 | Corrigir mapeamento unit/name em hub_macro_series_meta | P0 | Baixo | Alto | ✅ DONE — 5 fixes: PIB Var. Trimestral (unit→%), Desocupação PNAD (name fix), Saldo CAGED (unit→vínculos), PEA desativada (sem dados), Massa Salarial Real (unit→R$ mi). |
+| 4 | Fix Focus data range (truncada em Dec 2025) | P0 | Baixo | Alto | ✅ DONE — Verificado: Focus retorna dados até 2026-03-27 (500 rows/série). Issue original já estava resolvida. |
+| 5 | Lazy-load queries por tab | P1 | Médio | Performance | ✅ DONE — Fase C: IntersectionObserver tracks `visitedSections`. Bundles balanca/divida/fiscal/focus/pib usam `enabled: sectionVisible(id)`. Overview (selic/ipca/cambio/trabalho) carrega eagerly. |
+| 6 | Deep-linking (URL state para tab + period) | P1 | Baixo | UX | ✅ DONE — Fase C: `useSearchParams` persiste `?period=2y&section=analytics` na URL. Scroll-to-section on mount quando URL tem section param. |
+| 7 | KPI overflow (ticker ou top-6 + expand) | P1 | Médio | UX | ✅ DONE — Fase B: Hero top-8 KPIs (HERO_CODES) + "Ver todos os N indicadores" expandível. Secondary KPIs em grid 6-col. |
+| 8 | Error boundaries por seção | P1 | Baixo | Estabilidade | ✅ DONE — Fase C: `SectionErrorBoundary` (class component) wraps cada `MacroSection`. Error UI com retry button, Tech-Noir styling. |
+| 9 | Overlay SMA/EMA/Trendline no MacroChart | P2 | Médio | Valor analítico | Pendente |
+| 10 | Calculadoras: enriquecer com cenários, multi-índice | P2 | Médio | Valor | Pendente |
+| 11 | Yield curve com vértices reais DI×Pré | P2 | Alto | Precisão | Pendente |
+| 12 | Insights gerados dinamicamente (trend + anomaly) | P2 | Alto | Diferenciação | ✅ PARCIAL — Fase B: `MacroInsightCard` com trend detection, anomaly z-score, target band analysis. Falta narrativa macro gerada e cross-module signals. |
+| 13 | Macro Scorecard / Regime Detection | P2 | Alto | Bloomberg-tier | Pendente |
+| 14 | Event overlay (COPOM, FOMC) | P2 | Médio | Pro feature | Pendente |
+| 15 | Export PDF do módulo completo | P2 | Alto | Enterprise | Pendente |
 
 ---
 
@@ -194,3 +194,27 @@ Zoom drag-to-select, CSV/PNG export, RichTooltip, dark theme consistente.
 O módulo tem uma **fundação visual sólida** (design system, chart component, calculadoras). Porém, **~50% dos dados exibidos são fabricados** (multiplicações arbitrárias e `Math.random`), o que é o problema #1 a resolver. O hook `mapSeriesResponse` descartando séries é a causa raiz — uma vez corrigido, todos os gráficos podem usar dados reais.
 
 A camada analítica tem potencial mas está subutilizada: a lib `statistics.ts` é robusta, mas o frontend mal a consome. Com as correções de dados + lazy loading + overlays + insights dinâmicos, o módulo pode genuinamente competir em densidade informacional com ferramentas profissionais.
+
+---
+
+## CHANGELOG DE IMPLEMENTAÇÃO
+
+### Fase A — Data Fixes (04/04/2026)
+- Backfill 24 séries BACEN SGS reais (7,304 rows) em 4 novas categorias: atividade (8), inflacao (4), monetaria (5), externo (7)
+- Refatoração do hook: `useHubSeriesBundle` retorna `SeriesBundle` completo, `pickSeries(bundle, code)` extrai série individual
+- Edge Function `hub-macro-api` v5: adicionadas 4 categorias + categoryAliases
+- Fix 5 entries em `hub_macro_series_meta` (nomes, unidades, PEA desativada)
+- Eliminados 100% dos dados fabricados (multiplicações e Math.random)
+
+### Fase B — UI Redesign (04/04/2026)
+- Layout narrativo: 6 seções temáticas com sidebar nav + IntersectionObserver
+- Novos componentes: `MacroSection`, `MacroSidebar`, `MacroInsightCard`
+- Hero KPIs top-8 com expandable secondary grid
+- `AlertCard` com detecção de outliers e tendências
+- Period selector no sticky header
+
+### Fase C — Performance & Stability (04/04/2026)
+- Lazy-load: `visitedSections` Set + `enabled` param em 5 bundle hooks (pib, divida, balanca, fiscal, focus)
+- Deep-linking: `useSearchParams` persiste `period` + `section` na URL, scroll-to-section on mount
+- `SectionErrorBoundary` class component wrapping todas as 5 MacroSections
+- TypeScript clean build (tsc --noEmit exit 0)

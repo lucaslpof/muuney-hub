@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
+import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import {
   useHubLatest,
   useHubSeriesBundle,
@@ -59,25 +61,49 @@ function buildSparklineMap(bundles: Record<string, SeriesBundle | undefined>): R
 
 /* ─── Main Component ─── */
 const HubMacro = () => {
-  const [period, setPeriod] = useState<string>("1y");
-  const [activeSection, setActiveSection] = useState<string>("overview");
+  /* ─── Deep-linking: period & section from URL ─── */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPeriod = searchParams.get("period") || "1y";
+  const initialSection = searchParams.get("section") || "overview";
+
+  const [period, setPeriod] = useState<string>(
+    (PERIODS as readonly string[]).includes(initialPeriod) ? initialPeriod : "1y"
+  );
+  const [activeSection, setActiveSection] = useState<string>(initialSection);
   const [heroExpanded, setHeroExpanded] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  /* ─── Lazy-load: track which sections have been visible ─── */
+  const [visitedSections, setVisitedSections] = useState<Set<string>>(
+    () => new Set(["overview"])
+  );
+
+  const sectionVisible = useCallback((id: string) => visitedSections.has(id), [visitedSections]);
+
+  /* ─── Sync period & section to URL ─── */
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    if (period !== "1y") next.period = period;
+    if (activeSection !== "overview") next.section = activeSection;
+    setSearchParams(next, { replace: true });
+  }, [period, activeSection, setSearchParams]);
 
   /* ─── Data: KPI cards ─── */
   const { data: cards, isLoading: cardsLoading } = useHubLatest("macro");
   const kpis = cards || [];
 
   /* ─── Data: Series bundles (lazy per section) ─── */
+  // Overview always needs: selic, ipca, cambio, trabalho
   const { data: selicBundle } = useHubSeriesBundle("selic", period, "macro");
   const { data: ipcaBundle } = useHubSeriesBundle("ipca", period, "macro");
   const { data: cambioBundle } = useHubSeriesBundle("cambio", period, "macro");
-  const { data: pibBundle } = useHubSeriesBundle("pib", period, "macro");
-  const { data: dividaBundle } = useHubSeriesBundle("divida", period, "macro");
-  const { data: balancaBundle } = useHubSeriesBundle("balanca", period, "macro");
   const { data: trabalhoBundle } = useHubSeriesBundle("trabalho", period, "macro");
-  const { data: fiscalBundle } = useHubSeriesBundle("fiscal", period, "macro");
-  const { data: focusBundle } = useHubSeriesBundle("focus", period, "macro");
+  // Lazy: only fetch when section has been visited
+  const { data: pibBundle } = useHubSeriesBundle("pib", period, "macro", sectionVisible("analytics"));
+  const { data: dividaBundle } = useHubSeriesBundle("divida", period, "macro", sectionVisible("analytics"));
+  const { data: balancaBundle } = useHubSeriesBundle("balanca", period, "macro", sectionVisible("setor-externo"));
+  const { data: fiscalBundle } = useHubSeriesBundle("fiscal", period, "macro", sectionVisible("analytics"));
+  const { data: focusBundle } = useHubSeriesBundle("focus", period, "macro", sectionVisible("expectativas"));
 
   const allBundles = { selicBundle, ipcaBundle, cambioBundle, pibBundle, dividaBundle, balancaBundle, trabalhoBundle, fiscalBundle, focusBundle };
   const sparklineMap = useMemo(() => buildSparklineMap(allBundles), [selicBundle, ipcaBundle, cambioBundle, pibBundle, dividaBundle, balancaBundle, trabalhoBundle, fiscalBundle, focusBundle]);
@@ -121,13 +147,20 @@ const HubMacro = () => {
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  /* ─── IntersectionObserver for active section tracking ─── */
+  /* ─── IntersectionObserver for active section + lazy-load tracking ─── */
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
+            const id = entry.target.id;
+            setActiveSection(id);
+            setVisitedSections((prev) => {
+              if (prev.has(id)) return prev;
+              const next = new Set(prev);
+              next.add(id);
+              return next;
+            });
           }
         }
       },
@@ -138,6 +171,18 @@ const HubMacro = () => {
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
+  }, []);
+
+  /* ─── Scroll to initial section from URL on mount ─── */
+  useEffect(() => {
+    if (initialSection !== "overview") {
+      const el = document.getElementById(initialSection);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+        setVisitedSections((prev) => new Set([...prev, initialSection]));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ─── Insight inputs per section ─── */
@@ -276,179 +321,189 @@ const HubMacro = () => {
           {/* ═══════════════════════════════════════════
               INFLAÇÃO & JUROS
               ═══════════════════════════════════════════ */}
-          <MacroSection
-            id="inflacao-juros"
-            title="Inflação & Juros"
-            subtitle="Selic, IPCA, agregados monetários e curva de juros"
-            icon={DollarSign}
-            seriesCount={4}
-            insights={<MacroInsightCard inputs={inflacaoInsights} />}
-            ref={(el) => { sectionRefs.current["inflacao-juros"] = el; }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={selic} title="Selic Meta — Taxa Básica de Juros" type="area" color="#0B6C3E" label="Selic" unit="% a.a." />
-              <MacroChart data={selicEfetiva} title="Selic Efetiva — Overnight" type="line" color="#6366F1" label="Selic Efetiva" unit="% a.a." />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" />
-              <MacroChart data={ipca12m} title="IPCA Acumulado 12 Meses" type="area" color="#EF4444" label="IPCA 12m" unit="%" />
-            </div>
-            <InflationCalculator ipcaData={ipcaMensal} />
-            <YieldCurveSimulator
-              currentSelic={kpiVal("432") || 14.25}
-              focusSelic2026={kpiVal("990002") || 12.5}
-              focusSelic2027={kpiVal("990012") || 10.5}
-            />
-          </MacroSection>
+          <SectionErrorBoundary sectionName="Inflação & Juros">
+            <MacroSection
+              id="inflacao-juros"
+              title="Inflação & Juros"
+              subtitle="Selic, IPCA, agregados monetários e curva de juros"
+              icon={DollarSign}
+              seriesCount={4}
+              insights={<MacroInsightCard inputs={inflacaoInsights} />}
+              ref={(el) => { sectionRefs.current["inflacao-juros"] = el; }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={selic} title="Selic Meta — Taxa Básica de Juros" type="area" color="#0B6C3E" label="Selic" unit="% a.a." />
+                <MacroChart data={selicEfetiva} title="Selic Efetiva — Overnight" type="line" color="#6366F1" label="Selic Efetiva" unit="% a.a." />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" />
+                <MacroChart data={ipca12m} title="IPCA Acumulado 12 Meses" type="area" color="#EF4444" label="IPCA 12m" unit="%" />
+              </div>
+              <InflationCalculator ipcaData={ipcaMensal} />
+              <YieldCurveSimulator
+                currentSelic={kpiVal("432") || 14.25}
+                focusSelic2026={kpiVal("990002") || 12.5}
+                focusSelic2027={kpiVal("990012") || 10.5}
+              />
+            </MacroSection>
+          </SectionErrorBoundary>
 
           {/* ═══════════════════════════════════════════
               EMPREGO & RENDA
               ═══════════════════════════════════════════ */}
-          <MacroSection
-            id="emprego-renda"
-            title="Emprego & Renda"
-            subtitle="PNAD Contínua, CAGED, rendimento e massa salarial"
-            icon={Users}
-            seriesCount={9}
-            insights={<MacroInsightCard inputs={trabalhoInsights} />}
-            ref={(el) => { sectionRefs.current["emprego-renda"] = el; }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={desocupacao} title="Taxa de Desocupação — PNAD Contínua" type="area" color="#8B5CF6" label="Desocupação" unit="%" />
-              <MacroChart data={rendimentoMedio} title="Rendimento Médio Real Habitual" type="line" color="#F59E0B" label="Rendimento" unit=" R$" />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={massaSalarial} title="Massa Salarial Real" type="area" color="#06B6D4" label="Massa Salarial" unit=" R$ mi" />
-              <MacroChart data={empregadosTotal} title="Empregados Total — PNAD" type="line" color="#10B981" label="Empregados" unit=" mil" />
-            </div>
-            <MacroChart data={estoqueCaged} title="Estoque de Empregos Formais — CAGED" type="area" color="#0B6C3E" label="Estoque" unit=" vínculos" />
-          </MacroSection>
+          <SectionErrorBoundary sectionName="Emprego & Renda">
+            <MacroSection
+              id="emprego-renda"
+              title="Emprego & Renda"
+              subtitle="PNAD Contínua, CAGED, rendimento e massa salarial"
+              icon={Users}
+              seriesCount={9}
+              insights={<MacroInsightCard inputs={trabalhoInsights} />}
+              ref={(el) => { sectionRefs.current["emprego-renda"] = el; }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={desocupacao} title="Taxa de Desocupação — PNAD Contínua" type="area" color="#8B5CF6" label="Desocupação" unit="%" />
+                <MacroChart data={rendimentoMedio} title="Rendimento Médio Real Habitual" type="line" color="#F59E0B" label="Rendimento" unit=" R$" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={massaSalarial} title="Massa Salarial Real" type="area" color="#06B6D4" label="Massa Salarial" unit=" R$ mi" />
+                <MacroChart data={empregadosTotal} title="Empregados Total — PNAD" type="line" color="#10B981" label="Empregados" unit=" mil" />
+              </div>
+              <MacroChart data={estoqueCaged} title="Estoque de Empregos Formais — CAGED" type="area" color="#0B6C3E" label="Estoque" unit=" vínculos" />
+            </MacroSection>
+          </SectionErrorBoundary>
 
           {/* ═══════════════════════════════════════════
               SETOR EXTERNO
               ═══════════════════════════════════════════ */}
-          <MacroSection
-            id="setor-externo"
-            title="Setor Externo"
-            subtitle="Câmbio, balança comercial, reservas e investimento direto"
-            icon={Globe}
-            seriesCount={5}
-            insights={<MacroInsightCard inputs={externoInsights} />}
-            ref={(el) => { sectionRefs.current["setor-externo"] = el; }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={ptaxCompra} title="PTAX Compra — USD/BRL" type="line" color="#F59E0B" label="PTAX Compra" unit=" R$" />
-              <MacroChart data={ptaxVenda} title="PTAX Venda — USD/BRL" type="line" color="#EF4444" label="PTAX Venda" unit=" R$" />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={balancaSaldo} title="Balança Comercial — Saldo Mensal" type="bar" color="#0B6C3E" label="Saldo" unit=" US$ mi" />
-              <MacroChart data={exportacoes} title="Exportações" type="area" color="#10B981" label="Exportações" unit=" US$ mi" />
-            </div>
-            <MacroChart data={importacoes} title="Importações" type="area" color="#8B5CF6" label="Importações" unit=" US$ mi" />
-          </MacroSection>
+          <SectionErrorBoundary sectionName="Setor Externo">
+            <MacroSection
+              id="setor-externo"
+              title="Setor Externo"
+              subtitle="Câmbio, balança comercial, reservas e investimento direto"
+              icon={Globe}
+              seriesCount={5}
+              insights={<MacroInsightCard inputs={externoInsights} />}
+              ref={(el) => { sectionRefs.current["setor-externo"] = el; }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={ptaxCompra} title="PTAX Compra — USD/BRL" type="line" color="#F59E0B" label="PTAX Compra" unit=" R$" />
+                <MacroChart data={ptaxVenda} title="PTAX Venda — USD/BRL" type="line" color="#EF4444" label="PTAX Venda" unit=" R$" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={balancaSaldo} title="Balança Comercial — Saldo Mensal" type="bar" color="#0B6C3E" label="Saldo" unit=" US$ mi" />
+                <MacroChart data={exportacoes} title="Exportações" type="area" color="#10B981" label="Exportações" unit=" US$ mi" />
+              </div>
+              <MacroChart data={importacoes} title="Importações" type="area" color="#8B5CF6" label="Importações" unit=" US$ mi" />
+            </MacroSection>
+          </SectionErrorBoundary>
 
           {/* ═══════════════════════════════════════════
               EXPECTATIVAS
               ═══════════════════════════════════════════ */}
-          <MacroSection
-            id="expectativas"
-            title="Expectativas"
-            subtitle="Focus BACEN — consenso de mercado para IPCA, Selic, PIB e câmbio"
-            icon={Target}
-            seriesCount={6}
-            insights={<MacroInsightCard inputs={expectativasInsights} />}
-            ref={(el) => { sectionRefs.current["expectativas"] = el; }}
-          >
-            <FocusConsensusPanel
-              entries={[
-                { label: "IPCA 2026", expected: kpiVal("990001") || 4.31, actual: kpiVal("13522") || 3.81, unit: "%", prevExpected: (focusIpca.length > 5 ? focusIpca[focusIpca.length - 6].value : undefined) },
-                { label: "Selic 2026", expected: kpiVal("990002") || 12.5, actual: kpiVal("432") || 14.75, unit: "%", prevExpected: (focusSelic.length > 5 ? focusSelic[focusSelic.length - 6].value : undefined) },
-                { label: "PIB 2026", expected: kpiVal("990003") || 1.85, actual: 0, unit: "%", prevExpected: (focusPib.length > 5 ? focusPib[focusPib.length - 6].value : undefined) },
-                { label: "Câmbio 2026", expected: kpiVal("990004") || 5.4, actual: kpiVal("1") || 5.17, unit: "", prevExpected: (focusCambio.length > 5 ? focusCambio[focusCambio.length - 6].value : undefined) },
-              ]}
-            />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={focusIpca} title="Focus — IPCA Esperado 2026" type="line" color="#10B981" label="IPCA 2026" unit="%" />
-              <MacroChart data={focusSelic} title="Focus — Selic Esperada 2026" type="line" color="#0B6C3E" label="Selic 2026" unit="% a.a." />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={focusPib} title="Focus — PIB Esperado 2026" type="line" color="#6366F1" label="PIB 2026" unit="%" />
-              <MacroChart data={focusCambio} title="Focus — Câmbio Esperado 2026" type="line" color="#F59E0B" label="Câmbio 2026" unit=" R$/US$" />
-            </div>
-          </MacroSection>
+          <SectionErrorBoundary sectionName="Expectativas">
+            <MacroSection
+              id="expectativas"
+              title="Expectativas"
+              subtitle="Focus BACEN — consenso de mercado para IPCA, Selic, PIB e câmbio"
+              icon={Target}
+              seriesCount={6}
+              insights={<MacroInsightCard inputs={expectativasInsights} />}
+              ref={(el) => { sectionRefs.current["expectativas"] = el; }}
+            >
+              <FocusConsensusPanel
+                entries={[
+                  { label: "IPCA 2026", expected: kpiVal("990001") || 4.31, actual: kpiVal("13522") || 3.81, unit: "%", prevExpected: (focusIpca.length > 5 ? focusIpca[focusIpca.length - 6].value : undefined) },
+                  { label: "Selic 2026", expected: kpiVal("990002") || 12.5, actual: kpiVal("432") || 14.75, unit: "%", prevExpected: (focusSelic.length > 5 ? focusSelic[focusSelic.length - 6].value : undefined) },
+                  { label: "PIB 2026", expected: kpiVal("990003") || 1.85, actual: 0, unit: "%", prevExpected: (focusPib.length > 5 ? focusPib[focusPib.length - 6].value : undefined) },
+                  { label: "Câmbio 2026", expected: kpiVal("990004") || 5.4, actual: kpiVal("1") || 5.17, unit: "", prevExpected: (focusCambio.length > 5 ? focusCambio[focusCambio.length - 6].value : undefined) },
+                ]}
+              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={focusIpca} title="Focus — IPCA Esperado 2026" type="line" color="#10B981" label="IPCA 2026" unit="%" />
+                <MacroChart data={focusSelic} title="Focus — Selic Esperada 2026" type="line" color="#0B6C3E" label="Selic 2026" unit="% a.a." />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={focusPib} title="Focus — PIB Esperado 2026" type="line" color="#6366F1" label="PIB 2026" unit="%" />
+                <MacroChart data={focusCambio} title="Focus — Câmbio Esperado 2026" type="line" color="#F59E0B" label="Câmbio 2026" unit=" R$/US$" />
+              </div>
+            </MacroSection>
+          </SectionErrorBoundary>
 
           {/* ═══════════════════════════════════════════
               ANALYTICS — Correlação, Fiscal, Insights
               ═══════════════════════════════════════════ */}
-          <MacroSection
-            id="analytics"
-            title="Analytics"
-            subtitle="Correlações, projeções fiscais e benchmarks vs metas"
-            icon={Brain}
-            ref={(el) => { sectionRefs.current["analytics"] = el; }}
-          >
-            <CorrelationPanel
-              series={[
-                { label: "Selic", data: selic },
-                { label: "IPCA", data: ipcaMensal },
-                { label: "Câmbio", data: ptaxCompra },
-                { label: "Desemprego", data: desocupacao },
-                { label: "Dívida/PIB", data: dividaPib },
-              ]}
-            />
+          <SectionErrorBoundary sectionName="Analytics">
+            <MacroSection
+              id="analytics"
+              title="Analytics"
+              subtitle="Correlações, projeções fiscais e benchmarks vs metas"
+              icon={Brain}
+              ref={(el) => { sectionRefs.current["analytics"] = el; }}
+            >
+              <CorrelationPanel
+                series={[
+                  { label: "Selic", data: selic },
+                  { label: "IPCA", data: ipcaMensal },
+                  { label: "Câmbio", data: ptaxCompra },
+                  { label: "Desemprego", data: desocupacao },
+                  { label: "Dívida/PIB", data: dividaPib },
+                ]}
+              />
 
-            <FiscalCalculator
-              currentDebtGdp={kpiVal("4503") || 57.06}
-              currentPrimary={kpiVal("5364") || 1.57}
-            />
+              <FiscalCalculator
+                currentDebtGdp={kpiVal("4503") || 57.06}
+                currentPrimary={kpiVal("5364") || 1.57}
+              />
 
-            {/* Benchmarks vs Metas */}
-            <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
-              <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">
-                Benchmarks vs Metas Oficiais
-              </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                {[
-                  { label: "IPCA 12m", actual: kpiVal("13522") || 3.81, target: 3.0, band: 1.5, unit: "%" },
-                  { label: "Resultado Primário", actual: kpiVal("5364") || 1.57, target: 0.5, band: 0.25, unit: "% PIB" },
-                  { label: "Dívida/PIB", actual: kpiVal("4503") || 57.06, target: 60.0, band: 5, unit: "%" },
-                  { label: "Desocupação", actual: kpiVal("24369") || 5.8, target: 7.0, band: 1, unit: "%" },
-                ].map((b) => {
-                  const inBand = Math.abs(b.actual - b.target) <= b.band;
-                  const above = b.actual > b.target + b.band;
-                  return (
-                    <div key={b.label} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-md p-3">
-                      <span className="text-[9px] text-zinc-600 font-mono block mb-1">{b.label}</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className={`text-lg font-bold font-mono ${inBand ? "text-emerald-400" : above ? "text-red-400" : "text-amber-400"}`}>
-                          {b.actual.toFixed(1)}
-                        </span>
-                        <span className="text-[10px] text-zinc-600 font-mono">
-                          meta: {b.target}{b.unit}
-                        </span>
+              {/* Benchmarks vs Metas */}
+              <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">
+                  Benchmarks vs Metas Oficiais
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {[
+                    { label: "IPCA 12m", actual: kpiVal("13522") || 3.81, target: 3.0, band: 1.5, unit: "%" },
+                    { label: "Resultado Primário", actual: kpiVal("5364") || 1.57, target: 0.5, band: 0.25, unit: "% PIB" },
+                    { label: "Dívida/PIB", actual: kpiVal("4503") || 57.06, target: 60.0, band: 5, unit: "%" },
+                    { label: "Desocupação", actual: kpiVal("24369") || 5.8, target: 7.0, band: 1, unit: "%" },
+                  ].map((b) => {
+                    const inBand = Math.abs(b.actual - b.target) <= b.band;
+                    const above = b.actual > b.target + b.band;
+                    return (
+                      <div key={b.label} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-md p-3">
+                        <span className="text-[9px] text-zinc-600 font-mono block mb-1">{b.label}</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className={`text-lg font-bold font-mono ${inBand ? "text-emerald-400" : above ? "text-red-400" : "text-amber-400"}`}>
+                            {b.actual.toFixed(1)}
+                          </span>
+                          <span className="text-[10px] text-zinc-600 font-mono">
+                            meta: {b.target}{b.unit}
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 mt-2">
+                          <div
+                            className={`h-1.5 rounded-full ${inBand ? "bg-emerald-500" : above ? "bg-red-500" : "bg-amber-500"}`}
+                            style={{ width: `${Math.min(100, (b.actual / (b.target + b.band * 2)) * 100)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 mt-2">
-                        <div
-                          className={`h-1.5 rounded-full ${inBand ? "bg-emerald-500" : above ? "bg-red-500" : "bg-amber-500"}`}
-                          style={{ width: `${Math.min(100, (b.actual / (b.target + b.band * 2)) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Fiscal charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={dividaPib} title="Dívida Líquida / PIB" type="area" color="#EF4444" label="Dívida/PIB" unit="%" />
-              <MacroChart data={dividaBruta} title="Dívida Bruta / PIB" type="area" color="#F59E0B" label="Dívida Bruta" unit="%" />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart data={primario} title="Resultado Primário 12m" type="bar" color="#10B981" label="Primário" unit="% PIB" />
-              <MacroChart data={nfsp} title="Necessidade Financ. Governo" type="bar" color="#8B5CF6" label="NFSP" unit="% PIB" />
-            </div>
-          </MacroSection>
+              {/* Fiscal charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={dividaPib} title="Dívida Líquida / PIB" type="area" color="#EF4444" label="Dívida/PIB" unit="%" />
+                <MacroChart data={dividaBruta} title="Dívida Bruta / PIB" type="area" color="#F59E0B" label="Dívida Bruta" unit="%" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart data={primario} title="Resultado Primário 12m" type="bar" color="#10B981" label="Primário" unit="% PIB" />
+                <MacroChart data={nfsp} title="Necessidade Financ. Governo" type="bar" color="#8B5CF6" label="NFSP" unit="% PIB" />
+              </div>
+            </MacroSection>
+          </SectionErrorBoundary>
 
           {/* ─── Footer ─── */}
           <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
