@@ -16,6 +16,9 @@ import {
   formatPL, formatPct, shortCnpj,
 } from "@/hooks/useHubFundos";
 import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
+import { computeFundScore } from "@/lib/fundScore";
+import { FundScoreCard } from "@/components/hub/FundScoreCard";
+import { FundNarrativePanel } from "@/components/hub/FundNarrativePanel";
 import {
   CompositionSummary, CompositionDetailTable,
 } from "@/components/hub/FundCompositionPanel";
@@ -159,6 +162,16 @@ const FundDetailPanel = ({
           <div className="p-3">
             <FlowChart daily={data.daily} title="Fluxo Diário" height={180} />
           </div>
+        </div>
+      )}
+
+      {/* Muuney Fund Score™ */}
+      {data.daily.length > 5 && (
+        <div className="px-4 py-3 border-t border-[#1a1a1a]">
+          <FundScoreCard
+            score={computeFundScore(m, data.daily)}
+            fundName={m.denom_social || shortCnpj(m.cnpj_fundo)}
+          />
         </div>
       )}
 
@@ -864,6 +877,12 @@ const HubFundos = () => {
             >
               {sectionVisible("analytics") ? (
                 <div className="space-y-4">
+                  {/* Fund Market Intelligence */}
+                  <FundNarrativePanel
+                    totalFunds={stats?.total_funds}
+                    totalPL={stats ? Object.values(stats.by_classe).reduce((a, c) => a + c.pl_total, 0) : undefined}
+                  />
+
                   {/* Benchmarks */}
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
                     <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
