@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react";
 import { getMainSiteUrl } from "@/lib/domain";
+import symbolGreen from "@/assets/symbol-green.png";
 
 /* ─── Sidebar context for layout offset ─── */
 interface SidebarContextType {
@@ -115,16 +116,12 @@ const SidebarContent = ({
         <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           {!collapsed ? (
             <>
-              <div className="w-6 h-6 rounded bg-[#0B6C3E] flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">M</span>
-              </div>
+              <img src={symbolGreen} alt="muuney" className="w-6 h-6 rounded object-cover" />
               <span className="text-sm font-semibold text-zinc-200 tracking-tight">muuney.hub</span>
               <span className="text-[8px] bg-[#0B6C3E]/20 text-[#0B6C3E] px-1 py-0.5 rounded font-mono">BETA</span>
             </>
           ) : (
-            <div className="w-7 h-7 rounded bg-[#0B6C3E] flex items-center justify-center mx-auto">
-              <span className="text-white text-xs font-bold">M</span>
-            </div>
+            <img src={symbolGreen} alt="muuney" className="w-7 h-7 rounded object-cover mx-auto" />
           )}
         </a>
         {onClose && (
