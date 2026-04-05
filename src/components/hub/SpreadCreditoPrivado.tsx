@@ -3,11 +3,12 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar,
 } from "recharts";
-import { ShieldAlert, TrendingUp, AlertTriangle, Landmark } from "lucide-react";
+import { ShieldAlert, TrendingUp, AlertTriangle, Landmark, Download, Minus } from "lucide-react";
 import type { SeriesDataPoint } from "@/hooks/useHubData";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SPREAD CRÉDITO PRIVADO — Debêntures vs DI · Análise de Risco
+   SPREAD CRÉDITO PRIVADO v2
+   Debêntures vs DI · Regime Detection · Cross-Signals · CSV Export
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface SpreadCreditoPrivadoProps {
@@ -18,14 +19,59 @@ interface SpreadCreditoPrivadoProps {
   spreadAASeries?: SeriesDataPoint[];
   spreadASeries?: SeriesDataPoint[];
   emissoesSeries?: SeriesDataPoint[];
+  selic?: number;
+}
+
+/* ─── Regime Detection ─── */
+interface CreditPrivateRegime {
+  name: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+}
+
+function detectPrivateRegime(spreadAA: number, spreadA: number, emissoes: number, selic: number): CreditPrivateRegime {
+  const diff = spreadA - spreadAA;
+  if (diff > 1.5 && spreadA > 3.5) return { name: "Stress", color: "text-red-400", bgColor: "bg-red-500/10", borderColor: "border-red-500/20" };
+  if (spreadAA < 0.8 && selic > 12) return { name: "Complacência", color: "text-amber-400", bgColor: "bg-amber-500/10", borderColor: "border-amber-500/20" };
+  if (emissoes > 35 && spreadAA < 1.5) return { name: "Expansão", color: "text-emerald-400", bgColor: "bg-emerald-500/10", borderColor: "border-emerald-500/20" };
+  if (emissoes < 15) return { name: "Retração", color: "text-orange-400", bgColor: "bg-orange-500/10", borderColor: "border-orange-500/20" };
+  return { name: "Neutro", color: "text-zinc-400", bgColor: "bg-zinc-500/10", borderColor: "border-zinc-500/20" };
+}
+
+/* ─── Cross-Signals ─── */
+interface Signal { label: string; message: string; severity: "alert" | "watch" | "positive" }
+
+function generateSignals(spreadAA: number, spreadA: number, emissoes: number, selic: number): Signal[] {
+  const signals: Signal[] = [];
+  const diff = spreadA - spreadAA;
+
+  if (spreadAA < 1.0 && selic > 12) {
+    signals.push({ label: "Subprecificação", message: `Spread AA (${spreadAA.toFixed(2)} p.p.) muito comprimido para Selic de ${selic.toFixed(2)}% — risco de repricing.`, severity: "alert" });
+  }
+  if (diff > 1.2) {
+    signals.push({ label: "Diferencial AA→A Alto", message: `Gap de ${diff.toFixed(2)} p.p. entre ratings — mercado discriminando qualidade de crédito.`, severity: "watch" });
+  } else if (diff < 0.5) {
+    signals.push({ label: "Diferencial Comprimido", message: `Gap AA→A de apenas ${diff.toFixed(2)} p.p. — risco de homogeneização de ratings.`, severity: "watch" });
+  }
+  if (emissoes > 30) {
+    signals.push({ label: "Mercado Primário Aquecido", message: `Emissões de R$ ${emissoes.toFixed(1)} bi/mês — absorção forte pelo mercado.`, severity: "positive" });
+  } else if (emissoes < 15) {
+    signals.push({ label: "Emissões Retraindo", message: `Volume de apenas R$ ${emissoes.toFixed(1)} bi — janela desfavorável ou aversão de emissores.`, severity: "alert" });
+  }
+  if (spreadAA > 2.0) {
+    signals.push({ label: "Spreads Elevados", message: `AA em ${spreadAA.toFixed(2)} p.p. — acima do p90 histórico. Oportunidade para compra com prêmio.`, severity: "watch" });
+  }
+
+  return signals;
 }
 
 /* ─── Risk Assessment ─── */
 function assessRisk(spreadAA: number, spreadA: number): { level: string; color: string; bgColor: string; message: string } {
   const diff = spreadA - spreadAA;
-  if (diff > 1.5 || spreadA > 3.5) return { level: "ELEVADO", color: "text-red-400", bgColor: "bg-red-500/10 border-red-500/20", message: "Spreads elevados indicam aversão a risco no mercado de crédito privado. Janela pode ser desfavorável para novas emissões." };
-  if (diff > 0.8 || spreadA > 2.5) return { level: "MODERADO", color: "text-amber-400", bgColor: "bg-amber-500/10 border-amber-500/20", message: "Spreads em patamar normal. Monitorar diferencial AA vs A para sinais de deterioração." };
-  return { level: "BAIXO", color: "text-emerald-400", bgColor: "bg-emerald-500/10 border-emerald-500/20", message: "Spreads comprimidos refletem apetite saudável por crédito privado. Janela favorável para emissores." };
+  if (diff > 1.5 || spreadA > 3.5) return { level: "ELEVADO", color: "text-red-400", bgColor: "bg-red-500/10 border-red-500/20", message: "Spreads elevados indicam aversão a risco no mercado de crédito privado." };
+  if (diff > 0.8 || spreadA > 2.5) return { level: "MODERADO", color: "text-amber-400", bgColor: "bg-amber-500/10 border-amber-500/20", message: "Spreads em patamar normal. Monitorar diferencial AA vs A." };
+  return { level: "BAIXO", color: "text-emerald-400", bgColor: "bg-emerald-500/10 border-emerald-500/20", message: "Spreads comprimidos refletem apetite saudável por crédito privado." };
 }
 
 /* ─── Tooltip ─── */
@@ -52,8 +98,17 @@ export function SpreadCreditoPrivado({
   spreadAASeries,
   spreadASeries,
   emissoesSeries,
+  selic = 14.25,
 }: SpreadCreditoPrivadoProps) {
   const risk = useMemo(() => assessRisk(spreadAA, spreadA), [spreadAA, spreadA]);
+  const regime = useMemo(() => detectPrivateRegime(spreadAA, spreadA, emissoes, selic), [spreadAA, spreadA, emissoes, selic]);
+  const signals = useMemo(() => generateSignals(spreadAA, spreadA, emissoes, selic), [spreadAA, spreadA, emissoes, selic]);
+
+  const severityStyles: Record<string, { bg: string; border: string; text: string }> = {
+    alert: { bg: "bg-red-500/5", border: "border-red-500/20", text: "text-red-400" },
+    watch: { bg: "bg-amber-500/5", border: "border-amber-500/20", text: "text-amber-400" },
+    positive: { bg: "bg-emerald-500/5", border: "border-emerald-500/20", text: "text-emerald-400" },
+  };
 
   /* Merge spread series for chart */
   const spreadChartData = useMemo(() => {
@@ -79,32 +134,58 @@ export function SpreadCreditoPrivado({
     }));
   }, [emissoesSeries]);
 
+  /* CSV export */
+  const exportCSV = () => {
+    const header = "Data,Spread AA,Spread A,Diferencial\n";
+    const rows = spreadChartData.map((d) => `${d.date},${d.AA.toFixed(2)},${d.A.toFixed(2)},${d.diff.toFixed(2)}`).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "spread_credito_privado.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-2">
-        <Landmark className="w-4 h-4 text-[#6366F1]" />
-        <span className="text-sm font-bold text-zinc-100">Crédito Privado — Spreads & Emissões</span>
+      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Landmark className="w-4 h-4 text-[#6366F1]" />
+          <span className="text-sm font-bold text-zinc-100">Crédito Privado — Spreads & Emissões</span>
+          <span className="text-[9px] font-mono text-zinc-600">v2</span>
+        </div>
+        <button
+          onClick={exportCSV}
+          className="flex items-center gap-1 text-[9px] font-mono text-zinc-600 hover:text-[#10B981] transition-colors"
+        >
+          <Download className="w-3 h-3" /> CSV
+        </button>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* KPI Cards + Regime */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
-            <div className="text-[8px] text-zinc-600 font-mono">Spread AA (s/ DI)</div>
+            <div className="text-[8px] text-zinc-600 font-mono">Spread AA</div>
             <div className="text-[14px] font-bold font-mono text-emerald-400">{spreadAA.toFixed(2)} p.p.</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
-            <div className="text-[8px] text-zinc-600 font-mono">Spread A (s/ DI)</div>
+            <div className="text-[8px] text-zinc-600 font-mono">Spread A</div>
             <div className="text-[14px] font-bold font-mono text-amber-400">{spreadA.toFixed(2)} p.p.</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
-            <div className="text-[8px] text-zinc-600 font-mono">Emissões Debêntures</div>
+            <div className="text-[8px] text-zinc-600 font-mono">Emissões Deb.</div>
             <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {emissoes.toFixed(1)} bi</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
-            <div className="text-[8px] text-zinc-600 font-mono">Estoque CRA + CRI</div>
+            <div className="text-[8px] text-zinc-600 font-mono">CRA + CRI</div>
             <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {estoqueCRACRI.toFixed(1)} bi</div>
+          </div>
+          <div className={`rounded p-2.5 border ${regime.bgColor} ${regime.borderColor}`}>
+            <div className="text-[8px] text-zinc-600 font-mono">Regime</div>
+            <div className={`text-[14px] font-bold font-mono ${regime.color}`}>{regime.name}</div>
           </div>
         </div>
 
@@ -115,7 +196,7 @@ export function SpreadCreditoPrivado({
              risk.level === "MODERADO" ? <ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> :
              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
             <span className={`text-[10px] font-mono font-bold ${risk.color}`}>
-              Risco de Crédito Privado: {risk.level}
+              Risco: {risk.level}
             </span>
             <span className="text-[9px] font-mono text-zinc-600 ml-auto">
               Δ AA→A: {(spreadA - spreadAA).toFixed(2)} p.p.
@@ -123,6 +204,26 @@ export function SpreadCreditoPrivado({
           </div>
           <p className="text-[9px] text-zinc-500 leading-relaxed">{risk.message}</p>
         </div>
+
+        {/* Cross-Signals */}
+        {signals.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {signals.map((signal) => {
+              const style = severityStyles[signal.severity];
+              return (
+                <div key={signal.label} className={`rounded border p-3 ${style.bg} ${style.border}`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    {signal.severity === "alert" && <AlertTriangle className="w-3 h-3 text-red-400" />}
+                    {signal.severity === "watch" && <Minus className="w-3 h-3 text-amber-400" />}
+                    {signal.severity === "positive" && <TrendingUp className="w-3 h-3 text-emerald-400" />}
+                    <span className={`text-[10px] font-mono font-bold ${style.text}`}>{signal.label}</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-500">{signal.message}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Spread Chart */}
         {spreadChartData.length > 0 && (
@@ -166,19 +267,6 @@ export function SpreadCreditoPrivado({
             </ResponsiveContainer>
           </div>
         )}
-
-        {/* Insights */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {[
-            { title: "Compressão de Spreads", text: "Spreads AA abaixo de 1.5 p.p. historicamente indicam excesso de demanda por crédito privado — atenção ao risco de repricing.", color: "border-emerald-500/20 bg-emerald-500/5", textColor: "text-emerald-400" },
-            { title: "Pipeline de Emissões", text: "Volume de emissões de debêntures acima de R$ 25 bi/mês sinaliza mercado primário aquecido — monitorar absorção.", color: "border-blue-500/20 bg-blue-500/5", textColor: "text-blue-400" },
-          ].map((insight) => (
-            <div key={insight.title} className={`rounded border p-2.5 ${insight.color}`}>
-              <div className={`text-[9px] font-mono font-bold ${insight.textColor}`}>{insight.title}</div>
-              <div className="text-[8px] text-zinc-600 mt-1">{insight.text}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

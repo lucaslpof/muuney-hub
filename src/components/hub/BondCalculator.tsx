@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Calculator, TrendingUp, TrendingDown, Clock, BarChart3 } from "lucide-react";
+import { Calculator, TrendingUp, TrendingDown, Clock, BarChart3, GitCompare } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CALCULADORA DE RENDA FIXA — Preço/Taxa · Duration · Marcação a Mercado
+   CALCULADORA DE RENDA FIXA v2
+   Preço/Taxa · Duration · Convexidade · Cenários · Heatmap · MaM
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type TipoTitulo = "prefixado" | "ipca" | "selic";
@@ -31,21 +32,24 @@ function calcPrice(faceValue: number, rate: number, periods: number, couponRate:
   return price;
 }
 
-function calcDuration(faceValue: number, rate: number, periods: number, couponRate: number): { macaulay: number; modified: number } {
+function calcDurationConvexity(faceValue: number, rate: number, periods: number, couponRate: number) {
   const r = rate / 100;
   const c = couponRate / 100;
   const coupon = faceValue * c;
   let price = 0;
   let weightedSum = 0;
+  let convexitySum = 0;
   for (let t = 1; t <= periods; t++) {
     const cf = t === periods ? coupon + faceValue : coupon;
     const pv = cf / Math.pow(1 + r, t);
     price += pv;
     weightedSum += t * pv;
+    convexitySum += t * (t + 1) * pv;
   }
   const macaulay = weightedSum / price;
   const modified = macaulay / (1 + r);
-  return { macaulay, modified };
+  const convexity = convexitySum / (price * Math.pow(1 + r, 2));
+  return { macaulay, modified, convexity, price };
 }
 
 function buildCashFlows(faceValue: number, rate: number, periods: number, couponRate: number): CashFlow[] {
@@ -87,6 +91,13 @@ const PRESETS: Record<TipoTitulo, { label: string; couponRate: number; defaultRa
   selic: { label: "Tesouro Selic (LFT)", couponRate: 0, defaultRate: 0.10, faceValue: 1000, defaultPeriods: 6 },
 };
 
+/* ─── Scenario comparison presets ─── */
+const SCENARIOS = [
+  { label: "Curto", tipo: "prefixado" as TipoTitulo, periods: 2, rate: 14.50 },
+  { label: "Médio", tipo: "ipca" as TipoTitulo, periods: 6, rate: 7.25 },
+  { label: "Longo", tipo: "ipca" as TipoTitulo, periods: 20, rate: 6.85 },
+];
+
 /* ─── Tooltip ─── */
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -103,21 +114,16 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 /* ═══ MAIN COMPONENT ═══ */
-export function BondCalculator({
-  currentSelic = 14.25,
-}: {
-  currentSelic?: number;
-}) {
+export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number }) {
   const [tipo, setTipo] = useState<TipoTitulo>("prefixado");
   const [rate, setRate] = useState(PRESETS.prefixado.defaultRate);
   const [periods, setPeriods] = useState(PRESETS.prefixado.defaultPeriods);
   const [purchaseRate, setPurchaseRate] = useState(PRESETS.prefixado.defaultRate);
   const [currentRate, setCurrentRate] = useState(PRESETS.prefixado.defaultRate - 0.5);
-  const [activeView, setActiveView] = useState<"calculator" | "mam">("calculator");
+  const [activeView, setActiveView] = useState<"calculator" | "scenarios" | "mam">("calculator");
 
   const preset = PRESETS[tipo];
 
-  // When tipo changes, reset rates
   const handleTipoChange = (t: TipoTitulo) => {
     setTipo(t);
     setRate(PRESETS[t].defaultRate);
@@ -127,32 +133,63 @@ export function BondCalculator({
   };
 
   /* ─── Calculations ─── */
-  const price = useMemo(() => calcPrice(preset.faceValue, rate, periods, preset.couponRate), [rate, periods, preset]);
-  const { macaulay, modified } = useMemo(() => calcDuration(preset.faceValue, rate, periods, preset.couponRate), [rate, periods, preset]);
+  const { macaulay, modified, convexity, price } = useMemo(
+    () => calcDurationConvexity(preset.faceValue, rate, periods, preset.couponRate),
+    [rate, periods, preset]
+  );
   const cashFlows = useMemo(() => buildCashFlows(preset.faceValue, rate, periods, preset.couponRate), [rate, periods, preset]);
   const mam = useMemo(() => calcMaM(preset.faceValue, purchaseRate, currentRate, periods, preset.couponRate), [purchaseRate, currentRate, periods, preset]);
 
-  /* Sensitivity table: price at different rates */
-  const sensitivity = useMemo(() => {
-    const steps = [-2, -1, -0.5, 0, 0.5, 1, 2];
-    return steps.map((delta) => {
-      const r = rate + delta;
-      const p = calcPrice(preset.faceValue, r, periods, preset.couponRate);
-      const chg = ((p - price) / price) * 100;
-      return { rate: r, price: p, change: chg, delta };
-    });
+  /* Sensitivity heatmap: 5 rates × 6 terms */
+  const heatmap = useMemo(() => {
+    const rateDeltas = [-2, -1, 0, 1, 2];
+    const termDeltas = [-4, -2, 0, 2, 4, 8];
+    return rateDeltas.map((rd) => ({
+      rateLabel: `${(rate + rd).toFixed(1)}%`,
+      cells: termDeltas.map((td) => {
+        const p = Math.max(1, periods + td);
+        const px = calcPrice(preset.faceValue, rate + rd, p, preset.couponRate);
+        const chg = ((px - price) / price) * 100;
+        return { periods: p, price: px, change: chg };
+      }),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rate, periods, preset, price]);
+
+  const termHeaders = [-4, -2, 0, 2, 4, 8].map((td) => Math.max(1, periods + td));
+
+  /* Scenario comparison */
+  const scenarioResults = useMemo(
+    () =>
+      SCENARIOS.map((sc) => {
+        const p = PRESETS[sc.tipo];
+        const res = calcDurationConvexity(p.faceValue, sc.rate, sc.periods, p.couponRate);
+        return { ...sc, ...res };
+      }),
+    []
+  );
+
+  /* ─── Heatmap color ─── */
+  function heatColor(change: number): string {
+    if (change > 5) return "bg-emerald-500/20 text-emerald-400";
+    if (change > 2) return "bg-emerald-500/10 text-emerald-400";
+    if (change > 0) return "bg-emerald-500/5 text-emerald-400";
+    if (change > -2) return "bg-red-500/5 text-red-400";
+    if (change > -5) return "bg-red-500/10 text-red-400";
+    return "bg-red-500/20 text-red-400";
+  }
 
   return (
     <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Calculator className="w-4 h-4 text-[#10B981]" />
           <span className="text-sm font-bold text-zinc-100">Calculadora de Renda Fixa</span>
+          <span className="text-[9px] font-mono text-zinc-600">v2</span>
         </div>
         <div className="flex gap-1">
-          {(["calculator", "mam"] as const).map((v) => (
+          {(["calculator", "scenarios", "mam"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setActiveView(v)}
@@ -160,7 +197,7 @@ export function BondCalculator({
                 activeView === v ? "bg-[#10B981]/15 text-[#10B981]" : "text-zinc-600 hover:text-zinc-300"
               }`}
             >
-              {v === "calculator" ? "Preço / Duration" : "Marcação a Mercado"}
+              {v === "calculator" ? "Preço / Duration" : v === "scenarios" ? "Comparador" : "Marcação a Mercado"}
             </button>
           ))}
         </div>
@@ -168,52 +205,40 @@ export function BondCalculator({
 
       <div className="p-4 space-y-4">
         {/* Tipo selector */}
-        <div className="flex gap-1">
-          {(Object.entries(PRESETS) as [TipoTitulo, typeof PRESETS.prefixado][]).map(([key, p]) => (
-            <button
-              key={key}
-              onClick={() => handleTipoChange(key)}
-              className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
-                tipo === key
-                  ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
-                  : "bg-[#111] text-zinc-500 border border-[#1a1a1a] hover:text-zinc-300"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {activeView !== "scenarios" && (
+          <div className="flex gap-1">
+            {(Object.entries(PRESETS) as [TipoTitulo, typeof PRESETS.prefixado][]).map(([key, p]) => (
+              <button
+                key={key}
+                onClick={() => handleTipoChange(key)}
+                className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
+                  tipo === key
+                    ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
+                    : "bg-[#111] text-zinc-500 border border-[#1a1a1a] hover:text-zinc-300"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
 
+        {/* ─── CALCULATOR VIEW ─── */}
         {activeView === "calculator" && (
           <>
-            {/* Inputs */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[9px] text-zinc-600 font-mono mb-1">
                   Taxa ({tipo === "ipca" ? "real" : "nominal"}) % a.a.
                 </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={tipo === "selic" ? 3 : 25}
-                  step={0.01}
-                  value={rate}
-                  onChange={(e) => setRate(Number(e.target.value))}
-                  className="w-full accent-[#10B981]"
-                />
+                <input type="range" min={0} max={tipo === "selic" ? 3 : 25} step={0.01} value={rate}
+                  onChange={(e) => setRate(Number(e.target.value))} className="w-full accent-[#10B981]" />
                 <span className="text-[11px] font-mono text-zinc-100 font-bold">{rate.toFixed(2)}%</span>
               </div>
               <div>
                 <label className="block text-[9px] text-zinc-600 font-mono mb-1">Semestres até o vencimento</label>
-                <input
-                  type="range"
-                  min={1}
-                  max={30}
-                  step={1}
-                  value={periods}
-                  onChange={(e) => setPeriods(Number(e.target.value))}
-                  className="w-full accent-[#10B981]"
-                />
+                <input type="range" min={1} max={30} step={1} value={periods}
+                  onChange={(e) => setPeriods(Number(e.target.value))} className="w-full accent-[#10B981]" />
                 <span className="text-[11px] font-mono text-zinc-100 font-bold">{periods} sem. ({(periods / 2).toFixed(1)} anos)</span>
               </div>
               <div>
@@ -222,13 +247,15 @@ export function BondCalculator({
               </div>
             </div>
 
-            {/* Results */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* Results — 6 KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
                 { label: "Preço Unitário", value: `R$ ${price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: "text-emerald-400" },
                 { label: "Duration Macaulay", value: `${macaulay.toFixed(2)} sem.`, sub: `${(macaulay / 2).toFixed(1)} anos`, color: "text-zinc-100" },
                 { label: "Duration Modificada", value: modified.toFixed(4), color: "text-zinc-100" },
+                { label: "Convexidade", value: convexity.toFixed(2), color: "text-indigo-400" },
                 { label: "Cupom Semestral", value: preset.couponRate > 0 ? `${preset.couponRate}%` : "Zero Cupom", color: "text-zinc-400" },
+                { label: "ΔP/Δy aprox.", value: `${(-(modified * 100) + 0.5 * convexity * 100).toFixed(2)} bps/1%`, color: "text-amber-400" },
               ].map((r) => (
                 <div key={r.label} className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
                   <div className="text-[8px] text-zinc-600 font-mono">{r.label}</div>
@@ -255,76 +282,103 @@ export function BondCalculator({
               </ResponsiveContainer>
             </div>
 
-            {/* Sensitivity Table */}
+            {/* Sensitivity Heatmap (rate × term) */}
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-3 h-3 text-[#6366F1]" />
-                <span className="text-[10px] font-bold text-zinc-300 font-mono">Sensibilidade ao Risco de Taxa</span>
+                <span className="text-[10px] font-bold text-zinc-300 font-mono">Heatmap de Sensibilidade (Taxa × Prazo)</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[#141414]">
-                      {["Δ Taxa", "Taxa", "Preço", "Var. %"].map((h) => (
-                        <th key={h} className="px-2 py-1.5 text-[8px] font-mono text-zinc-600 text-right">{h}</th>
+                      <th className="px-2 py-1.5 text-[8px] font-mono text-zinc-600 text-left">Taxa ↓ / Sem →</th>
+                      {termHeaders.map((t) => (
+                        <th key={t} className="px-2 py-1.5 text-[8px] font-mono text-zinc-600 text-center">{t} sem</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {sensitivity.map((s) => (
-                      <tr key={s.delta} className={`border-b border-[#111] ${s.delta === 0 ? "bg-[#10B981]/5" : ""}`}>
-                        <td className="px-2 py-1 text-[9px] font-mono text-zinc-500 text-right">
-                          {s.delta > 0 ? "+" : ""}{s.delta.toFixed(1)} p.p.
-                        </td>
-                        <td className="px-2 py-1 text-[9px] font-mono text-zinc-300 text-right">{s.rate.toFixed(2)}%</td>
-                        <td className="px-2 py-1 text-[9px] font-mono text-zinc-100 text-right font-bold">
-                          R$ {s.price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className={`px-2 py-1 text-[9px] font-mono text-right font-bold ${s.change > 0 ? "text-emerald-400" : s.change < 0 ? "text-red-400" : "text-zinc-400"}`}>
-                          {s.change > 0 ? "+" : ""}{s.change.toFixed(2)}%
-                        </td>
+                    {heatmap.map((row) => (
+                      <tr key={row.rateLabel} className="border-b border-[#111]">
+                        <td className="px-2 py-1 text-[9px] font-mono text-zinc-400">{row.rateLabel}</td>
+                        {row.cells.map((cell, ci) => (
+                          <td key={ci} className={`px-2 py-1 text-[9px] font-mono text-center font-bold ${heatColor(cell.change)}`}>
+                            {cell.change >= 0 ? "+" : ""}{cell.change.toFixed(1)}%
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <div className="text-[8px] text-zinc-700 font-mono mt-1">Variação % do preço vs cenário base ({rate.toFixed(1)}% / {periods} sem)</div>
             </div>
           </>
         )}
 
+        {/* ─── SCENARIOS VIEW ─── */}
+        {activeView === "scenarios" && (
+          <>
+            <div className="flex items-center gap-2 mb-2">
+              <GitCompare className="w-3.5 h-3.5 text-[#10B981]" />
+              <span className="text-[10px] font-bold text-zinc-300 font-mono">Comparador de Títulos — 3 perfis</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {scenarioResults.map((sc, idx) => {
+                const colors = ["text-emerald-400", "text-indigo-400", "text-amber-400"];
+                const bgColors = ["bg-emerald-500/5", "bg-indigo-500/5", "bg-amber-500/5"];
+                return (
+                  <div key={sc.label} className={`rounded-lg border border-[#1a1a1a] p-3 ${bgColors[idx]}`}>
+                    <div className={`text-[11px] font-mono font-bold ${colors[idx]} mb-2`}>{sc.label}</div>
+                    <div className="text-[9px] text-zinc-500 font-mono mb-2">
+                      {PRESETS[sc.tipo].label} · {sc.rate}% · {sc.periods} sem ({(sc.periods / 2).toFixed(1)}a)
+                    </div>
+                    <div className="space-y-1.5">
+                      {[
+                        { label: "Preço", value: `R$ ${sc.price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+                        { label: "Duration", value: `${sc.macaulay.toFixed(2)} sem (${(sc.macaulay / 2).toFixed(1)}a)` },
+                        { label: "Mod. Duration", value: sc.modified.toFixed(4) },
+                        { label: "Convexidade", value: sc.convexity.toFixed(2) },
+                        { label: "Sensib. +1%", value: `${((-sc.modified + 0.5 * sc.convexity) * 1).toFixed(2)}%` },
+                      ].map((r) => (
+                        <div key={r.label} className="flex justify-between">
+                          <span className="text-[8px] text-zinc-600 font-mono">{r.label}</span>
+                          <span className="text-[9px] text-zinc-200 font-mono font-bold">{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3 mt-2">
+              <span className="text-[9px] text-zinc-600 font-mono">
+                Títulos mais longos e com menor cupom têm maior duration e convexidade — mais sensíveis a variações de taxa.
+                Em cenário de corte de juros, o título longo ganha mais; em alta, perde mais.
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* ─── MAM VIEW ─── */}
         {activeView === "mam" && (
           <>
-            {/* MaM Inputs */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[9px] text-zinc-600 font-mono mb-1">Taxa de Compra (% a.a.)</label>
-                <input
-                  type="range"
-                  min={0}
-                  max={tipo === "selic" ? 3 : 25}
-                  step={0.01}
-                  value={purchaseRate}
-                  onChange={(e) => setPurchaseRate(Number(e.target.value))}
-                  className="w-full accent-[#F59E0B]"
-                />
+                <input type="range" min={0} max={tipo === "selic" ? 3 : 25} step={0.01} value={purchaseRate}
+                  onChange={(e) => setPurchaseRate(Number(e.target.value))} className="w-full accent-[#F59E0B]" />
                 <span className="text-[11px] font-mono text-amber-400 font-bold">{purchaseRate.toFixed(2)}%</span>
               </div>
               <div>
                 <label className="block text-[9px] text-zinc-600 font-mono mb-1">Taxa Atual de Mercado (% a.a.)</label>
-                <input
-                  type="range"
-                  min={0}
-                  max={tipo === "selic" ? 3 : 25}
-                  step={0.01}
-                  value={currentRate}
-                  onChange={(e) => setCurrentRate(Number(e.target.value))}
-                  className="w-full accent-[#10B981]"
-                />
+                <input type="range" min={0} max={tipo === "selic" ? 3 : 25} step={0.01} value={currentRate}
+                  onChange={(e) => setCurrentRate(Number(e.target.value))} className="w-full accent-[#10B981]" />
                 <span className="text-[11px] font-mono text-emerald-400 font-bold">{currentRate.toFixed(2)}%</span>
               </div>
             </div>
 
-            {/* MaM Results */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
                 <div className="text-[8px] text-zinc-600 font-mono">PU Compra</div>
@@ -353,17 +407,16 @@ export function BondCalculator({
               </div>
             </div>
 
-            {/* MaM explanation */}
             <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Clock className="w-3 h-3 text-zinc-500" />
                 <span className="text-[9px] font-mono font-bold text-zinc-400">Como funciona</span>
               </div>
               <p className="text-[9px] text-zinc-600 leading-relaxed">
-                A <strong className="text-zinc-400">marcação a mercado</strong> recalcula o preço do título pela taxa atual de negociação.
-                Se a taxa de mercado <strong className="text-emerald-400">caiu</strong> após sua compra, o preço do título <strong className="text-emerald-400">subiu</strong> (ganho).
+                A <strong className="text-zinc-400">marcação a mercado</strong> recalcula o preço do título pela taxa atual.
+                Se a taxa <strong className="text-emerald-400">caiu</strong>, o preço <strong className="text-emerald-400">subiu</strong> (ganho).
                 Se a taxa <strong className="text-red-400">subiu</strong>, o preço <strong className="text-red-400">caiu</strong> (perda temporária).
-                Quanto maior a <strong className="text-zinc-400">duration</strong>, maior a sensibilidade à variação de taxa.
+                A <strong className="text-indigo-400">convexidade</strong> faz com que ganhos sejam maiores que perdas para variações iguais de taxa.
               </p>
             </div>
           </>
