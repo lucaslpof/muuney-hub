@@ -59,28 +59,11 @@ interface ApiOverviewResponse {
 }
 
 interface ApiSeriesItem {
-  serie_code?: number | string;
-  serie_name?: string;
-  category?: string;
-  unit?: string;
   data?: SeriesDataPoint[];
 }
 
 interface ApiSeriesResponse {
-  module?: string;
-  period?: string;
-  start_date?: string;
   series?: ApiSeriesItem[];
-}
-
-/* ─── Multi-series map: all series keyed by serie_code ─── */
-export interface SeriesBundle {
-  [serieCode: string]: {
-    name: string;
-    unit: string;
-    category: string;
-    data: SeriesDataPoint[];
-  };
 }
 
 interface IngestionModule {
@@ -145,23 +128,6 @@ function mapSeriesResponse(apiData: unknown): SeriesDataPoint[] {
   return series[0].data || [];
 }
 
-/* Map API "series" response → SeriesBundle (ALL series keyed by code) */
-function mapSeriesBundleResponse(apiData: unknown): SeriesBundle {
-  const response = apiData as ApiSeriesResponse;
-  const series = response?.series || [];
-  const bundle: SeriesBundle = {};
-  for (const s of series) {
-    const code = String(s.serie_code ?? "unknown");
-    bundle[code] = {
-      name: s.serie_name ?? code,
-      unit: s.unit ?? "",
-      category: s.category ?? "",
-      data: s.data ?? [],
-    };
-  }
-  return bundle;
-}
-
 export function useHubLatest(module: "macro" | "credito" = "macro") {
   return useQuery<LatestCard[]>({
     queryKey: ["hub", "latest", module],
@@ -188,32 +154,6 @@ export function useHubSeries(category: string, period: string = "1y", module: "m
     enabled: !!category,
     retry: 2,
   });
-}
-
-/**
- * Fetch ALL series in a category as a bundle keyed by serie_code.
- * Use this instead of useHubSeries when you need individual series from a category.
- * Example: useHubSeriesBundle("trabalho", "1y", "macro") → { "24369": {...}, "28544": {...}, ... }
- */
-export function useHubSeriesBundle(
-  category: string,
-  period: string = "1y",
-  module: "macro" | "credito" = "macro",
-  enabled: boolean = true,
-) {
-  return useQuery<SeriesBundle>({
-    queryKey: ["hub", "series-bundle", module, category, period],
-    queryFn: async () => mapSeriesBundleResponse(await fetchHub("series", { category, period, module })),
-    staleTime: 30 * 60 * 1000,
-    enabled: enabled && !!category,
-    retry: 2,
-  });
-}
-
-/** Helper: extract a single serie's data from a bundle, with empty fallback */
-export function pickSeries(bundle: SeriesBundle | undefined, code: string | number): SeriesDataPoint[] {
-  if (!bundle) return [];
-  return bundle[String(code)]?.data ?? [];
 }
 
 export function useHubIngestionStatus() {

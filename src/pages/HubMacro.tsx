@@ -17,7 +17,6 @@ import { YieldCurveSimulator } from "@/components/hub/YieldCurveSimulator";
 import { FiscalCalculator } from "@/components/hub/FiscalCalculator";
 import { CorrelationPanel } from "@/components/hub/CorrelationPanel";
 import { FocusConsensusPanel } from "@/components/hub/FocusConsensusPanel";
-import { MacroNarrativePanel } from "@/components/hub/MacroNarrativePanel";
 import {
   DollarSign, Globe, Users, Target, Brain,
   LayoutGrid, ChevronDown,
@@ -442,17 +441,6 @@ const HubMacro = () => {
               icon={Brain}
               ref={(el) => { sectionRefs.current["analytics"] = el; }}
             >
-              {/* Macro Intelligence — regime + cross-module signals */}
-              <MacroNarrativePanel
-                selic={kpiVal("432") || 14.25}
-                ipca12m={kpiVal("13522") || 3.81}
-                desocupacao={kpiVal("24369") || 5.8}
-                dividaPib={kpiVal("4503") || 57.06}
-                ptax={kpiVal("1") || 5.17}
-                focusIpca={kpiVal("990001") || undefined}
-                focusSelic={kpiVal("990002") || undefined}
-              />
-
               <CorrelationPanel
                 series={[
                   { label: "Selic", data: selic },
