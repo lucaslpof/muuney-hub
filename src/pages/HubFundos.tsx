@@ -13,12 +13,13 @@ import {
 import {
   useFundCatalog, useFundDetail, useFundRankings, useFundStats,
   useFundSearch, useGestoraRankings, useAdminRankings,
-  formatPL, formatPct, shortCnpj,
+  formatPL, formatPct, formatCnpj, fundDisplayName, primaryCnpj,
 } from "@/hooks/useHubFundos";
 import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
 import { computeFundScore } from "@/lib/fundScore";
 import { FundScoreCard } from "@/components/hub/FundScoreCard";
 import { FundNarrativePanel } from "@/components/hub/FundNarrativePanel";
+import { ClasseBadge, HierarquiaBadges, RcvmAdaptadoBadge, ModoAssessorToggle } from "@/lib/rcvm175";
 import {
   CompositionSummary, CompositionDetailTable,
 } from "@/components/hub/FundCompositionPanel";
@@ -55,9 +56,9 @@ const SECTIONS = [
 
 /* ─── Fund Detail Panel ─── */
 const FundDetailPanel = ({
-  cnpj, period, onClose,
+  cnpj, period, onClose, modoAssessor = false,
 }: {
-  cnpj: string; period: string; onClose: () => void;
+  cnpj: string; period: string; onClose: () => void; modoAssessor?: boolean;
 }) => {
   const { data, isLoading } = useFundDetail(cnpj, period);
 
@@ -82,16 +83,25 @@ const FundDetailPanel = ({
       exit={{ opacity: 0, y: -20 }}
       className="bg-[#111111] border border-[#0B6C3E]/20 rounded-lg overflow-hidden"
     >
-      {/* Header */}
+      {/* Header — Name-first with RCVM 175 hierarchy */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-[#1a1a1a]">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-zinc-100 truncate">
-            {m.denom_social || shortCnpj(m.cnpj_fundo)}
+            {fundDisplayName(m)}
           </h3>
-          <div className="flex items-center gap-3 mt-1 text-[9px] text-zinc-600 font-mono">
-            <span>{m.cnpj_fundo}</span>
-            {m.classe && <span className="px-1 py-0.5 bg-[#1a1a1a] rounded">{m.classe}</span>}
-            {m.classe_anbima && <span className="px-1 py-0.5 bg-[#1a1a1a] rounded">{m.classe_anbima}</span>}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <HierarquiaBadges
+              classe_rcvm175={m.classe_rcvm175 || m.classe || m.tp_fundo}
+              subclasse_rcvm175={m.subclasse_rcvm175}
+              publico_alvo={m.publico_alvo}
+              tributacao={m.tributacao}
+              size="sm"
+            />
+            <RcvmAdaptadoBadge hasCnpjClasse={!!m.cnpj_fundo_classe} />
+          </div>
+          <div className="flex items-center gap-3 mt-1 text-[8px] text-zinc-700 font-mono">
+            <span>{formatCnpj(primaryCnpj(m))}</span>
+            {m.gestor_nome && <span>Gestor: {m.gestor_nome}</span>}
           </div>
         </div>
         <button onClick={onClose} className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-600 hover:text-zinc-300">
@@ -99,7 +109,7 @@ const FundDetailPanel = ({
         </button>
       </div>
 
-      {/* Metrics rows */}
+      {/* Metrics rows — adapts to Modo Assessor */}
       {(() => {
         const fm = data.daily.length > 5 ? computeFundMetrics(data.daily) : null;
         const sl = fm ? sharpeLabel(fm.sharpe) : null;
@@ -121,11 +131,12 @@ const FundDetailPanel = ({
                 <div className="text-sm font-bold text-zinc-300 font-mono">{m.taxa_adm != null ? `${m.taxa_adm.toFixed(2)}%` : "—"}</div>
               </div>
               <div>
-                <div className="text-[9px] text-zinc-600 uppercase font-mono">Gestor</div>
-                <div className="text-[11px] text-zinc-400 truncate">{m.gestor_nome || "—"}</div>
+                <div className="text-[9px] text-zinc-600 uppercase font-mono">Cotistas</div>
+                <div className="text-sm font-bold text-zinc-300 font-mono">{m.nr_cotistas != null ? m.nr_cotistas.toLocaleString("pt-BR") : "—"}</div>
               </div>
             </div>
-            {fm && (
+            {/* Assessor: full metrics row */}
+            {modoAssessor && fm && (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 px-4 py-2.5 border-b border-[#1a1a1a] bg-[#0d0d0d]">
                 <div>
                   <div className="text-[8px] text-zinc-700 uppercase font-mono">Vol (a.a.)</div>
@@ -146,6 +157,23 @@ const FundDetailPanel = ({
                 <div>
                   <div className="text-[8px] text-zinc-700 uppercase font-mono">Dias +</div>
                   <div className="text-[11px] font-bold text-zinc-300 font-mono">{fmtMetric(fm.positive_days_pct, 0)}%</div>
+                </div>
+              </div>
+            )}
+            {/* Investidor: simplified — just Fund Score badge inline */}
+            {!modoAssessor && fm && (
+              <div className="flex items-center gap-3 px-4 py-2 border-b border-[#1a1a1a] bg-[#0d0d0d]">
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Sharpe</div>
+                  <div className={`text-[11px] font-bold font-mono ${sl?.color || "text-zinc-300"}`}>{fmtMetric(fm.sharpe)}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Vol</div>
+                  <div className="text-[11px] font-bold text-zinc-300 font-mono">{fmtMetric(fm.volatility)}%</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-zinc-700 uppercase font-mono">Max DD</div>
+                  <div className={`text-[11px] font-bold font-mono ${metricColor(fm.max_drawdown, false)}`}>{fmtMetric(fm.max_drawdown)}%</div>
                 </div>
               </div>
             )}
@@ -170,38 +198,29 @@ const FundDetailPanel = ({
         <div className="px-4 py-3 border-t border-[#1a1a1a]">
           <FundScoreCard
             score={computeFundScore(m, data.daily)}
-            fundName={m.denom_social || shortCnpj(m.cnpj_fundo)}
+            fundName={fundDisplayName(m)}
           />
         </div>
       )}
 
-      {/* Meta details */}
+      {/* Meta details — extended for Assessor mode */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-3 border-t border-[#1a1a1a] text-[9px] font-mono text-zinc-600">
         <div><span className="text-zinc-700">Condomínio:</span> <span className="text-zinc-400">{m.condom || "—"}</span></div>
-        <div><span className="text-zinc-700">Fundo Cotas:</span> <span className="text-zinc-400">{m.fundo_cotas || "N"}</span></div>
-        <div><span className="text-zinc-700">Exclusivo:</span> <span className="text-zinc-400">{m.fundo_exclusivo || "N"}</span></div>
+        <div><span className="text-zinc-700">Aplicação mín:</span> <span className="text-zinc-400">{m.aplicacao_min != null ? formatPL(m.aplicacao_min) : "—"}</span></div>
+        <div><span className="text-zinc-700">Resgate:</span> <span className="text-zinc-400">{m.prazo_resgate || "—"}</span></div>
         <div><span className="text-zinc-700">Constituição:</span> <span className="text-zinc-400">{m.dt_const || "—"}</span></div>
       </div>
+      {modoAssessor && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4 py-2 border-t border-[#141414] text-[9px] font-mono text-zinc-600">
+          <div><span className="text-zinc-700">Fundo Cotas:</span> <span className="text-zinc-400">{m.fundo_cotas || "N"}</span></div>
+          <div><span className="text-zinc-700">Exclusivo:</span> <span className="text-zinc-400">{m.fundo_exclusivo || "N"}</span></div>
+          <div><span className="text-zinc-700">Tx Perfm:</span> <span className="text-zinc-400">{m.taxa_perfm != null ? `${m.taxa_perfm.toFixed(2)}%` : "—"}</span></div>
+          <div><span className="text-zinc-700">Benchmark:</span> <span className="text-zinc-400">{m.benchmark || m.rentab_fundo || "—"}</span></div>
+        </div>
+      )}
     </motion.div>
   );
 };
-
-/* ─── Class badge helper ─── */
-const CLASS_COLORS: Record<string, { bg: string; text: string }> = {
-  FIDC: { bg: "#F59E0B15", text: "#F59E0B" },
-  FII: { bg: "#8B5CF615", text: "#8B5CF6" },
-  FIP: { bg: "#EC489915", text: "#EC4899" },
-};
-function classBadge(classe: string | null | undefined) {
-  const key = classe?.toUpperCase().trim();
-  const c = key && CLASS_COLORS[key];
-  if (!c) return null;
-  return (
-    <span className="text-[7px] font-bold font-mono px-1 py-0.5 rounded" style={{ backgroundColor: c.bg, color: c.text }}>
-      {key}
-    </span>
-  );
-}
 
 /* ─── Comparador Section v2 (cross-class, up to 6 funds) ─── */
 const MAX_COMPARE = 6;
@@ -225,8 +244,8 @@ const ComparadorSection = ({ period }: { period: string }) => {
     fundDetails
       .filter((f) => f.data?.daily?.length)
       .map((f) => ({
-        cnpj: f.data!.meta?.cnpj_fundo || "",
-        name: f.data!.meta?.denom_social || shortCnpj(f.data!.meta?.cnpj_fundo || ""),
+        cnpj: primaryCnpj(f.data!.meta) || "",
+        name: fundDisplayName(f.data!.meta),
         daily: f.data!.daily,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,9 +271,9 @@ const ComparadorSection = ({ period }: { period: string }) => {
     };
 
     return loaded.map((f) => ({
-      cnpj: f.data!.meta!.cnpj_fundo,
-      name: f.data!.meta!.denom_social || shortCnpj(f.data!.meta!.cnpj_fundo),
-      classe: f.data!.meta!.classe || f.data!.meta!.tp_fundo,
+      cnpj: primaryCnpj(f.data!.meta!),
+      name: fundDisplayName(f.data!.meta!),
+      classe: f.data!.meta!.classe_rcvm175 || f.data!.meta!.classe || f.data!.meta!.tp_fundo,
       score: computeFundScore(f.data!.meta!, f.data!.daily, peerMetrics),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -300,8 +319,8 @@ const ComparadorSection = ({ period }: { period: string }) => {
               const fund = catalog?.funds.find((f) => f.cnpj_fundo === cnpj);
               return (
                 <span key={cnpj} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0B6C3E]/10 border border-[#0B6C3E]/20 rounded text-[9px] text-[#0B6C3E] font-mono">
-                  {classBadge(fund?.classe || fund?.tp_fundo)}
-                  {fund?.denom_social ? fund.denom_social.slice(0, 22) : shortCnpj(cnpj)}
+                  <ClasseBadge classe={fund?.classe_rcvm175 || fund?.classe || fund?.tp_fundo} />
+                  {fund?.denom_social ? fund.denom_social.slice(0, 22) : formatCnpj(cnpj).slice(0, 18)}
                   <button onClick={() => toggleFund(cnpj)} className="hover:text-white ml-0.5">
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -324,12 +343,12 @@ const ComparadorSection = ({ period }: { period: string }) => {
                 className="w-full text-left flex items-center justify-between px-2 py-1 rounded hover:bg-[#0B6C3E]/5 transition-colors disabled:opacity-30"
               >
                 <div className="min-w-0 flex items-center gap-1.5">
-                  {classBadge(f.classe || f.tp_fundo)}
+                  <ClasseBadge classe={f.classe_rcvm175 || f.classe || f.tp_fundo} />
                   <div>
                     <div className="text-[10px] text-zinc-300 font-mono truncate">
-                      {f.denom_social || shortCnpj(f.cnpj_fundo)}
+                      {f.denom_social || formatCnpj(f.cnpj_fundo)}
                     </div>
-                    <div className="text-[8px] text-zinc-700 font-mono">{shortCnpj(f.cnpj_fundo)}</div>
+                    <div className="text-[8px] text-zinc-700 font-mono">{f.gestor_nome || formatCnpj(f.cnpj_fundo_classe || f.cnpj_fundo)}</div>
                   </div>
                 </div>
                 <span className="text-[9px] text-zinc-600 font-mono flex-shrink-0 ml-2">
@@ -380,7 +399,7 @@ const ComparadorSection = ({ period }: { period: string }) => {
                       <div key={f.cnpj} className="flex items-center gap-2">
                         <div className="w-[140px] flex-shrink-0">
                           <div className="text-[9px] text-zinc-400 font-mono truncate flex items-center gap-1">
-                            {classBadge(f.classe)} {f.name.slice(0, 18)}
+                            <ClasseBadge classe={f.classe} /> {f.name.slice(0, 18)}
                           </div>
                         </div>
                         <div className="flex-1 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -452,7 +471,7 @@ const ComparadorSection = ({ period }: { period: string }) => {
         const metricsData = fundDetails
           .filter((f) => f.data?.daily?.length && f.data.daily.length > 5)
           .map((f) => ({
-            name: f.data!.meta?.denom_social || shortCnpj(f.data!.meta?.cnpj_fundo || ""),
+            name: fundDisplayName(f.data!.meta),
             metrics: computeFundMetrics(f.data!.daily),
           }));
         return metricsData.length >= 2 ? (
@@ -470,7 +489,7 @@ const ComparadorSection = ({ period }: { period: string }) => {
                 {fundDetails.map((f, i) => (
                   <th key={i} className="text-right px-3 py-2 max-w-[130px]">
                     <div className="flex items-center justify-end gap-1">
-                      {classBadge(f.data?.meta?.classe || f.data?.meta?.tp_fundo)}
+                      <ClasseBadge classe={f.data?.meta?.classe_rcvm175 || f.data?.meta?.classe || f.data?.meta?.tp_fundo} />
                       <span className="truncate">{f.data?.meta?.denom_social?.slice(0, 16) || "—"}</span>
                     </div>
                   </th>
@@ -580,13 +599,16 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
           {results?.results.map((f) => (
             <button
               key={f.cnpj_fundo}
-              onClick={() => { onSelectFund(f.cnpj_fundo); setOpen(false); setQuery(""); }}
+              onClick={() => { onSelectFund(f.cnpj_fundo_classe || f.cnpj_fundo); setOpen(false); setQuery(""); }}
               className="w-full text-left px-3 py-2 hover:bg-[#0B6C3E]/5 border-b border-[#141414] last:border-0 transition-colors"
             >
-              <div className="text-[10px] text-zinc-300 font-mono truncate">{f.denom_social}</div>
+              <div className="flex items-center gap-1.5">
+                <ClasseBadge classe={f.classe_rcvm175 || f.classe || f.tp_fundo} size="sm" />
+                <span className="text-[10px] text-zinc-300 font-mono truncate">{f.denom_social}</span>
+              </div>
               <div className="flex items-center gap-2 mt-0.5 text-[8px] text-zinc-600 font-mono">
-                <span>{shortCnpj(f.cnpj_fundo)}</span>
-                {f.classe && <span className="px-1 py-0.5 bg-[#1a1a1a] rounded">{f.classe}</span>}
+                <span>{formatCnpj(f.cnpj_fundo_classe || f.cnpj_fundo)}</span>
+                {f.gestor_nome && <span className="truncate max-w-[120px]">{f.gestor_nome}</span>}
                 <span className="ml-auto">{formatPL(f.vl_patrim_liq)}</span>
               </div>
             </button>
@@ -693,6 +715,7 @@ const HubFundos = () => {
   );
   const [activeSection, setActiveSection] = useState<string>(initialSection);
   const [selectedFund, setSelectedFund] = useState<string | null>(null);
+  const [modoAssessor, setModoAssessor] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   /* ─── Lazy-load: track which sections have been visible ─── */
@@ -775,23 +798,26 @@ const HubFundos = () => {
           <div>
             <h1 className="text-base font-bold text-zinc-100 tracking-tight">Módulo Fundos</h1>
             <p className="text-[9px] text-zinc-600 font-mono">
-              CVM &middot; {stats?.total_funds || "—"} fundos &middot; FIDC + FII + FIP &middot; Dados diários
+              CVM &middot; {stats?.total_funds ? `${(stats.total_funds / 1000).toFixed(1)}k+` : "—"} classes &middot; RCVM 175 &middot; Dados diários 6M
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all ${
-                  period === p
-                    ? "bg-[#0B6C3E]/15 text-[#0B6C3E] border border-[#0B6C3E]/30"
-                    : "text-zinc-600 hover:text-zinc-400 border border-transparent"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <ModoAssessorToggle isAssessor={modoAssessor} onToggle={() => setModoAssessor(!modoAssessor)} />
+            <div className="flex items-center gap-1">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all ${
+                    period === p
+                      ? "bg-[#0B6C3E]/15 text-[#0B6C3E] border border-[#0B6C3E]/30"
+                      : "text-zinc-600 hover:text-zinc-400 border border-transparent"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         {/* Global search bar */}
@@ -806,6 +832,7 @@ const HubFundos = () => {
               cnpj={selectedFund}
               period={period}
               onClose={() => setSelectedFund(null)}
+              modoAssessor={modoAssessor}
             />
           </div>
         )}
@@ -873,11 +900,11 @@ const HubFundos = () => {
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
-                      Catálogo <span className="text-zinc-700">({catalog.total} fundos)</span>
+                      Catálogo <span className="text-zinc-700">({catalog.total ? `${(catalog.total / 1000).toFixed(1)}k` : "—"} classes)</span>
                     </h3>
                   </div>
                   <p className="text-[9px] text-zinc-600 font-mono">
-                    Fonte: CVM (cad_fi + inf_diario) &middot; Última atualização: {stats?.last_updated ? new Date(stats.last_updated).toLocaleDateString("pt-BR") : "—"}
+                    Fonte: CVM (registro_fundo_classe + inf_diario_fi) &middot; RCVM 175 &middot; Última atualização: {stats?.last_updated ? new Date(stats.last_updated).toLocaleDateString("pt-BR") : "—"}
                   </p>
                 </div>
               )}
@@ -985,7 +1012,7 @@ const HubFundos = () => {
                       if (!fundData?.daily?.length) return null;
                       return (
                         <div className="space-y-3">
-                          <FundMetricsSummary daily={fundData.daily} title={`Métricas — ${fundData.meta?.denom_social || shortCnpj(selectedFund)}`} />
+                          <FundMetricsSummary daily={fundData.daily} title={`Métricas — ${fundDisplayName(fundData.meta)}`} />
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             <DrawdownChart daily={fundData.daily} />
                             <VolatilityChart daily={fundData.daily} />
@@ -1081,9 +1108,9 @@ const HubFundos = () => {
                     </h3>
                     <div className="space-y-3">
                       {[
-                        { label: "Fundos catalogados", current: stats?.total_funds || 0, target: 500, unit: "" },
-                        { label: "Classes com dados", current: Object.keys(stats?.by_classe || {}).length, target: 15, unit: "" },
-                        { label: "Dados diários (dias)", current: 22, target: 60, unit: "" },
+                        { label: "Classes catalogadas", current: stats?.total_funds || 0, target: 27000, unit: "" },
+                        { label: "Classes RCVM 175", current: Object.keys(stats?.by_classe_rcvm175 || stats?.by_classe || {}).length, target: 7, unit: "" },
+                        { label: "Dados diários (meses)", current: 6, target: 12, unit: "" },
                       ].map((b) => (
                         <div key={b.label}>
                           <div className="flex items-center justify-between mb-1">
@@ -1111,19 +1138,19 @@ const HubFundos = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         {
-                          title: "CVM Resolução 175",
-                          desc: "CNPJ_FUNDO_CLASSE diverge de CNPJ_FUNDO para ~83% dos fundos. Pipeline adaptado para match por ambos campos.",
-                          color: "#F59E0B",
-                        },
-                        {
-                          title: "Concentração de PL",
-                          desc: `Top 10 fundos concentram a maior parte do PL total. ${stats?.total_funds || 0} fundos catalogados de ~40.000 ativos na CVM.`,
-                          color: "#6366F1",
-                        },
-                        {
-                          title: "Dados Diários",
-                          desc: "Cobertura: março/2026 (22 dias úteis). Próximo passo: ingestão retroativa + pg_cron automático.",
+                          title: "RCVM 175 Adaptado",
+                          desc: "27k+ classes com cnpj_fundo_classe como chave primária. Hierarquia Fundo→Classe→Subclasse implementada. Badge ✓ RCVM 175 visível.",
                           color: "#0B6C3E",
+                        },
+                        {
+                          title: "Cobertura de Dados",
+                          desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · 2.6M+ registros diários · 6 meses (Out 2025 — Mar 2026) · Ingestão via pg_cron D+1.`,
+                          color: "#3B82F6",
+                        },
+                        {
+                          title: "Modo Assessor",
+                          desc: "Toggle entre visão Investidor (simplificada, Fund Score™) e Assessor (Sharpe, Sortino, Calmar, VaR, composição CDA, due diligence).",
+                          color: "#06B6D4",
                         },
                         {
                           title: "Cross-module",

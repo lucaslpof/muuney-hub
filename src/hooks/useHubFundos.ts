@@ -5,18 +5,27 @@ const CVM_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-cvm-a
 /* ─── Types ─── */
 export interface FundMeta {
   cnpj_fundo: string;
+  cnpj_fundo_classe: string | null;
+  slug: string | null;
   denom_social: string;
   cd_cvm: number | null;
   tp_fundo: string | null;
   classe: string | null;
+  classe_rcvm175: string | null;
+  subclasse_rcvm175: string | null;
   classe_anbima: string | null;
   condom: string | null;
   fundo_cotas: string | null;
   fundo_exclusivo: string | null;
   invest_qualif: string | null;
+  publico_alvo: string | null;
+  tributacao: string | null;
+  prazo_resgate: string | null;
+  aplicacao_min: number | null;
   taxa_adm: number | null;
   taxa_perfm: number | null;
   benchmark: string | null;
+  rentab_fundo: string | null;
   vl_patrim_liq: number | null;
   dt_patrim_liq: string | null;
   nr_cotistas: number | null;
@@ -60,9 +69,14 @@ export interface FundCatalogResponse {
 
 export interface FundRankingItem {
   cnpj_fundo: string;
+  cnpj_fundo_classe: string | null;
+  slug: string | null;
   denom_social: string;
   classe: string | null;
+  classe_rcvm175: string | null;
   classe_anbima: string | null;
+  publico_alvo: string | null;
+  tributacao: string | null;
   vl_patrim_liq: number | null;
   taxa_adm: number | null;
   taxa_perfm: number | null;
@@ -73,6 +87,7 @@ export interface FundRankingItem {
 export interface FundStatsResponse {
   total_funds: number;
   by_classe: Record<string, { count: number; pl_total: number }>;
+  by_classe_rcvm175?: Record<string, { count: number; pl_total: number }>;
   last_updated: string;
 }
 
@@ -136,12 +151,19 @@ export function useFundCatalog(opts: {
   });
 }
 
-/** Single fund detail (meta + daily + metrics) */
-export function useFundDetail(cnpj: string | null, period: string = "3m") {
+/** Single fund detail (meta + daily + metrics). Accepts CNPJ or slug. */
+export function useFundDetail(identifier: string | null, period: string = "3m") {
+  // Detect if identifier is a slug (no dots/dashes in CNPJ pattern) vs CNPJ
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
   return useQuery<FundDetail>({
-    queryKey: ["fundos", "detail", cnpj, period],
-    queryFn: () => fetchCvm("fund", { cnpj: cnpj!, period }) as Promise<FundDetail>,
-    enabled: !!cnpj,
+    queryKey: ["fundos", "detail", identifier, period],
+    queryFn: () => {
+      const params: Record<string, string> = { period };
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchCvm("fund", params) as Promise<FundDetail>;
+    },
+    enabled: !!identifier,
     staleTime: 10 * 60 * 1000,
     retry: 2,
   });
@@ -541,8 +563,30 @@ export function formatPct(value: number | null | undefined, decimals = 2): strin
   return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
 }
 
+/** Format CNPJ with dots/slashes (XX.XXX.XXX/XXXX-XX). Handles both formatted and raw. */
+export function formatCnpj(cnpj: string): string {
+  const digits = cnpj.replace(/\D/g, "");
+  if (digits.length === 14) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+  }
+  return cnpj; // already formatted or invalid — return as-is
+}
+
+/** @deprecated Use formatCnpj instead. Kept for backward compatibility. */
 export function shortCnpj(cnpj: string): string {
   return cnpj.replace(/^(\d{2})\.(\d{3})\.(\d{3}).*/, "$1.$2.$3");
+}
+
+/** Get the display name for a fund. Name-first: always prefer denom_social. */
+export function fundDisplayName(meta: FundMeta | null | undefined): string {
+  if (!meta) return "—";
+  return meta.denom_social || formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo);
+}
+
+/** Get the primary CNPJ identifier (prefers cnpj_fundo_classe for RCVM 175). */
+export function primaryCnpj(meta: FundMeta | null | undefined): string {
+  if (!meta) return "";
+  return meta.cnpj_fundo_classe || meta.cnpj_fundo;
 }
 
 /* ─── Gestora Rankings (H1.4 Fase A) ─── */
@@ -589,8 +633,11 @@ export function useAdminRankings(opts?: { limit?: number; orderBy?: string; enab
 /* ─── Fund Search (H1.4 Fase A) ─── */
 export interface FundSearchResult {
   cnpj_fundo: string;
+  cnpj_fundo_classe: string | null;
+  slug: string | null;
   denom_social: string;
   classe: string | null;
+  classe_rcvm175: string | null;
   classe_anbima: string | null;
   tp_fundo: string | null;
   vl_patrim_liq: number | null;
