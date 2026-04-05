@@ -179,11 +179,11 @@ Zoom drag-to-select, CSV/PNG export, RichTooltip, dark theme consistente.
 | 6 | Deep-linking (URL state para tab + period) | P1 | Baixo | UX | ✅ DONE — Fase C: `useSearchParams` persiste `?period=2y&section=analytics` na URL. Scroll-to-section on mount quando URL tem section param. |
 | 7 | KPI overflow (ticker ou top-6 + expand) | P1 | Médio | UX | ✅ DONE — Fase B: Hero top-8 KPIs (HERO_CODES) + "Ver todos os N indicadores" expandível. Secondary KPIs em grid 6-col. |
 | 8 | Error boundaries por seção | P1 | Baixo | Estabilidade | ✅ DONE — Fase C: `SectionErrorBoundary` (class component) wraps cada `MacroSection`. Error UI com retry button, Tech-Noir styling. |
-| 9 | Overlay SMA/EMA/Trendline no MacroChart | P2 | Médio | Valor analítico | Pendente |
-| 10 | Calculadoras: enriquecer com cenários, multi-índice | P2 | Médio | Valor | Pendente |
-| 11 | Yield curve com vértices reais DI×Pré | P2 | Alto | Precisão | Pendente |
-| 12 | Insights gerados dinamicamente (trend + anomaly) | P2 | Alto | Diferenciação | ✅ PARCIAL — Fase B: `MacroInsightCard` com trend detection, anomaly z-score, target band analysis. Falta narrativa macro gerada e cross-module signals. |
-| 13 | Macro Scorecard / Regime Detection | P2 | Alto | Bloomberg-tier | Pendente |
+| 9 | Overlay SMA/EMA/Trendline no MacroChart | P2 | Médio | Valor analítico | ✅ DONE — Fase D: Toggle buttons SMA/EMA/Trendline (regressão linear com R²) em todos os gráficos line/area. Integrado com statistics.ts. |
+| 10 | Calculadoras: enriquecer com cenários, multi-índice | P2 | Médio | Valor | ✅ DONE — Fase D: YieldCurve (Hawkish/Dovish/Neutro presets + shape analysis), FiscalCalc (multi-cenário + heatmap sensibilidade r×g), InflationCalc (presets 6M-5A + gráfico evolução poder de compra + inflação anualizada). |
+| 11 | Yield curve com vértices reais DI×Pré | P2 | Alto | Precisão | Pendente (requer integração com Módulo Renda Fixa H1.3 — vértices swap DI) |
+| 12 | Insights gerados dinamicamente (trend + anomaly) | P2 | Alto | Diferenciação | ✅ DONE — Fase B+D: `MacroInsightCard` (trend detection, anomaly z-score, target band) + `MacroNarrativePanel` (cross-module signals: juro real, superaquecimento, fiscal stress, câmbio, Focus divergência, Selic convergência). |
+| 13 | Macro Scorecard / Regime Detection | P2 | Alto | Bloomberg-tier | ✅ DONE — Fase D: `MacroNarrativePanel` com regime detection (Expansão/Superaquecimento/Estagflação/Contração/Aperto/Dominância Fiscal/Transição). Key metrics strip (Selic, IPCA, Juro Real, Desemp., Dív/PIB). |
 | 14 | Event overlay (COPOM, FOMC) | P2 | Médio | Pro feature | Pendente |
 | 15 | Export PDF do módulo completo | P2 | Alto | Enterprise | Pendente |
 
@@ -217,4 +217,14 @@ A camada analítica tem potencial mas está subutilizada: a lib `statistics.ts` 
 - Lazy-load: `visitedSections` Set + `enabled` param em 5 bundle hooks (pib, divida, balanca, fiscal, focus)
 - Deep-linking: `useSearchParams` persiste `period` + `section` na URL, scroll-to-section on mount
 - `SectionErrorBoundary` class component wrapping todas as 5 MacroSections
+- TypeScript clean build (tsc --noEmit exit 0)
+
+### Fase D — Chart Optimization & Analytics (04/04/2026)
+- **MacroChart v2**: Auto-scale Y-axis com `computeYDomain` (nice ticks, padding, positive clamping). Smart Y formatter (B/M/k + precision adaptativa ao range). Adaptive X-axis interval. Summary stats bar (Últ/Mín/Máx/Variação%). Empty state handler. PNG export icon fix (ZoomIn→Camera). Disabled animations for performance.
+- **SMA/EMA/Trendline overlays** (#9): Toggle buttons no header do chart. SMA/EMA window auto-calculado (15% do dataset). Trendline via `linearRegression` com R² display. Overlay legend com cores distintas. Integra `statistics.ts` (sma, ema, linearRegression).
+- **YieldCurveSimulator v2** (#10): 3 scenario presets (Hawkish +150bps / Neutro / Dovish −150bps). Shape analysis automática (Normal/Invertida/Corcova/Flat). Badge de shape no header. Nice Y-axis domain.
+- **FiscalCalculator v2** (#10): Multi-cenário comparison toggle (Base/Otimista/Pessimista no mesmo chart). Sensitivity heatmap r×g (5 taxas × 6 crescimentos, color-coded). Projeção Domar mantida com status badge.
+- **InflationCalculator v2** (#10): Period presets (6M/1A/2A/3A/5A/Tudo). Gráfico evolução poder de compra (AreaChart com degradê). Inflação anualizada como KPI adicional. 5 result cards (era 4).
+- **MacroNarrativePanel** (#12, #13): Regime detection automático (7 regimes: Expansão, Superaquecimento, Estagflação, Contração, Aperto Monetário, Dominância Fiscal, Transição). Cross-module signals engine (juro real, superaquecimento, fiscal stress, câmbio, Focus divergência, Selic convergência). Key metrics strip. Severity-coded signal cards.
+- Novo componente: `src/components/hub/MacroNarrativePanel.tsx`
 - TypeScript clean build (tsc --noEmit exit 0)
