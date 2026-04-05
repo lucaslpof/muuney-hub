@@ -544,3 +544,68 @@ export function formatPct(value: number | null | undefined, decimals = 2): strin
 export function shortCnpj(cnpj: string): string {
   return cnpj.replace(/^(\d{2})\.(\d{3})\.(\d{3}).*/, "$1.$2.$3");
 }
+
+/* ─── Gestora Rankings (H1.4 Fase A) ─── */
+export interface GestoraRankingItem {
+  gestor_nome: string;
+  cnpj_gestor: string;
+  fund_count: number;
+  total_pl: number;
+  avg_taxa_adm: number | null;
+  total_cotistas: number;
+}
+
+export function useGestoraRankings(opts?: { limit?: number; orderBy?: string; enabled?: boolean }) {
+  const limit = opts?.limit ?? 50;
+  const orderBy = opts?.orderBy ?? "total_pl";
+  return useQuery<{ gestoras: GestoraRankingItem[]; total: number }>({
+    queryKey: ["cvm", "gestora_rankings", limit, orderBy],
+    queryFn: () => fetchCvm("gestora_rankings", { limit: String(limit), order_by: orderBy }) as Promise<{ gestoras: GestoraRankingItem[]; total: number }>,
+    staleTime: 30 * 60_000,
+    enabled: opts?.enabled !== false,
+  });
+}
+
+/* ─── Admin Rankings (H1.4 Fase A) ─── */
+export interface AdminRankingItem {
+  admin_nome: string;
+  cnpj_admin: string;
+  fund_count: number;
+  total_pl: number;
+  total_cotistas: number;
+}
+
+export function useAdminRankings(opts?: { limit?: number; orderBy?: string; enabled?: boolean }) {
+  const limit = opts?.limit ?? 50;
+  const orderBy = opts?.orderBy ?? "total_pl";
+  return useQuery<{ admins: AdminRankingItem[]; total: number }>({
+    queryKey: ["cvm", "admin_rankings", limit, orderBy],
+    queryFn: () => fetchCvm("admin_rankings", { limit: String(limit), order_by: orderBy }) as Promise<{ admins: AdminRankingItem[]; total: number }>,
+    staleTime: 30 * 60_000,
+    enabled: opts?.enabled !== false,
+  });
+}
+
+/* ─── Fund Search (H1.4 Fase A) ─── */
+export interface FundSearchResult {
+  cnpj_fundo: string;
+  denom_social: string;
+  classe: string | null;
+  classe_anbima: string | null;
+  tp_fundo: string | null;
+  vl_patrim_liq: number | null;
+  gestor_nome: string | null;
+  admin_nome: string | null;
+  is_active: boolean;
+}
+
+export function useFundSearch(query: string, opts?: { limit?: number; enabled?: boolean }) {
+  const limit = opts?.limit ?? 20;
+  const trimmed = query.trim();
+  return useQuery<{ query: string; results: FundSearchResult[]; count: number }>({
+    queryKey: ["cvm", "fund_search", trimmed, limit],
+    queryFn: () => fetchCvm("fund_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FundSearchResult[]; count: number }>,
+    staleTime: 5 * 60_000,
+    enabled: (opts?.enabled !== false) && trimmed.length >= 2,
+  });
+}
