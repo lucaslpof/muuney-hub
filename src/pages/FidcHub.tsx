@@ -1,0 +1,567 @@
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, Link } from "react-router-dom";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { LayoutGrid, Zap, Search, TrendingUp, BarChart3 } from "lucide-react";
+import { motion } from "framer-motion";
+
+import {
+  useFidcV4Overview, useFidcV4Rankings, useFidcSegments, useFidcSearch,
+  formatPL,
+} from "@/hooks/useHubFundos";
+import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
+import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+
+/** Local KPI Card */
+const KPICard = ({
+  label, value, unit = "", color = "text-zinc-400",
+}: {
+  label: string; value: string | number; unit?: string; color?: string;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
+  >
+    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
+    <div className={`text-lg font-semibold font-mono ${color}`}>
+      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
+    </div>
+  </motion.div>
+);
+
+const SECTIONS = [
+  { id: "overview", label: "Visão Geral", icon: LayoutGrid },
+  { id: "rankings", label: "Rankings", icon: TrendingUp },
+  { id: "screener", label: "Screener", icon: Search },
+  { id: "segmentos", label: "Segmentos", icon: BarChart3 },
+];
+
+/** FidcHub Component */
+export default function FidcHub() {
+  /* ─── Deep-linking: section from URL ─── */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSection = searchParams.get("section") || "overview";
+
+  const [activeSection, setActiveSection] = useState<string>(initialSection);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  /* ─── Lazy-load: track which sections have been visible ─── */
+  const [visitedSections, setVisitedSections] = useState<Set<string>>(
+    () => new Set(["overview"])
+  );
+
+  const sectionVisible = useCallback((id: string) => visitedSections.has(id), [visitedSections]);
+
+  /* ─── Sync section to URL ─── */
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    if (activeSection !== "overview") next.section = activeSection;
+    setSearchParams(next, { replace: true });
+  }, [activeSection, setSearchParams]);
+
+  /* ─── Screener Filters ─── */
+  const [selectedLastro, setSelectedLastro] = useState<string | null>(null);
+  const [minPl, setMinPl] = useState<number>(0);
+  const [maxInadim, setMaxInadim] = useState<number>(100);
+  const [minSubord, setMinSubord] = useState<number>(0);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  /* ─── Rankings Sorting ─── */
+  const [rankingOrderBy, setRankingOrderBy] = useState<string>("vl_pl_total");
+  const [rankingOrder, setRankingOrder] = useState<string>("desc");
+  const [rankingPage, setRankingPage] = useState<number>(0);
+
+  /* ─── Data: Overview ─── */
+  const { data: overviewData, isLoading: overviewLoading } = useFidcV4Overview();
+
+  /* ─── Data: Segments ─── */
+  const { data: segmentsData } = useFidcSegments();
+  const segments = segmentsData?.segments || [];
+
+  /* ─── Data: Rankings (lazy) ─── */
+  const { data: rankingsData, isLoading: rankingsLoading } = useFidcV4Rankings(
+    {
+      orderBy: rankingOrderBy,
+      order: rankingOrder,
+      limit: 50,
+      offset: rankingPage * 50,
+      lastro: selectedLastro || undefined,
+      minPl: minPl > 0 ? minPl : undefined,
+      maxInadim: maxInadim < 100 ? maxInadim : undefined,
+      minSubord: minSubord > 0 ? minSubord : undefined,
+      search: searchQuery || undefined,
+      enabled: sectionVisible("rankings") || sectionVisible("screener"),
+    }
+  );
+  const rankingsFunds = rankingsData?.funds || [];
+
+  /* ─── Data: Search ─── */
+  const { data: searchData } = useFidcSearch(searchQuery, {
+    limit: 10,
+    enabled: searchQuery.length >= 2 && sectionVisible("screener"),
+  });
+  const searchResults = searchData?.results || [];
+
+  /* ─── Pie Chart Data ─── */
+  const pieData = useMemo(() => {
+    if (!overviewData?.by_lastro) return [];
+    return overviewData.by_lastro.map((item) => ({
+      name: item.lastro,
+      value: parseFloat((item.pct_pl * 100).toFixed(1)),
+      pl: item.pl,
+    }));
+  }, [overviewData]);
+
+  const COLORS = ["#0B6C3E", "#F59E0B", "#8B5CF6", "#3B82F6", "#EC4899", "#F97316", "#06B6D4", "#10B981"];
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] w-full">
+      {/* Sidebar Navigation */}
+      <MacroSidebar
+        items={SECTIONS}
+        activeId={activeSection}
+        onNavigate={(id: string) => {
+          setActiveSection(id);
+          const ref = sectionRefs.current[id];
+          if (ref) ref.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
+
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-8 py-6">
+          <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-[#0B6C3E]" />
+            Módulo FIDC
+          </h1>
+          <p className="text-[9px] text-zinc-500 mt-2 font-mono">Crédito. Inovação. Inteligência.</p>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 px-8 py-8 space-y-8">
+          {/* === SECTION 1: Visão Geral === */}
+          <MacroSection ref={(el) => { sectionRefs.current["overview"] = el; }} id="overview" title="Visão Geral" icon={LayoutGrid}>
+            <SectionErrorBoundary sectionName="Visão Geral FIDC">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("overview"))}
+                className="space-y-6"
+              >
+                {/* Title */}
+                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
+                  <LayoutGrid className="w-5 h-5 text-[#0B6C3E]" />
+                  <h2 className="text-lg font-semibold text-zinc-300">Visão Geral</h2>
+                </div>
+
+                {/* KPI Cards */}
+                {overviewData && !overviewLoading ? (
+                  <div className="grid grid-cols-4 gap-4">
+                    <KPICard
+                      label="Total FIDCs"
+                      value={String(overviewData.total_fidcs)}
+                      color="text-zinc-300"
+                    />
+                    <KPICard
+                      label="PL Agregado"
+                      value={formatPL(overviewData.total_pl)}
+                      color="text-[#0B6C3E]"
+                    />
+                    <KPICard
+                      label="Subordinação Média"
+                      value={overviewData.avg_subordinacao?.toFixed(2) || "—"}
+                      unit="%"
+                      color={overviewData.avg_subordinacao && overviewData.avg_subordinacao < 10 ? "text-red-400" : "text-emerald-400"}
+                    />
+                    <KPICard
+                      label="Inadimplência Média"
+                      value={overviewData.avg_inadimplencia?.toFixed(2) || "—"}
+                      unit="%"
+                      color={overviewData.avg_inadimplencia && overviewData.avg_inadimplencia > 5 ? "text-red-400" : "text-emerald-400"}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-24 bg-[#111111] rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                )}
+
+                {/* Pie Chart: Distribuição por Lastro */}
+                {pieData.length > 0 && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-6">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-4">Distribuição de PL por Lastro</h3>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }: any) => `${name} ${value}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieData.map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
+                          labelStyle={{ color: "#d4d4d8" }}
+                          formatter={(v: any) => `${v}%`}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </motion.div>
+            </SectionErrorBoundary>
+          </MacroSection>
+
+          {/* === SECTION 2: Rankings === */}
+          <MacroSection ref={(el) => { sectionRefs.current["rankings"] = el; }} id="rankings" title="Rankings" icon={TrendingUp}>
+            <SectionErrorBoundary sectionName="Rankings">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("rankings"))}
+                className="space-y-6"
+              >
+                {/* Title */}
+                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
+                  <TrendingUp className="w-5 h-5 text-[#0B6C3E]" />
+                  <h2 className="text-lg font-semibold text-zinc-300">Rankings</h2>
+                </div>
+
+                {/* Segment Filter */}
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={() => setSelectedLastro(null)}
+                    className={`px-4 py-2 text-[9px] font-mono rounded border transition-all ${
+                      selectedLastro === null
+                        ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
+                        : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {segments.map((seg) => (
+                    <button
+                      key={seg.lastro}
+                      onClick={() => setSelectedLastro(seg.lastro)}
+                      className={`px-4 py-2 text-[9px] font-mono rounded border transition-all ${
+                        selectedLastro === seg.lastro
+                          ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
+                          : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
+                      }`}
+                    >
+                      {seg.lastro} ({seg.count})
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sorting Controls */}
+                <div className="flex gap-3 items-center">
+                  <select
+                    value={rankingOrderBy}
+                    onChange={(e) => {
+                      setRankingOrderBy(e.target.value);
+                      setRankingPage(0);
+                    }}
+                    className="px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 focus:outline-none focus:border-[#0B6C3E]"
+                  >
+                    <option value="vl_pl_total">PL Total</option>
+                    <option value="indice_subordinacao">Subordinação</option>
+                    <option value="taxa_inadimplencia">Inadimplência</option>
+                    <option value="rentab_senior">Rentab. Senior</option>
+                  </select>
+                  <button
+                    onClick={() => setRankingOrder(rankingOrder === "desc" ? "asc" : "desc")}
+                    className="px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 transition-colors"
+                  >
+                    {rankingOrder === "desc" ? "↓ DESC" : "↑ ASC"}
+                  </button>
+                </div>
+
+                {/* Rankings Table */}
+                <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[8px] font-mono">
+                      <thead className="border-b border-[#1a1a1a] bg-[#0a0a0a]">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-zinc-600">#</th>
+                          <th className="px-4 py-2 text-left text-zinc-600">Nome</th>
+                          <th className="px-4 py-2 text-right text-zinc-600">PL</th>
+                          <th className="px-4 py-2 text-right text-zinc-600">Subordinação</th>
+                          <th className="px-4 py-2 text-right text-zinc-600">Inadimplência</th>
+                          <th className="px-4 py-2 text-right text-zinc-600">Rentab. Senior</th>
+                          <th className="px-4 py-2 text-center text-zinc-600">Lastro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rankingsLoading ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-zinc-600">
+                              Carregando...
+                            </td>
+                          </tr>
+                        ) : rankingsFunds.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-zinc-600">
+                              Nenhum FIDC encontrado
+                            </td>
+                          </tr>
+                        ) : (
+                          rankingsFunds.map((fund, idx) => (
+                            <tr
+                              key={`${fund.cnpj_fundo_classe}-${idx}`}
+                              className="border-t border-[#1a1a1a] hover:bg-[#0a0a0a]/50 transition-colors"
+                            >
+                              <td className="px-4 py-2 text-zinc-600">{rankingPage * 50 + idx + 1}</td>
+                              <td className="px-4 py-2">
+                                <Link
+                                  to={`/fundos/fidc/${fund.slug || fund.cnpj_fundo_classe}`}
+                                  className="text-[#0B6C3E] hover:underline truncate max-w-xs"
+                                >
+                                  {fund.denom_social || `FIDC ${fund.cnpj_fundo_classe}`}
+                                </Link>
+                              </td>
+                              <td className="px-4 py-2 text-right text-zinc-300">{formatPL(fund.vl_pl_total)}</td>
+                              <td className="px-4 py-2 text-right">
+                                <span className={fund.indice_subordinacao && fund.indice_subordinacao < 10 ? "text-red-400" : "text-emerald-400"}>
+                                  {fund.indice_subordinacao?.toFixed(2) || "—"}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <span className={fund.taxa_inadimplencia && fund.taxa_inadimplencia > 5 ? "text-red-400" : "text-emerald-400"}>
+                                  {fund.taxa_inadimplencia?.toFixed(2) || "—"}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right text-zinc-300">
+                                {fund.rentab_senior?.toFixed(2) || "—"}%
+                              </td>
+                              <td className="px-4 py-2 text-center text-zinc-500 text-[7px]">
+                                —
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {rankingsFunds.length > 0 && (
+                    <div className="border-t border-[#1a1a1a] px-4 py-3 flex justify-between items-center text-[8px]">
+                      <span className="text-zinc-600">
+                        Exibindo {rankingPage * 50 + 1}-{Math.min((rankingPage + 1) * 50, (rankingsData?.count || 0))} de {rankingsData?.count || 0}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setRankingPage(Math.max(0, rankingPage - 1))}
+                          disabled={rankingPage === 0}
+                          className="px-2 py-1 bg-[#0B6C3E]/20 text-[#0B6C3E] rounded disabled:opacity-50"
+                        >
+                          Anterior
+                        </button>
+                        <button
+                          onClick={() => setRankingPage(rankingPage + 1)}
+                          disabled={(rankingPage + 1) * 50 >= (rankingsData?.count || 0)}
+                          className="px-2 py-1 bg-[#0B6C3E]/20 text-[#0B6C3E] rounded disabled:opacity-50"
+                        >
+                          Próximo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </SectionErrorBoundary>
+          </MacroSection>
+
+          {/* === SECTION 3: Screener === */}
+          <MacroSection ref={(el) => { sectionRefs.current["screener"] = el; }} id="screener" title="Screener" icon={Search}>
+            <SectionErrorBoundary sectionName="Screener">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("screener"))}
+                className="space-y-6"
+              >
+                {/* Title */}
+                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
+                  <Search className="w-5 h-5 text-[#0B6C3E]" />
+                  <h2 className="text-lg font-semibold text-zinc-300">Screener</h2>
+                </div>
+
+                {/* Filters */}
+                <div className="grid grid-cols-4 gap-4">
+                  {/* Search */}
+                  <div className="col-span-2">
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
+                      Buscar por Nome
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setRankingPage(0);
+                      }}
+                      placeholder="Digite o nome do FIDC..."
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Min PL */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
+                      PL Mínimo
+                    </label>
+                    <input
+                      type="number"
+                      value={minPl}
+                      onChange={(e) => {
+                        setMinPl(Number(e.target.value));
+                        setRankingPage(0);
+                      }}
+                      placeholder="em milhões"
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Max Inadimplência */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
+                      Max Inadimplência %
+                    </label>
+                    <input
+                      type="number"
+                      value={maxInadim}
+                      onChange={(e) => {
+                        setMaxInadim(Number(e.target.value));
+                        setRankingPage(0);
+                      }}
+                      min={0}
+                      max={100}
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Min Subordinação */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
+                      Min Subordinação %
+                    </label>
+                    <input
+                      type="number"
+                      value={minSubord}
+                      onChange={(e) => {
+                        setMinSubord(Number(e.target.value));
+                        setRankingPage(0);
+                      }}
+                      min={0}
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+                </div>
+
+                {/* Search Results */}
+                {searchQuery.length >= 2 && searchResults.length > 0 && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-2">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Resultados da Busca</h3>
+                    {searchResults.map((result) => (
+                      <Link
+                        key={result.cnpj_fundo_classe}
+                        to={`/fundos/fidc/${result.slug || result.cnpj_fundo_classe}`}
+                        className="block px-3 py-2 bg-[#0a0a0a] rounded border border-[#1a1a1a] hover:border-[#0B6C3E]/30 transition-all group"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[9px] font-semibold text-[#0B6C3E] group-hover:underline truncate">
+                              {result.denom_social}
+                            </div>
+                            <div className="text-[8px] text-zinc-600 mt-0.5">
+                              Gestor: {result.gestor_nome?.split(" ")[0] || "—"}
+                            </div>
+                          </div>
+                          <div className="text-[9px] font-mono text-zinc-500">{formatPL(result.vl_patrim_liq)}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </SectionErrorBoundary>
+          </MacroSection>
+
+          {/* === SECTION 4: Segmentos === */}
+          <MacroSection ref={(el) => { sectionRefs.current["segmentos"] = el; }} id="segmentos" title="Segmentos" icon={Zap}>
+            <SectionErrorBoundary sectionName="Segmentos">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("segmentos"))}
+                className="space-y-6"
+              >
+                {/* Title */}
+                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
+                  <Zap className="w-5 h-5 text-[#0B6C3E]" />
+                  <h2 className="text-lg font-semibold text-zinc-300">Segmentos de Lastro</h2>
+                </div>
+
+                {/* Segment Cards */}
+                <div className="grid grid-cols-3 gap-4">
+                  {segments.length > 0 ? (
+                    segments.map((seg, idx) => (
+                      <motion.div
+                        key={seg.lastro}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all cursor-pointer"
+                        onClick={() => {
+                          setSelectedLastro(seg.lastro);
+                          setActiveSection("rankings");
+                          sectionRefs.current["rankings"]?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-semibold text-zinc-300">{seg.lastro}</h3>
+                          </div>
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: COLORS[segments.indexOf(seg) % COLORS.length] }}
+                          />
+                        </div>
+
+                        <div className="space-y-2 text-[9px] font-mono">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-600">Fundos</span>
+                            <span className="text-zinc-300 font-semibold">{seg.count}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-600">PL Agregado</span>
+                            <span className="text-zinc-300 font-semibold">{formatPL(seg.pl)}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center text-zinc-600 py-8">
+                      Sem dados de segmentos
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </SectionErrorBoundary>
+          </MacroSection>
+        </div>
+      </div>
+    </div>
+  );
+}

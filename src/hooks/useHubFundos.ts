@@ -357,6 +357,12 @@ export interface FidcMonthlyItem {
   rentab_fundo: number | null;
   nr_cedentes: number | null;
   concentracao_cedente: number | null;
+  vl_carteira_prejuizo: number | null;
+  vl_pl_mezanino?: number | null;
+  vl_cota_mezanino?: number | null;
+  qt_cota_mezanino?: number | null;
+  nr_cotistas_senior?: number | null;
+  nr_cotistas_subordinada?: number | null;
 }
 
 export interface FidcRankingItem {
@@ -759,3 +765,152 @@ export const INSIGHT_SEVERITY_COLORS: Record<InsightSeverity, { bg: string; text
   warning: { bg: "#F59E0B10", text: "#F59E0B", border: "#F59E0B30" },
   critical: { bg: "#EF444410", text: "#EF4444", border: "#EF444430" },
 };
+
+/* ═══ FIDC V4 — Deep Module (hub-fidc-api) ═══ */
+
+const FIDC_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-fidc-api";
+
+async function fetchFidc(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+  const url = new URL(FIDC_API);
+  url.searchParams.set("endpoint", endpoint);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`FIDC API error: ${res.status}`);
+  return res.json();
+}
+
+// Enhanced FIDC types for V4
+export interface FidcDetailResponse {
+  meta: FundMeta | null;
+  monthly: FidcMonthlyItem[];
+  latest: FidcMonthlyItem | null;
+  similar: (FidcMonthlyItem & { denom_social?: string; slug?: string; gestor_nome?: string })[];
+}
+
+export interface FidcV4RankingItem extends FidcMonthlyItem {
+  denom_social?: string;
+  slug?: string;
+  gestor_nome?: string;
+  admin_nome?: string;
+  classe_rcvm175?: string;
+  cnpj_fundo_classe?: string;
+}
+
+export interface FidcV4OverviewResponse {
+  date: string;
+  total_fidcs: number;
+  total_pl: number;
+  total_carteira: number;
+  avg_subordinacao: number | null;
+  avg_inadimplencia: number | null;
+  avg_rentab_senior: number | null;
+  by_lastro: { lastro: string; count: number; pl: number; pct_pl: number; avg_inadim: number | null }[];
+  segments: string[];
+}
+
+export interface FidcSegment {
+  lastro: string;
+  count: number;
+  pl: number;
+}
+
+export interface FidcSearchResult {
+  cnpj_fundo_classe: string;
+  denom_social: string;
+  slug: string | null;
+  gestor_nome: string | null;
+  vl_patrim_liq: number | null;
+}
+
+/** FIDC V4 — Detailed fund page (meta + monthly + similar) */
+export function useFidcDetail(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<FidcDetailResponse>({
+    queryKey: ["fidc", "detail", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFidc("fidc_detail", params) as Promise<FidcDetailResponse>;
+    },
+    enabled: !!identifier,
+    staleTime: 10 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FIDC V4 — Enhanced rankings with filters */
+export function useFidcV4Rankings(opts: {
+  orderBy?: string;
+  order?: string;
+  limit?: number;
+  offset?: number;
+  lastro?: string;
+  minPl?: number;
+  maxInadim?: number;
+  minSubord?: number;
+  gestor?: string;
+  search?: string;
+  enabled?: boolean;
+} = {}) {
+  const { orderBy = "vl_pl_total", order = "desc", limit = 50, offset = 0, lastro, minPl, maxInadim, minSubord, gestor, search } = opts;
+  return useQuery<{ date: string; order_by: string; funds: FidcV4RankingItem[]; count: number }>({
+    queryKey: ["fidc", "v4_rankings", orderBy, order, limit, offset, lastro, minPl, maxInadim, minSubord, gestor, search],
+    queryFn: () => {
+      const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit), offset: String(offset) };
+      if (lastro) params.lastro = lastro;
+      if (minPl && minPl > 0) params.min_pl = String(minPl);
+      if (maxInadim != null) params.max_inadim = String(maxInadim);
+      if (minSubord != null) params.min_subord = String(minSubord);
+      if (gestor) params.gestor = gestor;
+      if (search) params.search = search;
+      return fetchFidc("fidc_rankings", params) as Promise<{ date: string; order_by: string; funds: FidcV4RankingItem[]; count: number }>;
+    },
+    staleTime: 15 * 60_000,
+    enabled: opts.enabled !== false,
+    retry: 2,
+  });
+}
+
+/** FIDC V4 — Enhanced overview with segments */
+export function useFidcV4Overview() {
+  return useQuery<FidcV4OverviewResponse>({
+    queryKey: ["fidc", "v4_overview"],
+    queryFn: () => fetchFidc("fidc_overview") as Promise<FidcV4OverviewResponse>,
+    staleTime: 30 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FIDC V4 — Search FIDCs by name */
+export function useFidcSearch(query: string, opts?: { limit?: number; enabled?: boolean }) {
+  const limit = opts?.limit ?? 20;
+  const trimmed = query.trim();
+  return useQuery<{ query: string; results: FidcSearchResult[]; count: number }>({
+    queryKey: ["fidc", "search", trimmed, limit],
+    queryFn: () => fetchFidc("fidc_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FidcSearchResult[]; count: number }>,
+    staleTime: 5 * 60_000,
+    enabled: (opts?.enabled !== false) && trimmed.length >= 2,
+  });
+}
+
+/** FIDC V4 — List all lastro segments */
+export function useFidcSegments() {
+  return useQuery<{ date: string; segments: FidcSegment[] }>({
+    queryKey: ["fidc", "segments"],
+    queryFn: () => fetchFidc("fidc_segments") as Promise<{ date: string; segments: FidcSegment[] }>,
+    staleTime: 60 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FIDC V4 — Monthly data via new API */
+export function useFidcV4Monthly(cnpj: string | null, months: number = 24) {
+  return useQuery<{ cnpj: string; data: FidcMonthlyItem[]; count: number }>({
+    queryKey: ["fidc", "v4_monthly", cnpj, months],
+    queryFn: () => fetchFidc("fidc_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FidcMonthlyItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 15 * 60_000,
+    retry: 2,
+  });
+}

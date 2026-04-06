@@ -11,6 +11,8 @@ const HubCredito = React.lazy(() => import("./pages/HubCredito"));
 const HubRendaFixa = React.lazy(() => import("./pages/HubRendaFixa"));
 const HubFundos = React.lazy(() => import("./pages/HubFundos"));
 const FundLamina = React.lazy(() => import("./pages/FundLamina"));
+const FidcHub = React.lazy(() => import("./pages/FidcHub"));
+const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const Loading = () => (
@@ -32,6 +34,8 @@ const App = () => (
           <Route path="/macro" element={<HubMacro />} />
           <Route path="/credito" element={<HubCredito />} />
           <Route path="/renda-fixa" element={<HubRendaFixa />} />
+          <Route path="/fundos/fidc/:slug" element={<FidcLamina />} />
+          <Route path="/fundos/fidc" element={<FidcHub />} />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />
         </Route>
