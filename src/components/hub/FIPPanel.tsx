@@ -97,6 +97,17 @@ export const FIPRankingTable = ({
     }
   };
 
+  // Compute integralização % per fund — must be called before any early return (Rules of Hooks)
+  const fundsEnriched = useMemo(() => {
+    const funds = data?.funds || [];
+    return funds.map((f) => ({
+      ...f,
+      pct_integr: f.vl_cap_comprom && f.vl_cap_comprom > 0 && f.vl_cap_integr != null
+        ? (f.vl_cap_integr / f.vl_cap_comprom) * 100
+        : null,
+    }));
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
@@ -109,17 +120,6 @@ export const FIPRankingTable = ({
   }
 
   const funds = data?.funds || [];
-
-  // Compute integralização % per fund
-  const fundsEnriched = useMemo(() =>
-    funds.map((f) => ({
-      ...f,
-      pct_integr: f.vl_cap_comprom && f.vl_cap_comprom > 0 && f.vl_cap_integr != null
-        ? (f.vl_cap_integr / f.vl_cap_comprom) * 100
-        : null,
-    })),
-    [funds]
-  );
 
   return (
     <motion.div
