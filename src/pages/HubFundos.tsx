@@ -37,6 +37,7 @@ import {
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { InsightsFeed } from "@/components/hub/InsightsFeed";
+import { RequireTier, BlurredPreview } from "@/components/hub/RequireTier";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
@@ -882,8 +883,10 @@ const HubFundos = () => {
                 ))}
               </div>
 
-              {/* Insights Feed — Últimas Movimentações */}
-              <InsightsFeed limit={10} days={30} title="Últimas Movimentações" />
+              {/* Insights Feed — Últimas Movimentações (Pro) */}
+              <RequireTier tier="pro" feature="o feed de insights e alertas">
+                <InsightsFeed limit={10} days={30} title="Últimas Movimentações" />
+              </RequireTier>
 
               {/* Rankings */}
               <FundRankingTable
@@ -1061,8 +1064,10 @@ const HubFundos = () => {
             >
               {sectionVisible("composicao-comparador") ? (
                 <div className="space-y-6">
-                  {/* Screener */}
-                  <FundScreener onSelectFund={setSelectedFund} />
+                  {/* Screener (Pro) */}
+                  <RequireTier tier="pro" feature="o screener multi-filtro">
+                    <FundScreener onSelectFund={setSelectedFund} />
+                  </RequireTier>
 
                   {/* Composition */}
                   {selectedFund ? (
@@ -1080,12 +1085,14 @@ const HubFundos = () => {
                     </div>
                   )}
 
-                  {/* Comparador */}
+                  {/* Comparador (Pro — cross-class até 6 fundos) */}
                   <div>
                     <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
                       <GitCompareArrows className="w-3 h-3 text-[#0B6C3E]" /> Comparador de Fundos
                     </h3>
-                    <ComparadorSection period={period} />
+                    <BlurredPreview feature="o comparador cross-class">
+                      <ComparadorSection period={period} />
+                    </BlurredPreview>
                   </div>
                 </div>
               ) : (

@@ -1,10 +1,16 @@
 import React, { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { HubLayout } from "@/components/hub/HubLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RequireTier } from "@/components/hub/RequireTier";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /* Lazy-loaded pages */
 const HubLanding = React.lazy(() => import("./pages/HubLanding"));
+const HubLogin = React.lazy(() => import("./pages/HubLogin"));
+const HubForgotPassword = React.lazy(() => import("./pages/HubForgotPassword"));
+const HubResetPassword = React.lazy(() => import("./pages/HubResetPassword"));
+const HubUpgrade = React.lazy(() => import("./pages/HubUpgrade"));
 const HubDashboard = React.lazy(() => import("./pages/HubDashboard"));
 const HubMacro = React.lazy(() => import("./pages/HubMacro"));
 const HubCredito = React.lazy(() => import("./pages/HubCredito"));
@@ -14,6 +20,13 @@ const FundLamina = React.lazy(() => import("./pages/FundLamina"));
 const FidcHub = React.lazy(() => import("./pages/FidcHub"));
 const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
+
+/* Gate wrapper for Pro-only routes */
+const ProRoute = ({ children, feature }: { children: React.ReactNode; feature?: string }) => (
+  <RequireTier tier="pro" feature={feature}>
+    {children}
+  </RequireTier>
+);
 
 const Loading = () => (
   <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -28,16 +41,35 @@ const App = () => (
         {/* Landing page — public */}
         <Route path="/" element={<HubLanding />} />
 
-        {/* Dashboard + Modules — inside HubLayout (sidebar + header) */}
-        <Route element={<HubLayout />}>
+        {/* Login & password recovery — public */}
+        <Route path="/login" element={<HubLogin />} />
+        <Route path="/forgot-password" element={<HubForgotPassword />} />
+        <Route path="/reset-password" element={<HubResetPassword />} />
+
+        {/* Dashboard + Modules — protected, inside HubLayout (sidebar + header) */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <HubLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<HubDashboard />} />
           <Route path="/macro" element={<HubMacro />} />
           <Route path="/credito" element={<HubCredito />} />
           <Route path="/renda-fixa" element={<HubRendaFixa />} />
-          <Route path="/fundos/fidc/:slug" element={<FidcLamina />} />
-          <Route path="/fundos/fidc" element={<FidcHub />} />
+          {/* FIDC Deep Module — Pro only */}
+          <Route
+            path="/fundos/fidc/:slug"
+            element={<ProRoute feature="a lâmina completa de FIDC"><FidcLamina /></ProRoute>}
+          />
+          <Route
+            path="/fundos/fidc"
+            element={<ProRoute feature="o módulo FIDC completo"><FidcHub /></ProRoute>}
+          />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />
+          <Route path="/upgrade" element={<HubUpgrade />} />
         </Route>
 
         {/* Backward compat: /hub/* redirects from old muuney-landing routes */}

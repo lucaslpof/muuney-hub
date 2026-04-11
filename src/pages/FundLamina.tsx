@@ -17,6 +17,8 @@ import { FundInsightsSection } from "@/components/hub/InsightsFeed";
 import {
   CompositionSummary, CompositionDetailTable,
 } from "@/components/hub/FundCompositionPanel";
+import { useLaminaQuota } from "@/hooks/useLaminaQuota";
+import { InlinePaywall } from "@/components/hub/RequireTier";
 
 const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
 
@@ -54,6 +56,9 @@ const KPICard = ({
 export default function FundLamina() {
   const { slug } = useParams<{ slug: string }>();
   const [period, setPeriod] = useState<typeof PERIODS[number]>("3m");
+
+  // Daily lâmina quota (free = 3/day, pro/admin = unlimited)
+  const quota = useLaminaQuota(slug);
 
   const { data: fundData, isLoading: fundLoading } = useFundDetail(slug ?? null, period);
   const cnpj = fundData?.meta ? primaryCnpj(fundData.meta) : null;
@@ -104,6 +109,26 @@ export default function FundLamina() {
           <Link to="/fundos" className="text-[#0B6C3E] hover:underline text-sm flex items-center gap-1 justify-center">
             <ArrowLeft className="w-4 h-4" /> Voltar para Módulo Fundos
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Free-tier daily quota exceeded
+  if (!quota.allowed) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] p-6">
+        <div className="max-w-2xl mx-auto pt-12">
+          <Link to="/fundos" className="inline-flex items-center gap-1 text-zinc-500 hover:text-[#0B6C3E] text-sm mb-8 transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Voltar para Módulo Fundos
+          </Link>
+          <div className="mb-6 text-center">
+            <p className="text-zinc-400 text-sm">
+              Você atingiu o limite diário de <span className="text-white font-semibold">{quota.total} lâminas</span> no plano Free.
+            </p>
+            <p className="text-zinc-600 text-xs mt-1">O contador reseta à meia-noite.</p>
+          </div>
+          <InlinePaywall feature="lâminas ilimitadas" />
         </div>
       </div>
     );

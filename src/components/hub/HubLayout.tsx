@@ -1,9 +1,34 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 import { SidebarProvider, MobileMenuButton, useSidebar } from "./HubSidebar";
 import { Helmet } from "react-helmet-async";
+import { useAuth } from "@/hooks/useAuth";
 
 const HubMain = () => {
   const { collapsed } = useSidebar();
+  const { user, tier, isPro, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  };
+
+  const tierBadge = isAdmin ? (
+    <span className="hidden sm:inline-block px-1.5 py-0.5 bg-violet-500/10 border border-violet-500/30 rounded text-[9px] text-violet-400 font-mono uppercase tracking-wider">
+      Admin
+    </span>
+  ) : isPro ? (
+    <span className="hidden sm:inline-block px-1.5 py-0.5 bg-[#0B6C3E]/10 border border-[#0B6C3E]/30 rounded text-[9px] text-[#0B6C3E] font-mono uppercase tracking-wider">
+      Pro
+    </span>
+  ) : (
+    <Link
+      to="/upgrade"
+      className="hidden sm:inline-block px-2 py-0.5 bg-zinc-800 hover:bg-[#0B6C3E]/20 border border-zinc-700 hover:border-[#0B6C3E]/50 rounded text-[9px] text-zinc-400 hover:text-[#0B6C3E] font-mono uppercase tracking-wider transition-colors"
+    >
+      Upgrade
+    </Link>
+  );
 
   return (
     <main
@@ -27,6 +52,18 @@ const HubMain = () => {
             className="w-2 h-2 rounded-full bg-[#0B6C3E] animate-pulse"
             title="Dados ativos"
           />
+          {user && (
+            <>
+              {tierBadge}
+              <button
+                onClick={handleLogout}
+                className="text-[10px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors ml-1"
+                title={`${user.email ?? ""} (${tier}) — Sair`}
+              >
+                Sair
+              </button>
+            </>
+          )}
         </div>
       </header>
 
