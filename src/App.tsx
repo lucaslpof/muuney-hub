@@ -22,6 +22,7 @@ const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
 const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
+const HubPortfolio = React.lazy(() => import("./pages/HubPortfolio"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 /* Gate wrapper for Pro-only routes */
@@ -86,6 +87,7 @@ const App = () => (
           />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />
+          <Route path="/portfolio" element={<HubPortfolio />} />
           <Route path="/upgrade" element={<HubUpgrade />} />
         </Route>
 
