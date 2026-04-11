@@ -914,3 +914,160 @@ export function useFidcV4Monthly(cnpj: string | null, months: number = 24) {
     retry: 2,
   });
 }
+
+/* ═══ FII V4 — Deep Module (hub-fii-api) ═══ */
+
+const FII_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-fii-api";
+
+async function fetchFii(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+  const url = new URL(FII_API);
+  url.searchParams.set("endpoint", endpoint);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+  const headers: Record<string, string> = {};
+  if (anonKey) {
+    headers["Authorization"] = `Bearer ${anonKey}`;
+    headers["apikey"] = anonKey;
+  }
+  const res = await fetch(url.toString(), { headers });
+  if (!res.ok) throw new Error(`FII API error: ${res.status}`);
+  return res.json();
+}
+
+// Enhanced FII types for V4
+export interface FiiV4MonthlyItem extends FiiMonthlyItem {
+  denom_social?: string | null;
+  slug?: string | null;
+  cnpj_fundo_classe?: string | null;
+  classe_rcvm175?: string | null;
+  gestor_nome?: string | null;
+}
+
+export interface FiiDetailResponse {
+  meta: FundMeta | null;
+  monthly: FiiMonthlyItem[];
+  latest: FiiMonthlyItem | null;
+  similar: FiiV4MonthlyItem[];
+}
+
+export interface FiiV4RankingItem extends FiiV4MonthlyItem {}
+
+export interface FiiV4OverviewResponse {
+  date: string;
+  total_fiis: number;
+  total_pl: number;
+  total_cotistas: number;
+  avg_dividend_yield: number | null;
+  avg_rentabilidade: number | null;
+  by_segmento: { segmento: string; count: number; pl: number; pct_pl: number; avg_dy: number | null }[];
+  by_mandato: { mandato: string; count: number }[];
+  by_tipo_gestao: { tipo: string; count: number }[];
+}
+
+export interface FiiSegment {
+  segmento: string;
+  count: number;
+  pl: number;
+}
+
+export interface FiiSearchResult {
+  cnpj_fundo_classe: string;
+  cnpj_fundo_legado: string | null;
+  denom_social: string;
+  slug: string | null;
+  gestor_nome: string | null;
+  vl_patrim_liq: number | null;
+}
+
+/** FII V4 — Detailed fund page (meta + monthly + similar by segmento) */
+export function useFiiDetail(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<FiiDetailResponse>({
+    queryKey: ["fii", "detail", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFii("fii_detail", params) as Promise<FiiDetailResponse>;
+    },
+    enabled: !!identifier,
+    staleTime: 10 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FII V4 — Enhanced rankings with filters */
+export function useFiiV4Rankings(opts: {
+  orderBy?: string;
+  order?: string;
+  limit?: number;
+  offset?: number;
+  segmento?: string;
+  tipoGestao?: string;
+  mandato?: string;
+  minPl?: number;
+  minDy?: number;
+  search?: string;
+  enabled?: boolean;
+} = {}) {
+  const { orderBy = "patrimonio_liquido", order = "desc", limit = 50, offset = 0, segmento, tipoGestao, mandato, minPl, minDy, search } = opts;
+  return useQuery<{ date: string; order_by: string; funds: FiiV4RankingItem[]; count: number }>({
+    queryKey: ["fii", "v4_rankings", orderBy, order, limit, offset, segmento, tipoGestao, mandato, minPl, minDy, search],
+    queryFn: () => {
+      const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit), offset: String(offset) };
+      if (segmento) params.segmento = segmento;
+      if (tipoGestao) params.tipo_gestao = tipoGestao;
+      if (mandato) params.mandato = mandato;
+      if (minPl && minPl > 0) params.min_pl = String(minPl);
+      if (minDy != null) params.min_dy = String(minDy);
+      if (search) params.search = search;
+      return fetchFii("fii_rankings", params) as Promise<{ date: string; order_by: string; funds: FiiV4RankingItem[]; count: number }>;
+    },
+    staleTime: 15 * 60_000,
+    enabled: opts.enabled !== false,
+    retry: 2,
+  });
+}
+
+/** FII V4 — Market overview with segmento/mandato/tipo breakdowns */
+export function useFiiV4Overview() {
+  return useQuery<FiiV4OverviewResponse>({
+    queryKey: ["fii", "v4_overview"],
+    queryFn: () => fetchFii("fii_overview") as Promise<FiiV4OverviewResponse>,
+    staleTime: 30 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FII V4 — Search FIIs by name */
+export function useFiiSearchV4(query: string, opts?: { limit?: number; enabled?: boolean }) {
+  const limit = opts?.limit ?? 20;
+  const trimmed = query.trim();
+  return useQuery<{ query: string; results: FiiSearchResult[]; count: number }>({
+    queryKey: ["fii", "search", trimmed, limit],
+    queryFn: () => fetchFii("fii_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FiiSearchResult[]; count: number }>,
+    staleTime: 5 * 60_000,
+    enabled: (opts?.enabled !== false) && trimmed.length >= 2,
+  });
+}
+
+/** FII V4 — List all segments with PL distribution */
+export function useFiiSegmentsV4() {
+  return useQuery<{ date: string; segments: FiiSegment[] }>({
+    queryKey: ["fii", "segments"],
+    queryFn: () => fetchFii("fii_segments") as Promise<{ date: string; segments: FiiSegment[] }>,
+    staleTime: 60 * 60_000,
+    retry: 2,
+  });
+}
+
+/** FII V4 — Monthly data via new API */
+export function useFiiV4Monthly(cnpj: string | null, months: number = 24) {
+  return useQuery<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>({
+    queryKey: ["fii", "v4_monthly", cnpj, months],
+    queryFn: () => fetchFii("fii_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>,
+    enabled: !!cnpj,
+    staleTime: 15 * 60_000,
+    retry: 2,
+  });
+}

@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
-import { Check, X, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Check, X, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Feature {
   label: string;
@@ -27,6 +29,8 @@ const FEATURES: Feature[] = [
   { label: "Priority support", free: false, pro: true },
 ];
 
+const CHECKOUT_FN_URL = `${import.meta.env.VITE_SUPABASE_URL ?? "https://yheopprbuimsunqfaqbp.supabase.co"}/functions/v1/stripe-checkout`;
+
 function FeatureCell({ value }: { value: boolean | string }) {
   if (value === true) {
     return (
@@ -48,11 +52,92 @@ function FeatureCell({ value }: { value: boolean | string }) {
 }
 
 export default function HubUpgrade() {
-  const { tier, isPro, isAdmin } = useAuth();
+  const { tier, isPro, isAdmin, refreshTier } = useAuth();
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successBanner, setSuccessBanner] = useState(false);
+  const [cancelledBanner, setCancelledBanner] = useState(false);
+
+  // Handle checkout return
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (status === "success") {
+      setSuccessBanner(true);
+      // Refresh tier after webhook processes (give it 3s)
+      const timer = setTimeout(() => refreshTier(), 3000);
+      return () => clearTimeout(timer);
+    }
+    if (status === "cancelled") {
+      setCancelledBanner(true);
+    }
+  }, [searchParams, refreshTier]);
+
+  async function startCheckout(plan: "monthly" | "yearly") {
+    setError(null);
+    setLoading(plan);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const jwt = sessionData.session?.access_token;
+      if (!jwt) {
+        setError("Sessão expirada. Faça login novamente.");
+        setLoading(null);
+        return;
+      }
+
+      const res = await fetch(CHECKOUT_FN_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Checkout error: ${res.status}`);
+      }
+
+      const { url } = await res.json();
+      if (!url) throw new Error("URL de checkout não retornada");
+
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setLoading(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-16">
+        {/* Status banners */}
+        {successBanner && (
+          <div className="mb-8 px-4 py-3 bg-[#0B6C3E]/10 border border-[#0B6C3E]/40 rounded-lg flex items-center gap-3">
+            <Check className="w-5 h-5 text-[#0B6C3E] shrink-0" />
+            <div>
+              <p className="text-sm text-[#0B6C3E] font-semibold">Pagamento confirmado</p>
+              <p className="text-xs text-zinc-400">Seu acesso Pro será ativado em alguns segundos.</p>
+            </div>
+          </div>
+        )}
+        {cancelledBanner && (
+          <div className="mb-8 px-4 py-3 bg-amber-500/10 border border-amber-500/40 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <p className="text-sm text-amber-400 font-semibold">Checkout cancelado</p>
+              <p className="text-xs text-zinc-400">Nada foi cobrado. Você pode tentar novamente quando quiser.</p>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="mb-8 px-4 py-3 bg-red-500/10 border border-red-500/40 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0B6C3E]/10 border border-[#0B6C3E]/30 mb-4">
@@ -139,17 +224,36 @@ export default function HubUpgrade() {
                 Plano atual
               </button>
             ) : (
-              <button
-                onClick={() => {
-                  // TODO: integrate Stripe/Pagar.me checkout
-                  alert(
-                    "Checkout em breve. Deixe seu email em contato@muuney.com.br para early-access."
-                  );
-                }}
-                className="w-full py-3 bg-[#0B6C3E] hover:bg-[#0B6C3E]/90 text-white rounded-lg font-medium transition-colors"
-              >
-                Fazer upgrade
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => startCheckout("monthly")}
+                  disabled={loading !== null}
+                  className="w-full py-3 bg-[#0B6C3E] hover:bg-[#0B6C3E]/90 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading === "monthly" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Redirecionando…
+                    </>
+                  ) : (
+                    "Assinar mensal — R$ 49/mês"
+                  )}
+                </button>
+                <button
+                  onClick={() => startCheckout("yearly")}
+                  disabled={loading !== null}
+                  className="w-full py-3 bg-transparent hover:bg-[#0B6C3E]/10 border border-[#0B6C3E]/50 disabled:opacity-60 disabled:cursor-not-allowed text-[#0B6C3E] rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading === "yearly" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Redirecionando…
+                    </>
+                  ) : (
+                    "Assinar anual — R$ 490/ano"
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>
