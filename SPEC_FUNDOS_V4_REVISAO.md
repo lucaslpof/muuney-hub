@@ -173,7 +173,9 @@ Comparar até 4 FIDCs lado a lado:
 
 ---
 
-### Fase 2: FII Deep Module (Semana 3-4)
+### Fase 2: FII Deep Module (Semana 3-4) — ✅ **CONCLUÍDA 11/04/2026**
+
+**Entregue:** `hub-fii-api` v2 (6 endpoints), `FiiHub.tsx` (4 seções narrativas), `FiiLamina.tsx` (Resumo + Performance + Composição + Similares), rotas Pro-gated `/fundos/fii` e `/fundos/fii/:slug`. Dados: 1.253 FIIs (Jan-Fev 2026, Mar filtrado por completude). Commit: `26ff312`.
 
 **Objetivo:** FII como segunda vertical — dados completos + métricas de mercado.
 

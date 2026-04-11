@@ -20,6 +20,14 @@ interface FormattedDataPoint extends MacroChartDataPoint {
   trend?: number;
 }
 
+export interface MacroChartEvent {
+  date: string; // ISO yyyy-mm-dd
+  label: string; // short tag, e.g. "COPOM +100bps"
+  kind?: "hike" | "cut" | "hold" | "start";
+  authority?: "COPOM" | "FOMC";
+  rationale?: string;
+}
+
 interface MacroChartProps {
   data: MacroChartDataPoint[];
   title: string;
@@ -34,6 +42,8 @@ interface MacroChartProps {
   /** Reference value to draw as horizontal dashed line (e.g. target/meta) */
   refValue?: number;
   refLabel?: string;
+  /** Optional monetary policy event overlay (COPOM/FOMC) */
+  events?: MacroChartEvent[];
 }
 
 /* ───── Overlay state ───── */
@@ -206,7 +216,7 @@ interface ChartMouseEvent {
 export const MacroChart = ({
   data, title, type = "line", color = "#0B6C3E", color2 = "#10B981",
   label = "Valor", label2, unit, height = 260, loading,
-  refValue, refLabel,
+  refValue, refLabel, events,
 }: MacroChartProps) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const [zoomLeft, setZoomLeft] = useState<string | null>(null);
@@ -214,6 +224,7 @@ export const MacroChart = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
   const [overlays, setOverlays] = useState<Set<Overlay>>(new Set());
+  const [showEvents, setShowEvents] = useState(false);
 
   const toggleOverlay = useCallback((o: Overlay) => {
     setOverlays(prev => {
@@ -449,6 +460,69 @@ export const MacroChart = ({
     </>
   );
 
+  /* Event overlay — COPOM / FOMC decisions mapped to nearest data point */
+  const eventMarkers = useMemo(() => {
+    if (!showEvents || !events?.length || !visibleData.length) return [];
+    // Build a sorted array of data timestamps for binary-search mapping
+    const dataPoints = visibleData
+      .map((d) => ({ t: new Date(d.date).getTime(), label: d.dateLabel, raw: d.date }))
+      .filter((p) => !Number.isNaN(p.t))
+      .sort((a, b) => a.t - b.t);
+    if (dataPoints.length === 0) return [];
+    const minT = dataPoints[0].t;
+    const maxT = dataPoints[dataPoints.length - 1].t;
+
+    return events
+      .map((e) => {
+        const et = new Date(e.date).getTime();
+        if (Number.isNaN(et) || et < minT || et > maxT) return null;
+        // Find nearest data point
+        let nearest = dataPoints[0];
+        let bestDiff = Math.abs(et - nearest.t);
+        for (let i = 1; i < dataPoints.length; i++) {
+          const diff = Math.abs(et - dataPoints[i].t);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            nearest = dataPoints[i];
+          }
+        }
+        return { ...e, mappedLabel: nearest.label };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [showEvents, events, visibleData]);
+
+  const renderEventMarkers = () => {
+    if (!showEvents || eventMarkers.length === 0) return null;
+    return eventMarkers.map((e, idx) => {
+      const strokeColor =
+        e.kind === "hike" ? "#EF4444" :
+        e.kind === "cut" ? "#22C55E" :
+        e.kind === "start" ? "#8B5CF6" :
+        "#71717A";
+      const showLabel = eventMarkers.length <= 20; // avoid clutter when too many
+      return (
+        <ReferenceLine
+          key={`ev-${idx}-${e.date}`}
+          x={e.mappedLabel}
+          stroke={strokeColor}
+          strokeDasharray="2 3"
+          strokeOpacity={0.6}
+          label={
+            showLabel
+              ? {
+                  value: e.authority === "FOMC" ? "F" : "C",
+                  position: "top",
+                  fill: strokeColor,
+                  fontSize: 9,
+                  fontFamily: "JetBrains Mono, monospace",
+                }
+              : undefined
+          }
+        />
+      );
+    });
+  };
+
   /* Reference line (e.g. meta/target) */
   const renderRefLine = () => {
     if (refValue == null) return null;
@@ -483,6 +557,7 @@ export const MacroChart = ({
         isAnimationActive={false}
       />
       {renderRefLine()}
+      {renderEventMarkers()}
       {children}
       {type !== "bar" && renderOverlays()}
       {renderZoomArea()}
@@ -541,6 +616,17 @@ export const MacroChart = ({
               >
                 <TrendingUp className="w-3 h-3" />
               </button>
+              {events && events.length > 0 && (
+                <button
+                  onClick={() => setShowEvents((v) => !v)}
+                  className={`p-1 rounded transition-colors text-[9px] font-mono ${
+                    showEvents ? "bg-cyan-500/20 text-cyan-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-[#1a1a1a]"
+                  }`}
+                  title="COPOM / FOMC decisions overlay"
+                >
+                  EV
+                </button>
+              )}
               <div className="w-px h-3 bg-[#1a1a1a] mx-0.5" />
             </>
           )}

@@ -21,6 +21,7 @@ const FidcHub = React.lazy(() => import("./pages/FidcHub"));
 const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
+const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 /* Gate wrapper for Pro-only routes */
@@ -77,6 +78,11 @@ const App = () => (
           <Route
             path="/fundos/fii"
             element={<ProRoute feature="o módulo FII completo"><FiiHub /></ProRoute>}
+          />
+          {/* Ofertas Públicas Radar — Pro only */}
+          <Route
+            path="/fundos/ofertas"
+            element={<ProRoute feature="o Ofertas Públicas Radar"><OfertasRadar /></ProRoute>}
           />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />

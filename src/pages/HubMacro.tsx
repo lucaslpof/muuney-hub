@@ -8,9 +8,11 @@ import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import {
   useHubLatest,
   useHubSeriesBundle,
+  useMonetaryEvents,
   pickSeries,
   type SeriesBundle,
 } from "@/hooks/useHubData";
+import type { MacroChartEvent } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { InflationCalculator } from "@/components/hub/InflationCalculator";
 import { YieldCurveSimulator } from "@/components/hub/YieldCurveSimulator";
@@ -137,6 +139,34 @@ const HubMacro = () => {
   const focusSelic = pickSeries(focusBundle, 990002);
   const focusPib = pickSeries(focusBundle, 990003);
   const focusCambio = pickSeries(focusBundle, 990004);
+
+  /* ─── Monetary policy events (COPOM + FOMC overlay) ─── */
+  const { data: monetaryEvents } = useMonetaryEvents("both");
+  const copomEvents: MacroChartEvent[] = useMemo(() => {
+    if (!monetaryEvents) return [];
+    return monetaryEvents
+      .filter((e) => e.authority === "COPOM")
+      .map((e) => ({
+        date: e.event_date,
+        label: `${e.authority} ${e.bps_change && e.bps_change > 0 ? "+" : ""}${e.bps_change ?? 0}bps → ${e.rate_after}%`,
+        kind: e.decision,
+        authority: e.authority,
+        rationale: e.rationale || undefined,
+      }));
+  }, [monetaryEvents]);
+  const fomcEvents: MacroChartEvent[] = useMemo(() => {
+    if (!monetaryEvents) return [];
+    return monetaryEvents
+      .filter((e) => e.authority === "FOMC")
+      .map((e) => ({
+        date: e.event_date,
+        label: `${e.authority} ${e.bps_change && e.bps_change > 0 ? "+" : ""}${e.bps_change ?? 0}bps → ${e.rate_after}%`,
+        kind: e.decision,
+        authority: e.authority,
+        rationale: e.rationale || undefined,
+      }));
+  }, [monetaryEvents]);
+  const allMonetaryEvents = useMemo(() => [...copomEvents, ...fomcEvents], [copomEvents, fomcEvents]);
 
   /* ─── KPI value helper ─── */
   const kpiVal = (code: string) => kpis.find(k => k.serie_code === code)?.last_value ?? 0;
@@ -312,9 +342,9 @@ const HubMacro = () => {
 
             {/* Overview charts — key snapshot */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
-              <MacroChart data={selic} title="Selic Meta" type="area" color="#0B6C3E" label="Selic" unit="% a.a." />
-              <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" />
-              <MacroChart data={ptaxCompra} title="Câmbio PTAX Compra" type="line" color="#F59E0B" label="PTAX" unit=" R$" />
+              <MacroChart data={selic} title="Selic Meta" type="area" color="#0B6C3E" label="Selic" unit="% a.a." events={copomEvents} />
+              <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" events={copomEvents} />
+              <MacroChart data={ptaxCompra} title="Câmbio PTAX Compra" type="line" color="#F59E0B" label="PTAX" unit=" R$" events={allMonetaryEvents} />
               <MacroChart data={desocupacao} title="Taxa de Desocupação" type="area" color="#8B5CF6" label="Desocupação" unit="%" />
             </div>
           </section>
@@ -333,12 +363,12 @@ const HubMacro = () => {
               ref={(el) => { sectionRefs.current["inflacao-juros"] = el; }}
             >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <MacroChart data={selic} title="Selic Meta — Taxa Básica de Juros" type="area" color="#0B6C3E" label="Selic" unit="% a.a." />
-                <MacroChart data={selicEfetiva} title="Selic Efetiva — Overnight" type="line" color="#6366F1" label="Selic Efetiva" unit="% a.a." />
+                <MacroChart data={selic} title="Selic Meta — Taxa Básica de Juros" type="area" color="#0B6C3E" label="Selic" unit="% a.a." events={copomEvents} />
+                <MacroChart data={selicEfetiva} title="Selic Efetiva — Overnight" type="line" color="#6366F1" label="Selic Efetiva" unit="% a.a." events={copomEvents} />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" />
-                <MacroChart data={ipca12m} title="IPCA Acumulado 12 Meses" type="area" color="#EF4444" label="IPCA 12m" unit="%" />
+                <MacroChart data={ipcaMensal} title="IPCA Mensal" type="bar" color="#10B981" label="IPCA" unit="%" events={copomEvents} />
+                <MacroChart data={ipca12m} title="IPCA Acumulado 12 Meses" type="area" color="#EF4444" label="IPCA 12m" unit="%" events={copomEvents} />
               </div>
               <InflationCalculator ipcaData={ipcaMensal} />
               <YieldCurveSimulator

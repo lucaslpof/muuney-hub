@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
 import { FundCategoryRankings } from "@/components/hub/FundCategoryRankings";
 import { FundScreener } from "@/components/hub/FundScreener";
@@ -41,7 +41,7 @@ import { RequireTier, BlurredPreview } from "@/components/hub/RequireTier";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
-  Building2, Landmark, Users,
+  Building2, Landmark, Users, Radar, ArrowRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -936,6 +936,49 @@ const HubFundos = () => {
             >
               {sectionVisible("estruturados") ? (
                 <div className="space-y-6">
+                  {/* Deep Module Launcher */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Link
+                      to="/fundos/fidc"
+                      className="group bg-[#0B6C3E]/5 border border-[#0B6C3E]/30 rounded-lg p-4 hover:bg-[#0B6C3E]/10 hover:border-[#0B6C3E]/60 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Shield className="w-5 h-5 text-[#0B6C3E]" />
+                        <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-[#0B6C3E] transition-colors" />
+                      </div>
+                      <div className="text-[11px] font-semibold text-zinc-200 mb-1">FIDC Deep</div>
+                      <div className="text-[9px] text-zinc-500 font-mono">
+                        Rankings · Subordinação · Inadimplência · Lâminas
+                      </div>
+                    </Link>
+                    <Link
+                      to="/fundos/fii"
+                      className="group bg-[#EC4899]/5 border border-[#EC4899]/30 rounded-lg p-4 hover:bg-[#EC4899]/10 hover:border-[#EC4899]/60 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Building2 className="w-5 h-5 text-[#EC4899]" />
+                        <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-[#EC4899] transition-colors" />
+                      </div>
+                      <div className="text-[11px] font-semibold text-zinc-200 mb-1">FII Deep</div>
+                      <div className="text-[9px] text-zinc-500 font-mono">
+                        Segmentos · DY · VP · Top performers · Lâminas
+                      </div>
+                    </Link>
+                    <Link
+                      to="/fundos/ofertas"
+                      className="group bg-amber-500/5 border border-amber-500/30 rounded-lg p-4 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Radar className="w-5 h-5 text-amber-400" />
+                        <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-amber-400 transition-colors" />
+                      </div>
+                      <div className="text-[11px] font-semibold text-zinc-200 mb-1">Ofertas Radar</div>
+                      <div className="text-[9px] text-zinc-500 font-mono">
+                        CVM 160/476/400 · Pipeline · Timeline · Filters
+                      </div>
+                    </Link>
+                  </div>
+
                   {/* FIDC */}
                   <div className="space-y-3">
                     <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono flex items-center gap-2">

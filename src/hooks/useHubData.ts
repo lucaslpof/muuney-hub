@@ -1,6 +1,45 @@
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const HUB_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-macro-api";
+
+/* ─── Monetary Policy Events (COPOM / FOMC) ─── */
+export interface MonetaryEvent {
+  id: number;
+  event_date: string;
+  authority: "COPOM" | "FOMC";
+  decision: "hike" | "cut" | "hold" | "start";
+  rate_before: number | null;
+  rate_after: number;
+  bps_change: number | null;
+  vote: string | null;
+  rationale: string | null;
+}
+
+/**
+ * Fetch monetary policy events (COPOM and/or FOMC) for chart overlays.
+ * Results are cached for 12h (events rarely change once published).
+ */
+export function useMonetaryEvents(authority?: "COPOM" | "FOMC" | "both") {
+  const key = authority || "both";
+  return useQuery<MonetaryEvent[]>({
+    queryKey: ["hub", "monetary_events", key],
+    queryFn: async () => {
+      let query = supabase
+        .from("hub_monetary_events")
+        .select("*")
+        .order("event_date", { ascending: true });
+      if (authority && authority !== "both") {
+        query = query.eq("authority", authority);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data as MonetaryEvent[]) || [];
+    },
+    staleTime: 12 * 60 * 60 * 1000,
+    retry: 2,
+  });
+}
 
 export interface SeriesDataPoint {
   date: string;

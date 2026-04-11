@@ -1071,3 +1071,173 @@ export function useFiiV4Monthly(cnpj: string | null, months: number = 24) {
     retry: 2,
   });
 }
+
+/* ═══ Ofertas Públicas — V4 Fase 3 (hub-ofertas-api) ═══ */
+
+const OFERTAS_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-ofertas-api";
+
+async function fetchOfertas(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+  const url = new URL(OFERTAS_API);
+  url.searchParams.set("endpoint", endpoint);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
+  });
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Ofertas API error: ${res.status}`);
+  return res.json();
+}
+
+export interface OfertaPublica {
+  id: number;
+  protocolo: string;
+  numero_oferta: string | null;
+  emissor_cnpj: string;
+  emissor_nome: string;
+  tipo_oferta: string;
+  tipo_ativo: string;
+  status: "em_analise" | "concedido" | "em_distribuicao" | "encerrado" | "cancelado" | "arquivado" | "suspenso";
+  modalidade: string | null;
+  valor_total: number | null;
+  volume_final: number | null;
+  data_protocolo: string | null;
+  data_registro: string | null;
+  data_inicio: string | null;
+  data_encerramento: string | null;
+  coordenador_lider: string | null;
+  rating: string | null;
+  serie: string | null;
+  segmento: string | null;
+  observacoes: string | null;
+  source_url: string | null;
+}
+
+export interface OfertasListFilters {
+  tipo_ativo?: string;
+  tipo_oferta?: string;
+  status?: string;
+  modalidade?: string;
+  segmento?: string;
+  search?: string;
+  min_valor?: number;
+  from_date?: string;
+  to_date?: string;
+  order_by?: string;
+  order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
+export interface OfertasListResponse {
+  ofertas: OfertaPublica[];
+  count: number;
+  limit: number;
+  offset: number;
+}
+
+export interface OfertasTimelineBucket {
+  month: string;
+  count: number;
+  valor_total: number;
+  volume_final: number;
+  ofertas: OfertaPublica[];
+}
+
+export interface OfertasTimelineResponse {
+  months: number;
+  total: number;
+  timeline: OfertasTimelineBucket[];
+}
+
+export interface OfertasStatsResponse {
+  total_ofertas: number;
+  total_valor: number;
+  total_volume: number;
+  em_distribuicao: number;
+  em_analise: number;
+  encerradas: number;
+  by_tipo_ativo: Array<{ tipo: string; count: number; valor: number }>;
+  by_status: Array<{ status: string; count: number }>;
+  by_tipo_oferta: Array<{ tipo: string; count: number }>;
+  by_modalidade: Array<{ modalidade: string; count: number }>;
+  by_segmento: Array<{ segmento: string; count: number; valor: number }>;
+}
+
+export interface OfertasFiltersResponse {
+  tipos_ativo: string[];
+  tipos_oferta: string[];
+  statuses: string[];
+  modalidades: string[];
+  segmentos: string[];
+}
+
+export interface OfertaDetailResponse {
+  oferta: OfertaPublica;
+  related: Array<Pick<OfertaPublica, "id" | "protocolo" | "emissor_nome" | "tipo_ativo" | "status" | "valor_total" | "data_protocolo">>;
+}
+
+/** List ofertas with filters (pagination supported) */
+export function useOfertasList(filters: OfertasListFilters = {}) {
+  return useQuery<OfertasListResponse>({
+    queryKey: ["ofertas", "list", filters],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") params[k] = String(v);
+      });
+      return fetchOfertas("ofertas_list", params) as Promise<OfertasListResponse>;
+    },
+    staleTime: 10 * 60_000,
+    retry: 2,
+  });
+}
+
+/** Detail view for a single oferta */
+export function useOfertaDetail(protocolo: string | null) {
+  return useQuery<OfertaDetailResponse>({
+    queryKey: ["ofertas", "detail", protocolo],
+    queryFn: () => fetchOfertas("ofertas_detail", { protocolo: protocolo! }) as Promise<OfertaDetailResponse>,
+    enabled: !!protocolo,
+    staleTime: 30 * 60_000,
+    retry: 2,
+  });
+}
+
+/** Timeline grouped by month */
+export function useOfertasTimeline(months = 12, tipoAtivo?: string, status?: string) {
+  return useQuery<OfertasTimelineResponse>({
+    queryKey: ["ofertas", "timeline", months, tipoAtivo, status],
+    queryFn: () => {
+      const params: Record<string, string> = { months: String(months) };
+      if (tipoAtivo) params.tipo_ativo = tipoAtivo;
+      if (status) params.status = status;
+      return fetchOfertas("ofertas_timeline", params) as Promise<OfertasTimelineResponse>;
+    },
+    staleTime: 10 * 60_000,
+    retry: 2,
+  });
+}
+
+/** Aggregate stats */
+export function useOfertasStats(fromDate?: string, toDate?: string) {
+  return useQuery<OfertasStatsResponse>({
+    queryKey: ["ofertas", "stats", fromDate, toDate],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+      return fetchOfertas("ofertas_stats", params) as Promise<OfertasStatsResponse>;
+    },
+    staleTime: 10 * 60_000,
+    retry: 2,
+  });
+}
+
+/** Filter options (distinct values) */
+export function useOfertasFilters() {
+  return useQuery<OfertasFiltersResponse>({
+    queryKey: ["ofertas", "filters"],
+    queryFn: () => fetchOfertas("ofertas_filters") as Promise<OfertasFiltersResponse>,
+    staleTime: 60 * 60_000,
+    retry: 2,
+  });
+}
