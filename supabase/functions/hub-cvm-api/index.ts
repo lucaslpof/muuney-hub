@@ -601,23 +601,37 @@ Deno.serve(async (req) => {
         const orderBy = url.searchParams.get('order_by') || 'indice_subordinacao'
         const limit = parseInt(url.searchParams.get('limit') || '20')
         const ascending = url.searchParams.get('order') === 'asc'
-        const { data: latestDt } = await supabase.from('hub_fidc_mensal').select('dt_comptc').order('dt_comptc', { ascending: false }).limit(1)
-        if (!latestDt?.length) { result = { funds: [], count: 0 }; break }
-        const dt = latestDt[0].dt_comptc
-        const { data, error } = await supabase.from('hub_fidc_mensal').select('cnpj_fundo, dt_comptc, vl_pl_total, indice_subordinacao, taxa_inadimplencia, indice_pdd_cobertura, rentab_fundo, rentab_senior, rentab_subordinada, spread_cdi, tp_lastro_principal, nr_cedentes').eq('dt_comptc', dt).not(orderBy, 'is', null).order(orderBy, { ascending, nullsFirst: false }).limit(limit)
+        // Prefer latest COMPLETE month (>=500 funds) to avoid partial ingest skew
+        const { data: latestComplete } = await supabase.rpc('fidc_latest_complete_date')
+        let dt: string | null = typeof latestComplete === 'string' ? latestComplete : null
+        if (!dt) {
+          const { data: latestDt } = await supabase.from('v_hub_fidc_clean').select('dt_comptc').order('dt_comptc', { ascending: false }).limit(1)
+          if (!latestDt?.length) { result = { funds: [], count: 0 }; break }
+          dt = latestDt[0].dt_comptc
+        }
+        // NOTE: v_hub_fidc_clean filters |rentab| > 95% outliers
+        const { data, error } = await supabase.from('v_hub_fidc_clean').select('cnpj_fundo, dt_comptc, vl_pl_total, indice_subordinacao, taxa_inadimplencia, indice_pdd_cobertura, rentab_fundo, rentab_senior, rentab_subordinada, spread_cdi, tp_lastro_principal, nr_cedentes').eq('dt_comptc', dt).not(orderBy, 'is', null).order(orderBy, { ascending, nullsFirst: false }).limit(limit)
         if (error) throw error
         const cnpjsToLookup = (data || []).map((d: any) => d.cnpj_fundo)
-        const { data: names } = await supabase.from('hub_fundos_meta').select('cnpj_fundo, denom_social, classe_anbima, gestor_nome').in('cnpj_fundo', cnpjsToLookup)
-        const nameMap: Record<string, any> = {}; for (const n of (names || [])) nameMap[n.cnpj_fundo] = n
+        const { data: names } = await supabase.from('hub_fundos_meta').select('cnpj_fundo_classe, cnpj_fundo_legado, denom_social, classe_rcvm175, gestor_nome').or(`cnpj_fundo_classe.in.(${cnpjsToLookup.map((c:string) => `"${c}"`).join(',')}),cnpj_fundo_legado.in.(${cnpjsToLookup.map((c:string) => `"${c}"`).join(',')})`)
+        const nameMap: Record<string, any> = {}
+        for (const n of (names || [])) {
+          nameMap[n.cnpj_fundo_classe] = n
+          if (n.cnpj_fundo_legado) nameMap[n.cnpj_fundo_legado] = n
+        }
         const enriched = (data || []).map((d: any) => ({ ...d, ...(nameMap[d.cnpj_fundo] || {}) }))
         result = { date: dt, order_by: orderBy, funds: enriched, count: enriched.length }
         break
       }
       case 'fidc_overview': {
-        const { data: latestDt } = await supabase.from('hub_fidc_mensal').select('dt_comptc').order('dt_comptc', { ascending: false }).limit(1)
-        if (!latestDt?.length) { result = { date: null, total_fidcs: 0 }; break }
-        const dt = latestDt[0].dt_comptc
-        const { data } = await supabase.from('hub_fidc_mensal').select('vl_pl_total, indice_subordinacao, taxa_inadimplencia, indice_pdd_cobertura, tp_lastro_principal').eq('dt_comptc', dt)
+        const { data: latestComplete } = await supabase.rpc('fidc_latest_complete_date')
+        let dt: string | null = typeof latestComplete === 'string' ? latestComplete : null
+        if (!dt) {
+          const { data: latestDt } = await supabase.from('v_hub_fidc_clean').select('dt_comptc').order('dt_comptc', { ascending: false }).limit(1)
+          if (!latestDt?.length) { result = { date: null, total_fidcs: 0 }; break }
+          dt = latestDt[0].dt_comptc
+        }
+        const { data } = await supabase.from('v_hub_fidc_clean').select('vl_pl_total, indice_subordinacao, taxa_inadimplencia, indice_pdd_cobertura, tp_lastro_principal').eq('dt_comptc', dt)
         const total = data?.length || 0
         let sumPl = 0, sumSubord = 0, sumInadim = 0, countSubord = 0, countInadim = 0
         const byLastro: Record<string, { count: number; pl: number }> = {}

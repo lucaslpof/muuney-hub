@@ -341,10 +341,12 @@ export default function FidcHub() {
                                 </span>
                               </td>
                               <td className="px-4 py-2 text-right text-zinc-300">
-                                {fund.rentab_senior?.toFixed(2) || "—"}%
+                                {fund.rentab_senior != null && Math.abs(fund.rentab_senior) <= 95
+                                  ? `${fund.rentab_senior.toFixed(2)}%`
+                                  : "—"}
                               </td>
-                              <td className="px-4 py-2 text-center text-zinc-500 text-[7px]">
-                                —
+                              <td className="px-4 py-2 text-center text-zinc-400 text-[8px] truncate max-w-[120px]">
+                                {fund.tp_lastro_principal || "—"}
                               </td>
                             </tr>
                           ))

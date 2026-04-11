@@ -17,11 +17,20 @@ import {
 /* ─── Metric columns for FIDC ranking table ─── */
 const SORT_OPTIONS = [
   { key: "vl_pl_total", label: "PL Total" },
-  { key: "rentab_fundo", label: "Rentabilidade" },
+  { key: "rentab_senior", label: "Rentab. Senior" },
   { key: "taxa_inadimplencia", label: "Inadimplência" },
   { key: "indice_subordinacao", label: "Subordinação" },
   { key: "indice_pdd_cobertura", label: "Cobertura PDD" },
 ] as const;
+
+/* ─── Sanity-check for corrupt rentabilidade values (CVM raw data outliers) ─── */
+const CORRUPT_RENTAB_THRESHOLD = 95;
+const cleanRentab = (v: number | null | undefined): number | null => {
+  if (v == null) return null;
+  if (!isFinite(v)) return null;
+  if (Math.abs(v) > CORRUPT_RENTAB_THRESHOLD) return null;
+  return v;
+};
 
 /* ─── Risk color scale ─── */
 const inadimColor = (v: number | null) => {
@@ -197,9 +206,14 @@ export const FIDCRankingTable = ({
                 <td className="px-3 py-1.5 text-right text-zinc-200 font-mono">
                   {formatPL(f.vl_pl_total)}
                 </td>
-                <td className={`px-3 py-1.5 text-right font-mono ${(f.rentab_fundo ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {f.rentab_fundo != null ? formatPct(f.rentab_fundo) : "—"}
-                </td>
+                {(() => {
+                  const cleaned = cleanRentab(f.rentab_senior);
+                  return (
+                    <td className={`px-3 py-1.5 text-right font-mono ${cleaned == null ? "text-zinc-600" : cleaned >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {cleaned != null ? formatPct(cleaned) : "—"}
+                    </td>
+                  );
+                })()}
                 <td className={`px-3 py-1.5 text-right font-mono ${inadimColor(f.taxa_inadimplencia)}`}>
                   {f.taxa_inadimplencia != null ? `${f.taxa_inadimplencia.toFixed(2)}%` : "—"}
                 </td>

@@ -363,6 +363,10 @@ export interface FidcMonthlyItem {
   qt_cota_mezanino?: number | null;
   nr_cotistas_senior?: number | null;
   nr_cotistas_subordinada?: number | null;
+  tp_lastro_principal?: string | null;
+  benchmark?: string | null;
+  rentab_benchmark?: number | null;
+  spread_cdi?: number | null;
 }
 
 export interface FidcRankingItem {
@@ -374,7 +378,10 @@ export interface FidcRankingItem {
   taxa_inadimplencia: number | null;
   indice_pdd_cobertura: number | null;
   rentab_fundo: number | null;
+  rentab_senior: number | null;
+  rentab_subordinada?: number | null;
   vl_carteira_direitos: number | null;
+  tp_lastro_principal?: string | null;
 }
 
 export interface FidcOverviewItem {

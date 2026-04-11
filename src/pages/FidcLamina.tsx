@@ -29,15 +29,33 @@ const KPICard = ({
   </motion.div>
 );
 
-/** Compute monthly series for chart (Senior, Subordinada, Fundo) */
+/**
+ * Compute monthly series for chart (Senior, Subordinada, Fundo).
+ * HOTFIX (11/04/2026):
+ *  - Correct field names: rentab_senior / rentab_subordinada (not rentab_fundo_senior/subord)
+ *  - Clip CVM outliers: any |rentab| > 95% in a single month is treated as corrupt
+ *    (raw CVM publishes e.g. -280 bi% for funds in liquidation with negative cotas).
+ */
+const CORRUPT_RENTAB_THRESHOLD = 95; // % in a single month; above this we consider CVM data corrupt
+
+function cleanRentab(v: any): number | null {
+  if (v == null) return null;
+  const n = typeof v === "number" ? v : parseFloat(v);
+  if (!isFinite(n)) return null;
+  if (Math.abs(n) > CORRUPT_RENTAB_THRESHOLD) return null;
+  return n;
+}
+
 function computeRentabilidadeSeries(monthly: any[]) {
   if (!monthly || monthly.length === 0) return [];
-  return monthly.map((m) => ({
-    date: m.dt_comptc,
-    rentab_senior: m.rentab_fundo_senior != null ? parseFloat(m.rentab_fundo_senior) : null,
-    rentab_subord: m.rentab_fundo_subord != null ? parseFloat(m.rentab_fundo_subord) : null,
-    rentab_fundo: m.rentab_fundo != null ? parseFloat(m.rentab_fundo) : null,
-  })).filter((d) => d.rentab_senior != null || d.rentab_subord != null || d.rentab_fundo != null);
+  return monthly
+    .map((m) => ({
+      date: m.dt_comptc,
+      rentab_senior: cleanRentab(m.rentab_senior),
+      rentab_subord: cleanRentab(m.rentab_subordinada),
+      rentab_fundo: cleanRentab(m.rentab_fundo),
+    }))
+    .filter((d) => d.rentab_senior != null || d.rentab_subord != null || d.rentab_fundo != null);
 }
 
 /** Compute capital structure series (PL Senior, Subord, Mezanino) */
