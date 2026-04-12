@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { fmtNum } from "@/lib/format";
 
 interface SparklinePoint {
   value: number;
@@ -120,7 +121,7 @@ export const KPICard = ({
               >
                 <TrendIcon className="w-2.5 h-2.5" />
                 {change > 0 ? "+" : ""}
-                {change.toFixed(2)}%
+                {fmtNum(change, 2)}%
               </span>
             )}
             {lastDate && (

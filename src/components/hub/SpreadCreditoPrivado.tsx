@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { ShieldAlert, TrendingUp, AlertTriangle, Landmark, Download, Minus } from "lucide-react";
 import type { SeriesDataPoint } from "@/hooks/useHubData";
+import { fmtNum } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SPREAD CRÉDITO PRIVADO v2
@@ -47,20 +48,20 @@ function generateSignals(spreadAA: number, spreadA: number, emissoes: number, se
   const diff = spreadA - spreadAA;
 
   if (spreadAA < 1.0 && selic > 12) {
-    signals.push({ label: "Subprecificação", message: `Spread AA (${spreadAA.toFixed(2)} p.p.) muito comprimido para Selic de ${selic.toFixed(2)}% — risco de repricing.`, severity: "alert" });
+    signals.push({ label: "Subprecificação", message: `Spread AA (${fmtNum(spreadAA, 2)} p.p.) muito comprimido para Selic de ${fmtNum(selic, 2)}% — risco de repricing.`, severity: "alert" });
   }
   if (diff > 1.2) {
-    signals.push({ label: "Diferencial AA→A Alto", message: `Gap de ${diff.toFixed(2)} p.p. entre ratings — mercado discriminando qualidade de crédito.`, severity: "watch" });
+    signals.push({ label: "Diferencial AA→A Alto", message: `Gap de ${fmtNum(diff, 2)} p.p. entre ratings — mercado discriminando qualidade de crédito.`, severity: "watch" });
   } else if (diff < 0.5) {
-    signals.push({ label: "Diferencial Comprimido", message: `Gap AA→A de apenas ${diff.toFixed(2)} p.p. — risco de homogeneização de ratings.`, severity: "watch" });
+    signals.push({ label: "Diferencial Comprimido", message: `Gap AA→A de apenas ${fmtNum(diff, 2)} p.p. — risco de homogeneização de ratings.`, severity: "watch" });
   }
   if (emissoes > 30) {
-    signals.push({ label: "Mercado Primário Aquecido", message: `Emissões de R$ ${emissoes.toFixed(1)} bi/mês — absorção forte pelo mercado.`, severity: "positive" });
+    signals.push({ label: "Mercado Primário Aquecido", message: `Emissões de R$ ${fmtNum(emissoes, 1)} bi/mês — absorção forte pelo mercado.`, severity: "positive" });
   } else if (emissoes < 15) {
-    signals.push({ label: "Emissões Retraindo", message: `Volume de apenas R$ ${emissoes.toFixed(1)} bi — janela desfavorável ou aversão de emissores.`, severity: "alert" });
+    signals.push({ label: "Emissões Retraindo", message: `Volume de apenas R$ ${fmtNum(emissoes, 1)} bi — janela desfavorável ou aversão de emissores.`, severity: "alert" });
   }
   if (spreadAA > 2.0) {
-    signals.push({ label: "Spreads Elevados", message: `AA em ${spreadAA.toFixed(2)} p.p. — acima do p90 histórico. Oportunidade para compra com prêmio.`, severity: "watch" });
+    signals.push({ label: "Spreads Elevados", message: `AA em ${fmtNum(spreadAA, 2)} p.p. — acima do p90 histórico. Oportunidade para compra com prêmio.`, severity: "watch" });
   }
 
   return signals;
@@ -83,7 +84,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
       {payload.map((p, i) => (
         <div key={i} className="text-[10px] font-mono">
           <span style={{ color: p.color }}>{p.name}:</span>{" "}
-          <span className="text-zinc-100">{typeof p.value === "number" ? p.value.toFixed(2) : p.value}</span>
+          <span className="text-zinc-100">{typeof p.value === "number" ? fmtNum(p.value, 2) : p.value}</span>
         </div>
       ))}
     </div>
@@ -137,7 +138,7 @@ export function SpreadCreditoPrivado({
   /* CSV export */
   const exportCSV = () => {
     const header = "Data,Spread AA,Spread A,Diferencial\n";
-    const rows = spreadChartData.map((d) => `${d.date},${d.AA.toFixed(2)},${d.A.toFixed(2)},${d.diff.toFixed(2)}`).join("\n");
+    const rows = spreadChartData.map((d) => `${d.date},${fmtNum(d.AA, 2)},${fmtNum(d.A, 2)},${fmtNum(d.diff, 2)}`).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -169,19 +170,19 @@ export function SpreadCreditoPrivado({
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Spread AA</div>
-            <div className="text-[14px] font-bold font-mono text-emerald-400">{spreadAA.toFixed(2)} p.p.</div>
+            <div className="text-[14px] font-bold font-mono text-emerald-400">{fmtNum(spreadAA, 2)} p.p.</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Spread A</div>
-            <div className="text-[14px] font-bold font-mono text-amber-400">{spreadA.toFixed(2)} p.p.</div>
+            <div className="text-[14px] font-bold font-mono text-amber-400">{fmtNum(spreadA, 2)} p.p.</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Emissões Deb.</div>
-            <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {emissoes.toFixed(1)} bi</div>
+            <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {fmtNum(emissoes, 1)} bi</div>
           </div>
           <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">CRA + CRI</div>
-            <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {estoqueCRACRI.toFixed(1)} bi</div>
+            <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {fmtNum(estoqueCRACRI, 1)} bi</div>
           </div>
           <div className={`rounded p-2.5 border ${regime.bgColor} ${regime.borderColor}`}>
             <div className="text-[8px] text-zinc-600 font-mono">Regime</div>
@@ -199,7 +200,7 @@ export function SpreadCreditoPrivado({
               Risco: {risk.level}
             </span>
             <span className="text-[9px] font-mono text-zinc-600 ml-auto">
-              Δ AA→A: {(spreadA - spreadAA).toFixed(2)} p.p.
+              Δ AA→A: {fmtNum(spreadA - spreadAA, 2)} p.p.
             </span>
           </div>
           <p className="text-[9px] text-zinc-500 leading-relaxed">{risk.message}</p>

@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { Download, Camera, RotateCcw, TrendingUp, Activity } from "lucide-react";
 import { sma, ema, linearRegression, type DataPoint } from "@/lib/statistics";
+import { smartFormatAxis } from "@/lib/format";
 
 interface MacroChartDataPoint {
   date: string;
@@ -85,19 +86,8 @@ function computeYDomain(values: number[]): { domain: [number, number]; ticks: nu
   return { domain: [lo, hi], ticks };
 }
 
-/* ───── Smart Y-axis formatter ───── */
-function smartFormat(v: number, range: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (abs >= 10_000) return `${(v / 1_000).toFixed(0)}k`;
-  if (abs >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
-  // For small ranges (e.g. 0.01 - 0.05), show more precision
-  if (range < 0.1) return v.toFixed(3);
-  if (range < 1) return v.toFixed(2);
-  if (range < 10) return v.toFixed(1);
-  return v.toFixed(0);
-}
+/* ───── Smart Y-axis formatter (pt-BR — delegated to @/lib/format) ───── */
+const smartFormat = smartFormatAxis;
 
 /* ───── Smart X-axis date label formatter ───── */
 function formatDateLabel(date: string, totalPoints: number): string {

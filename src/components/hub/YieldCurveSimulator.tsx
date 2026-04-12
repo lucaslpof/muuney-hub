@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
+import { fmtNum } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    YIELD CURVE SIMULATOR v2
@@ -145,7 +146,7 @@ export const YieldCurveSimulator = ({
           </span>
           {/* DV01 badge */}
           <span className="text-[9px] font-mono text-zinc-600 px-2 py-0.5 rounded border border-[#1a1a1a]">
-            DV01 ≈ R$ {dv01.toFixed(2)}/1000
+            DV01 ≈ R$ {fmtNum(dv01, 2)}/1000
           </span>
         </div>
       </div>
@@ -215,7 +216,7 @@ export const YieldCurveSimulator = ({
             tickLine={false}
             width={50}
             domain={[yMin, yMax]}
-            tickFormatter={(v: number) => `${v.toFixed(1)}%`}
+            tickFormatter={(v: number) => `${fmtNum(v, 1)}%`}
           />
           <Tooltip
             contentStyle={{
@@ -226,7 +227,7 @@ export const YieldCurveSimulator = ({
               fontFamily: "JetBrains Mono, monospace",
             }}
             labelStyle={{ color: "#71717a" }}
-            formatter={(v: number) => [`${v.toFixed(2)}%`]}
+            formatter={(v: number) => [`${fmtNum(v, 2)}%`]}
           />
           <ReferenceLine y={currentSelic} stroke="#3f3f46" strokeDasharray="4 4" />
           <Line type="monotone" dataKey="base" name="Atual" stroke="#52525b" strokeWidth={1.5} dot={{ r: 3 }} strokeDasharray="4 4" />

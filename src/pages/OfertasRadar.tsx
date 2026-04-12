@@ -40,35 +40,7 @@ import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { HubSEO } from "@/lib/seo";
 import { SkeletonKPI, SkeletonChart, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
-
-/* ─── Formatters ─── */
-const formatMoney = (v: number | null | undefined): string => {
-  if (v == null || isNaN(Number(v))) return "—";
-  const num = Number(v);
-  if (num >= 1_000_000_000) return `R$ ${(num / 1_000_000_000).toFixed(2)}B`;
-  if (num >= 1_000_000) return `R$ ${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `R$ ${(num / 1_000).toFixed(0)}k`;
-  return `R$ ${num.toFixed(0)}`;
-};
-
-const formatDate = (d: string | null | undefined): string => {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return d;
-  }
-};
-
-const formatMonthLabel = (month: string): string => {
-  const [year, mo] = month.split("-");
-  const mesNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  return `${mesNames[Number(mo) - 1] ?? mo}/${year?.slice(2) ?? ""}`;
-};
+import { formatBRL, formatDate, formatMonthLabel, formatCount, fmtNum } from "@/lib/format";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -263,24 +235,24 @@ export default function OfertasRadar() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <KPICard
                       label="Total de Ofertas"
-                      value={String(stats.total_ofertas)}
+                      value={formatCount(stats.total_ofertas)}
                       subtext="últimos 12 meses"
                       color="text-zinc-100"
                     />
                     <KPICard
                       label="Volume Protocolado"
-                      value={formatMoney(stats.total_valor)}
+                      value={formatBRL(stats.total_valor)}
                       color="text-[#0B6C3E]"
                     />
                     <KPICard
                       label="Em Distribuição"
-                      value={String(stats.em_distribuicao)}
+                      value={formatCount(stats.em_distribuicao)}
                       subtext="registros ativos"
                       color="text-emerald-400"
                     />
                     <KPICard
                       label="Em Análise"
-                      value={String(stats.em_analise)}
+                      value={formatCount(stats.em_analise)}
                       subtext="pipeline CVM"
                       color="text-amber-400"
                     />
@@ -294,24 +266,23 @@ export default function OfertasRadar() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Pie: Tipo Ativo por valor */}
+                  {/* Pie: Tipo Ativo por valor — external legend to avoid label overlap */}
                   {pieDataByAtivo.length > 0 && (
                     <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-6">
                       <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-4">
                         Volume por Classe de Ativo
                       </h3>
-                      <ResponsiveContainer width="100%" height={260}>
+                      <ResponsiveContainer width="100%" height={200}>
                         <PieChart>
                           <Pie
                             data={pieDataByAtivo}
                             cx="50%"
                             cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }: { name: string; percent: number }) =>
-                              `${name} ${(percent * 100).toFixed(0)}%`
-                            }
+                            innerRadius={45}
                             outerRadius={80}
                             dataKey="value"
+                            stroke="#0a0a0a"
+                            strokeWidth={2}
                           >
                             {pieDataByAtivo.map((_entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -320,6 +291,28 @@ export default function OfertasRadar() {
                           <Tooltip content={<ChartTooltip />} />
                         </PieChart>
                       </ResponsiveContainer>
+                      {/* External legend */}
+                      <div className="mt-3 space-y-1.5">
+                        {pieDataByAtivo.map((entry, index) => {
+                          const total = pieDataByAtivo.reduce((s, e) => s + e.value, 0);
+                          const pct = total > 0 ? (entry.value / total) * 100 : 0;
+                          return (
+                            <div key={entry.name} className="flex items-center justify-between text-[10px] font-mono">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                />
+                                <span className="text-zinc-400 truncate">{entry.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-zinc-300">{formatBRL(entry.value)}</span>
+                                <span className="text-zinc-600 w-10 text-right">{fmtNum(pct, 1)}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -333,7 +326,7 @@ export default function OfertasRadar() {
                         {stats?.by_status.map((s) => (
                           <div key={s.status} className="flex items-center justify-between">
                             <StatusBadge status={s.status as OfertaPublica["status"]} />
-                            <span className="text-[11px] font-mono text-zinc-300">{s.count}</span>
+                            <span className="text-[11px] font-mono text-zinc-300">{formatCount(s.count)}</span>
                           </div>
                         ))}
                       </div>
@@ -346,7 +339,7 @@ export default function OfertasRadar() {
                         {stats?.by_tipo_oferta.map((t) => (
                           <div key={t.tipo} className="flex justify-between text-[10px] font-mono">
                             <span className="text-zinc-400">{t.tipo}</span>
-                            <span className="text-zinc-200">{t.count}</span>
+                            <span className="text-zinc-200">{formatCount(t.count)}</span>
                           </div>
                         ))}
                       </div>
@@ -425,13 +418,14 @@ export default function OfertasRadar() {
                           yAxisId="left"
                           stroke="#0B6C3E"
                           style={{ fontSize: 10 }}
-                          tickFormatter={(v) => `R$ ${v.toFixed(1)}B`}
+                          tickFormatter={(v: number) => `R$ ${fmtNum(v, 1)}B`}
                         />
                         <YAxis
                           yAxisId="right"
                           orientation="right"
                           stroke="#F59E0B"
                           style={{ fontSize: 10 }}
+                          tickFormatter={(v: number) => formatCount(v)}
                         />
                         <Tooltip content={<ChartTooltip />} />
                         <Bar yAxisId="left" dataKey="valor" fill="#0B6C3E" name="Volume (R$B)" />
@@ -453,8 +447,8 @@ export default function OfertasRadar() {
                           {formatMonthLabel(bucket.month)}
                         </h4>
                         <div className="flex gap-3 text-[9px] font-mono text-zinc-500">
-                          <span>{bucket.count} ofertas</span>
-                          <span className="text-[#0B6C3E]">{formatMoney(bucket.valor_total)}</span>
+                          <span>{formatCount(bucket.count)} ofertas</span>
+                          <span className="text-[#0B6C3E]">{formatBRL(bucket.valor_total)}</span>
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -473,7 +467,7 @@ export default function OfertasRadar() {
                               <span className="text-zinc-500">{o.tipo_oferta}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-zinc-300">{formatMoney(o.valor_total)}</span>
+                              <span className="text-zinc-300">{formatBRL(o.valor_total)}</span>
                               <StatusBadge status={o.status} />
                             </div>
                           </div>
@@ -538,10 +532,10 @@ export default function OfertasRadar() {
                           </div>
                         </div>
                         <div className="text-xl font-semibold font-mono text-[#0B6C3E]">
-                          {formatMoney(t.valor)}
+                          {formatBRL(t.valor)}
                         </div>
                         <div className="text-[9px] font-mono text-zinc-500 mt-1">
-                          {t.count} ofertas
+                          {formatCount(t.count)} ofertas
                         </div>
                       </div>
                     ))}
@@ -564,7 +558,7 @@ export default function OfertasRadar() {
                             <div className="flex justify-between text-[10px] font-mono">
                               <span className="text-zinc-400 truncate max-w-[60%]">{s.segmento}</span>
                               <span className="text-zinc-300">
-                                {formatMoney(s.valor)} · {s.count}
+                                {formatBRL(s.valor)} · {formatCount(s.count)}
                               </span>
                             </div>
                             <div className="h-1 bg-[#0a0a0a] rounded overflow-hidden">
@@ -686,7 +680,7 @@ export default function OfertasRadar() {
                       {order === "desc" ? "↓ DESC" : "↑ ASC"}
                     </button>
                     <div className="flex-1 text-right text-[9px] font-mono text-zinc-600">
-                      {listData?.count ?? 0} ofertas encontradas
+                      {formatCount(listData?.count ?? 0)} ofertas encontradas
                     </div>
                   </div>
                 </div>
@@ -759,10 +753,10 @@ export default function OfertasRadar() {
                               )}
                             </td>
                             <td className="px-4 py-2.5 text-right text-[10px] font-mono text-[#0B6C3E]">
-                              {formatMoney(o.valor_total)}
+                              {formatBRL(o.valor_total)}
                               {o.volume_final && (
                                 <div className="text-[9px] text-zinc-500 mt-0.5">
-                                  Final: {formatMoney(o.volume_final)}
+                                  Final: {formatBRL(o.volume_final)}
                                 </div>
                               )}
                             </td>
@@ -819,7 +813,7 @@ export default function OfertasRadar() {
                   Fonte: CVM (SRE — Ofertas Públicas) · Atualização semanal via pipeline automatizado
                   {stats && (
                     <span className="ml-2 text-zinc-700">
-                      · {stats.total_ofertas.toLocaleString("pt-BR")} registros
+                      · {formatCount(stats.total_ofertas)} registros
                     </span>
                   )}
                 </div>
@@ -877,12 +871,12 @@ export default function OfertasRadar() {
                 </div>
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
                   <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Valor Protocolado</div>
-                  <div className="text-sm font-mono text-[#0B6C3E]">{formatMoney(selectedOferta.valor_total)}</div>
+                  <div className="text-sm font-mono text-[#0B6C3E]">{formatBRL(selectedOferta.valor_total)}</div>
                 </div>
                 {selectedOferta.volume_final && (
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
                     <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Volume Final</div>
-                    <div className="text-sm font-mono text-emerald-400">{formatMoney(selectedOferta.volume_final)}</div>
+                    <div className="text-sm font-mono text-emerald-400">{formatBRL(selectedOferta.volume_final)}</div>
                   </div>
                 )}
                 {selectedOferta.rating && (

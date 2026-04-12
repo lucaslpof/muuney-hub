@@ -4,6 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
+import { fmtNum, formatBRL, formatBRLCompact } from "@/lib/format";
 
 interface InflationCalculatorProps {
   ipcaData: { date: string; value: number }[];
@@ -156,22 +157,22 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
             <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
               <span className="text-[9px] text-zinc-600 font-mono block">Inflação Acumulada</span>
-              <span className="text-sm font-bold text-red-400 font-mono">{result.totalPct}%</span>
+              <span className="text-sm font-bold text-red-400 font-mono">{fmtNum(Number(result.totalPct), 2)}%</span>
             </div>
             <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
               <span className="text-[9px] text-zinc-600 font-mono block">Anualizada</span>
-              <span className="text-sm font-bold text-red-300 font-mono">{result.annualized}%</span>
+              <span className="text-sm font-bold text-red-300 font-mono">{fmtNum(Number(result.annualized), 2)}%</span>
             </div>
             <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
               <span className="text-[9px] text-zinc-600 font-mono block">Valor Corrigido</span>
               <span className="text-sm font-bold text-[#0B6C3E] font-mono">
-                R$ {Number(result.adjustedAmount).toLocaleString("pt-BR")}
+                {formatBRL(Number(result.adjustedAmount))}
               </span>
             </div>
             <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
               <span className="text-[9px] text-zinc-600 font-mono block">Perda de Poder</span>
               <span className="text-sm font-bold text-amber-400 font-mono">
-                R$ {Number(result.lostPower).toLocaleString("pt-BR")}
+                {formatBRL(Number(result.lostPower))}
               </span>
             </div>
             <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
@@ -184,7 +185,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
           {showChart && (
             <div>
               <h4 className="text-[10px] text-zinc-500 font-mono mb-1">
-                Evolução do poder de compra de R$ {amount.toLocaleString("pt-BR")}
+                Evolução do poder de compra de {formatBRL(amount)}
               </h4>
               <ResponsiveContainer width="100%" height={140}>
                 <AreaChart data={powerChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
@@ -201,12 +202,12 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
                     axisLine={false}
                     tickLine={false}
                     width={55}
-                    tickFormatter={(v: number) => `R$${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v.toFixed(0)}`}
+                    tickFormatter={(v: number) => formatBRLCompact(v)}
                   />
                   <Tooltip
                     contentStyle={{ background: "#0f0f0f", border: "1px solid #2a2a2a", borderRadius: 6, fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
                     formatter={(v: number, name: string) => [
-                      name === "poder" ? `R$ ${v.toFixed(2)}` : `${v.toFixed(2)}%`,
+                      name === "poder" ? formatBRL(v) : `${fmtNum(v, 2)}%`,
                       name === "poder" ? "Poder de compra" : "Inflação acum.",
                     ]}
                   />

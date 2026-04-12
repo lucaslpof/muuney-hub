@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useProductData, type CreditProduct } from "@/hooks/useHubData";
 import { ShoppingBag, Users, Building2, ArrowUpDown, ChevronDown, ChevronUp, Loader2, AlertTriangle } from "lucide-react";
+import { fmtNum } from "@/lib/format";
 
 /* ─── Product type (view model) ─── */
 interface Product {
@@ -163,29 +164,29 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.taxa_aa, maxTaxa), backgroundColor: accentColor, opacity: 0.7 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${rateColor(p.taxa_aa)}`}>
-                      {p.taxa_aa.toFixed(2)}%
+                      {fmtNum(p.taxa_aa, 2)}%
                     </span>
                   </div>
                 </td>
-                <td className="py-1.5 px-2 text-right text-zinc-500">{p.taxa_am.toFixed(2)}%</td>
+                <td className="py-1.5 px-2 text-right text-zinc-500">{fmtNum(p.taxa_am, 2)}%</td>
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-2 justify-end">
                     <div className="w-16 h-3 bg-[#111] rounded-full overflow-hidden flex-shrink-0">
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.spread_aa, maxSpread), backgroundColor: p.spread_aa >= 0 ? "#F59E0B" : "#10B981", opacity: 0.6 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${spreadColor(p.spread_aa)}`}>
-                      {p.spread_aa >= 0 ? "+" : ""}{p.spread_aa.toFixed(2)}%
+                      {p.spread_aa >= 0 ? "+" : ""}{fmtNum(p.spread_aa, 2)}%
                     </span>
                   </div>
                 </td>
-                <td className="py-1.5 px-2 text-right text-zinc-500">{p.spread_am >= 0 ? "+" : ""}{p.spread_am.toFixed(2)}%</td>
+                <td className="py-1.5 px-2 text-right text-zinc-500">{p.spread_am >= 0 ? "+" : ""}{fmtNum(p.spread_am, 2)}%</td>
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-2 justify-end">
                     <div className="w-16 h-3 bg-[#111] rounded-full overflow-hidden flex-shrink-0">
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.inadimplencia, maxNPL), backgroundColor: "#EF4444", opacity: 0.6 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${nplColor(p.inadimplencia)}`}>
-                      {p.inadimplencia.toFixed(2)}%
+                      {fmtNum(p.inadimplencia, 2)}%
                     </span>
                   </div>
                 </td>
@@ -234,7 +235,7 @@ const RankingCards = ({ pfProducts, pjProducts }: { pfProducts: Product[]; pjPro
               {item.tipo}
             </span>
             <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${colorFn(item[valueKey])}`}>
-              {item[valueKey].toFixed(1)}{unit}
+              {fmtNum(item[valueKey], 1)}{unit}
             </span>
           </div>
         ))}

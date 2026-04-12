@@ -3,6 +3,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Minus,
   Activity, Zap, Scale,
 } from "lucide-react";
+import { fmtNum } from "@/lib/format";
 
 /* ─── Credit Regime Types ─── */
 interface CreditRegime {
@@ -122,7 +123,7 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (inadTotal > 3.5 && selic > 12) {
     signals.push({
       label: "Double Squeeze",
-      message: `Inadimplência (${inadTotal.toFixed(1)}%) e Selic (${selic.toFixed(1)}%) ambas elevadas — pressão dupla sobre tomadores de crédito.`,
+      message: `Inadimplência (${fmtNum(inadTotal, 1)}%) e Selic (${fmtNum(selic, 1)}%) ambas elevadas — pressão dupla sobre tomadores de crédito.`,
       severity: "alert",
     });
   }
@@ -131,13 +132,13 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (spreadMedio < 20) {
     signals.push({
       label: "Spread Compression",
-      message: `Spread médio (${spreadMedio.toFixed(1)} p.p.) abaixo do p10 histórico — risco subprecificado.`,
+      message: `Spread médio (${fmtNum(spreadMedio, 1)} p.p.) abaixo do p10 histórico — risco subprecificado.`,
       severity: "alert",
     });
   } else if (spreadMedio > 35) {
     signals.push({
       label: "Spreads Elevados",
-      message: `Spread médio (${spreadMedio.toFixed(1)} p.p.) acima do p90 — custo excessivo para tomadores.`,
+      message: `Spread médio (${fmtNum(spreadMedio, 1)} p.p.) acima do p90 — custo excessivo para tomadores.`,
       severity: "watch",
     });
   }
@@ -146,13 +147,13 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (concessoesMoM > 4) {
     signals.push({
       label: "Concessões Acelerando",
-      message: `Variação MoM de ${concessoesMoM.toFixed(1)}% — momentum forte nas concessões.`,
+      message: `Variação MoM de ${fmtNum(concessoesMoM, 1)}% — momentum forte nas concessões.`,
       severity: "positive",
     });
   } else if (concessoesMoM < -3) {
     signals.push({
       label: "Concessões Desacelerando",
-      message: `Variação MoM de ${concessoesMoM.toFixed(1)}% — contração significativa.`,
+      message: `Variação MoM de ${fmtNum(concessoesMoM, 1)}% — contração significativa.`,
       severity: "alert",
     });
   }
@@ -161,13 +162,13 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (creditoPib > 55) {
     signals.push({
       label: "Alavancagem Elevada",
-      message: `Crédito/PIB em ${creditoPib.toFixed(1)}% — acima do threshold BCB (55%). Risco sistêmico monitorado.`,
+      message: `Crédito/PIB em ${fmtNum(creditoPib, 1)}% — acima do threshold BCB (55%). Risco sistêmico monitorado.`,
       severity: "alert",
     });
   } else if (creditoPib > 50) {
     signals.push({
       label: "Crédito/PIB Saudável",
-      message: `Crédito/PIB em ${creditoPib.toFixed(1)}% — dentro da faixa saudável, tendência de alta.`,
+      message: `Crédito/PIB em ${fmtNum(creditoPib, 1)}% — dentro da faixa saudável, tendência de alta.`,
       severity: "positive",
     });
   }
@@ -178,7 +179,7 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
     const maisRisco = inadPF > inadPJ ? "PF" : "PJ";
     signals.push({
       label: "Divergência PF×PJ",
-      message: `Inadimplência ${maisRisco} (${(maisRisco === "PF" ? inadPF : inadPJ).toFixed(1)}%) significativamente maior — risco setorial concentrado.`,
+      message: `Inadimplência ${maisRisco} (${fmtNum(maisRisco === "PF" ? inadPF : inadPJ, 1)}%) significativamente maior — risco setorial concentrado.`,
       severity: "watch",
     });
   }
@@ -188,7 +189,7 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (taxaReal > 50) {
     signals.push({
       label: "Custo Real Elevado",
-      message: `Taxa real PF de ${taxaReal.toFixed(1)}% a.a. — custo efetivo muito acima da inflação.`,
+      message: `Taxa real PF de ${fmtNum(taxaReal, 1)}% a.a. — custo efetivo muito acima da inflação.`,
       severity: "watch",
     });
   }
@@ -197,7 +198,7 @@ function generateCrossSignals(props: CreditNarrativePanelProps): Signal[] {
   if (selic > 13) {
     signals.push({
       label: "Selic Restritiva",
-      message: `Selic em ${selic.toFixed(2)}% — patamar restritivo para concessões. Monitorar próximas decisões do COPOM.`,
+      message: `Selic em ${fmtNum(selic, 2)}% — patamar restritivo para concessões. Monitorar próximas decisões do COPOM.`,
       severity: "watch",
     });
   }
@@ -249,11 +250,11 @@ export const CreditNarrativePanel = (props: CreditNarrativePanelProps) => {
             {/* Key metrics strip */}
             <div className="flex flex-wrap gap-3 mt-2.5 pt-2.5 border-t border-[#1a1a1a]">
               {[
-                { label: "Inadim.", value: `${inadTotal.toFixed(1)}%` },
-                { label: "Spread", value: `${spreadMedio.toFixed(0)} p.p.` },
-                { label: "Conc. MoM", value: `${concessoesMoM >= 0 ? "+" : ""}${concessoesMoM.toFixed(1)}%` },
-                { label: "Créd/PIB", value: `${creditoPib.toFixed(1)}%` },
-                { label: "Selic", value: `${selic.toFixed(2)}%` },
+                { label: "Inadim.", value: `${fmtNum(inadTotal, 1)}%` },
+                { label: "Spread", value: `${fmtNum(spreadMedio, 0)} p.p.` },
+                { label: "Conc. MoM", value: `${concessoesMoM >= 0 ? "+" : ""}${fmtNum(concessoesMoM, 1)}%` },
+                { label: "Créd/PIB", value: `${fmtNum(creditoPib, 1)}%` },
+                { label: "Selic", value: `${fmtNum(selic, 2)}%` },
               ].map((m) => (
                 <div key={m.label} className="text-[9px] font-mono">
                   <span className="text-zinc-600">{m.label}: </span>

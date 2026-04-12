@@ -672,34 +672,13 @@ export function useFipOverview() {
   });
 }
 
-/* ─── Formatting Helpers ─── */
-export function formatPL(value: number | null | undefined): string {
-  if (value == null) return "—";
-  if (value >= 1e12) return `R$ ${(value / 1e12).toFixed(1)}T`;
-  if (value >= 1e9) return `R$ ${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `R$ ${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `R$ ${(value / 1e3).toFixed(0)}K`;
-  return `R$ ${value.toFixed(0)}`;
-}
-
-export function formatPct(value: number | null | undefined, decimals = 2): string {
-  if (value == null) return "—";
-  return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
-}
-
-/** Format CNPJ with dots/slashes (XX.XXX.XXX/XXXX-XX). Handles both formatted and raw. */
-export function formatCnpj(cnpj: string): string {
-  const digits = cnpj.replace(/\D/g, "");
-  if (digits.length === 14) {
-    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
-  }
-  return cnpj; // already formatted or invalid — return as-is
-}
-
-/** @deprecated Use formatCnpj instead. Kept for backward compatibility. */
-export function shortCnpj(cnpj: string): string {
-  return cnpj.replace(/^(\d{2})\.(\d{3})\.(\d{3}).*/, "$1.$2.$3");
-}
+/* ─── Formatting Helpers (delegated to @/lib/format for pt-BR consistency) ─── */
+import { formatBRL, formatPct as _formatPct, formatCnpj as _formatCnpj, formatCnpjShort, formatCount as _formatCount } from "@/lib/format";
+export const formatPL = formatBRL;
+export const formatPct = _formatPct;
+export const formatCnpj = _formatCnpj;
+export const shortCnpj = formatCnpjShort;
+export const formatCount = _formatCount;
 
 /** Get the display name for a fund. Name-first: always prefer denom_social. */
 export function fundDisplayName(meta: FundMeta | null | undefined): string {

@@ -3,6 +3,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Minus,
   Activity, Zap, Scale, Shield,
 } from "lucide-react";
+import { fmtNum } from "@/lib/format";
 
 /* ─── Monetary Regime Types ─── */
 interface MonetaryRegime {
@@ -151,13 +152,13 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (curveShape === "Invertida" && breakeven1a > 5.0) {
     signals.push({
       label: "Curva × Inflação",
-      message: `Curva invertida com breakeven 1a em ${breakeven1a.toFixed(2)}% — sinal recessivo com inflação persistente. Risco de estagflação.`,
+      message: `Curva invertida com breakeven 1a em ${fmtNum(breakeven1a, 2)}% — sinal recessivo com inflação persistente. Risco de estagflação.`,
       severity: "alert",
     });
   } else if (curveShape === "Normal" && breakeven1a < 4.0) {
     signals.push({
       label: "Curva × Inflação",
-      message: `Curva normal com breakeven 1a em ${breakeven1a.toFixed(2)}% — expectativas ancoradas. Ambiente construtivo para renda fixa.`,
+      message: `Curva normal com breakeven 1a em ${fmtNum(breakeven1a, 2)}% — expectativas ancoradas. Ambiente construtivo para renda fixa.`,
       severity: "positive",
     });
   }
@@ -166,13 +167,13 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (spreadAA < 1.0 && selicMeta > 12) {
     signals.push({
       label: "Spread × Selic",
-      message: `Spread AA (${spreadAA.toFixed(2)} p.p.) comprimido com Selic em ${selicMeta.toFixed(2)}% — possível subprecificação de risco de crédito privado.`,
+      message: `Spread AA (${fmtNum(spreadAA, 2)} p.p.) comprimido com Selic em ${fmtNum(selicMeta, 2)}% — possível subprecificação de risco de crédito privado.`,
       severity: "alert",
     });
   } else if (spreadAA > 2.0) {
     signals.push({
       label: "Spreads Privados Elevados",
-      message: `Spread AA em ${spreadAA.toFixed(2)} p.p. — acima do p90 histórico. Aversão a risco no crédito privado.`,
+      message: `Spread AA em ${fmtNum(spreadAA, 2)} p.p. — acima do p90 histórico. Aversão a risco no crédito privado.`,
       severity: "watch",
     });
   }
@@ -182,7 +183,7 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (beiVsIpca > 1.5) {
     signals.push({
       label: "Breakeven vs IPCA",
-      message: `Breakeven 1a (${breakeven1a.toFixed(2)}%) supera IPCA 12m (${ipca12m.toFixed(1)}%) em ${beiVsIpca.toFixed(2)} p.p. — mercado precifica aceleração inflacionária.`,
+      message: `Breakeven 1a (${fmtNum(breakeven1a, 2)}%) supera IPCA 12m (${fmtNum(ipca12m, 1)}%) em ${fmtNum(beiVsIpca, 2)} p.p. — mercado precifica aceleração inflacionária.`,
       severity: "alert",
     });
   } else if (beiVsIpca < 0) {
@@ -197,13 +198,13 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (vendasTD < 0) {
     signals.push({
       label: "Fluxo TD Negativo",
-      message: `Vendas líquidas TD negativas (${vendasTD.toFixed(2)} R$ bi) — sinal de aversão a risco no varejo. Investidores resgatando posições.`,
+      message: `Vendas líquidas TD negativas (${fmtNum(vendasTD, 2)} R$ bi) — sinal de aversão a risco no varejo. Investidores resgatando posições.`,
       severity: "alert",
     });
   } else if (vendasTD > 5) {
     signals.push({
       label: "Fluxo TD Forte",
-      message: `Vendas líquidas de ${vendasTD.toFixed(2)} R$ bi — apetite forte do varejo por renda fixa. Ambiente favorável.`,
+      message: `Vendas líquidas de ${fmtNum(vendasTD, 2)} R$ bi — apetite forte do varejo por renda fixa. Ambiente favorável.`,
       severity: "positive",
     });
   }
@@ -214,13 +215,13 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (diVsFocus < 0.3) {
     signals.push({
       label: "DI × Focus Alinhados",
-      message: `Vértice 360d (${di360.toFixed(2)}%) convergente com Focus Selic (${focusSelic.toFixed(2)}%) — mercado alinhado ao consenso.`,
+      message: `Vértice 360d (${fmtNum(di360, 2)}%) convergente com Focus Selic (${fmtNum(focusSelic, 2)}%) — mercado alinhado ao consenso.`,
       severity: "positive",
     });
   } else if (diVsFocus > 1.0) {
     signals.push({
       label: "DI × Focus Divergência",
-      message: `Vértice 360d (${di360.toFixed(2)}%) diverge ${diVsFocus.toFixed(2)} p.p. do Focus Selic (${focusSelic.toFixed(2)}%) — dissenso entre mercado e analistas.`,
+      message: `Vértice 360d (${fmtNum(di360, 2)}%) diverge ${fmtNum(diVsFocus, 2)} p.p. do Focus Selic (${fmtNum(focusSelic, 2)}%) — dissenso entre mercado e analistas.`,
       severity: "watch",
     });
   }
@@ -230,13 +231,13 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (termPremium < -1.0) {
     signals.push({
       label: "Term Premium Comprimido",
-      message: `Spread 5a-1a em ${termPremium.toFixed(2)} p.p. — inversão significativa. Mercado precifica cortes agressivos ou recessão.`,
+      message: `Spread 5a-1a em ${fmtNum(termPremium, 2)} p.p. — inversão significativa. Mercado precifica cortes agressivos ou recessão.`,
       severity: "watch",
     });
   } else if (termPremium > 0.5) {
     signals.push({
       label: "Term Premium Saudável",
-      message: `Spread 5a-1a em +${termPremium.toFixed(2)} p.p. — curva inclinada positivamente. Prêmio de prazo adequado.`,
+      message: `Spread 5a-1a em +${fmtNum(termPremium, 2)} p.p. — curva inclinada positivamente. Prêmio de prazo adequado.`,
       severity: "positive",
     });
   }
@@ -245,7 +246,7 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (ntnb2029 > 7.0) {
     signals.push({
       label: "Juro Real Elevado",
-      message: `NTN-B 2029 em ${ntnb2029.toFixed(2)}% a.a. — juro real acima de 7% reflete prêmio fiscal e/ou credibilidade monetária em teste.`,
+      message: `NTN-B 2029 em ${fmtNum(ntnb2029, 2)}% a.a. — juro real acima de 7% reflete prêmio fiscal e/ou credibilidade monetária em teste.`,
       severity: "watch",
     });
   }
@@ -255,7 +256,7 @@ function generateFixedIncomeSignals(props: FixedIncomeNarrativePanelProps): Sign
   if (beiSpread > 1.0) {
     signals.push({
       label: "Breakeven Desancorando",
-      message: `BEI 1a (${breakeven1a.toFixed(2)}%) supera BEI 5a (${breakeven5a.toFixed(2)}%) em ${beiSpread.toFixed(2)} p.p. — inflação curta pressionada mas longo ancorado.`,
+      message: `BEI 1a (${fmtNum(breakeven1a, 2)}%) supera BEI 5a (${fmtNum(breakeven5a, 2)}%) em ${fmtNum(beiSpread, 2)} p.p. — inflação curta pressionada mas longo ancorado.`,
       severity: "watch",
     });
   }
@@ -306,11 +307,11 @@ export const FixedIncomeNarrativePanel = (props: FixedIncomeNarrativePanelProps)
             {/* Key metrics strip */}
             <div className="flex flex-wrap gap-3 mt-2.5 pt-2.5 border-t border-[#1a1a1a]">
               {[
-                { label: "Selic", value: `${selicMeta.toFixed(2)}%` },
-                { label: "Focus", value: `${focusSelic.toFixed(2)}%` },
+                { label: "Selic", value: `${fmtNum(selicMeta, 2)}%` },
+                { label: "Focus", value: `${fmtNum(focusSelic, 2)}%` },
                 { label: "Curva", value: curveShape },
-                { label: "BEI 1a", value: `${breakeven1a.toFixed(2)}%` },
-                { label: "Spread AA", value: `${spreadAA.toFixed(2)} p.p.` },
+                { label: "BEI 1a", value: `${fmtNum(breakeven1a, 2)}%` },
+                { label: "Spread AA", value: `${fmtNum(spreadAA, 2)} p.p.` },
               ].map((m) => (
                 <div key={m.label} className="text-[9px] font-mono">
                   <span className="text-zinc-600">{m.label}: </span>

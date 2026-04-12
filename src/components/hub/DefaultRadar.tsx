@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ShieldAlert, TrendingUp, TrendingDown, Minus, Clock } from "lucide-react";
+import { fmtNum } from "@/lib/format";
 
 interface DefaultRadarProps {
   inadTotal?: number;
@@ -101,7 +102,7 @@ export const DefaultRadar = ({
           <div>
             <span className="text-[9px] text-zinc-600 font-mono">Risco Composto (ponderado)</span>
             <div className={`text-lg font-bold font-mono ${compositeLevel.color}`}>
-              {compositeRisk.toFixed(2)}%
+              {fmtNum(compositeRisk, 2)}%
             </div>
           </div>
           <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${compositeLevel.bgColor} ${compositeLevel.color}`}>
@@ -146,12 +147,12 @@ export const DefaultRadar = ({
                 </div>
               </div>
               <div className="w-16 text-right">
-                <span className={`text-[11px] font-mono font-bold ${level.color}`}>{s.rate.toFixed(2)}%</span>
+                <span className={`text-[11px] font-mono font-bold ${level.color}`}>{fmtNum(s.rate, 2)}%</span>
               </div>
               <div className="w-16 flex items-center gap-1 justify-end">
                 <TrendIcon className={`w-3 h-3 ${trendColor}`} />
                 <span className={`text-[9px] font-mono ${trendColor}`}>
-                  {delta >= 0 ? "+" : ""}{deltaAbs.toFixed(2)}
+                  {delta >= 0 ? "+" : ""}{fmtNum(deltaAbs, 2)}
                 </span>
               </div>
               <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${level.bgColor} ${level.color} w-16 text-center`}>
@@ -163,7 +164,7 @@ export const DefaultRadar = ({
       </div>
 
       <div className="mt-3 pt-2 border-t border-[#141414] text-[9px] text-zinc-700 font-mono flex justify-between">
-        <span>Inadimplência Total SFN: {inadTotal.toFixed(2)}%</span>
+        <span>Inadimplência Total SFN: {fmtNum(inadTotal, 2)}%</span>
         <span>Comparação: {PERIOD_PRESETS[periodIdx].label} anterior</span>
       </div>
     </div>

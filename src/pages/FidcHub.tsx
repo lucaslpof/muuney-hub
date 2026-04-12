@@ -199,21 +199,21 @@ export default function FidcHub() {
                   </div>
                 )}
 
-                {/* Pie Chart: Distribuição por Lastro */}
+                {/* Pie Chart: Distribuição por Lastro — external legend */}
                 {pieData.length > 0 && (
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-6">
                     <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-4">Distribuição de PL por Lastro</h3>
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
                         <Pie
                           data={pieData}
                           cx="50%"
                           cy="50%"
-                          labelLine={false}
-                          label={({ name, value }: any) => `${name} ${value}%`}
+                          innerRadius={45}
                           outerRadius={80}
-                          fill="#8884d8"
                           dataKey="value"
+                          stroke="#0a0a0a"
+                          strokeWidth={2}
                         >
                           {pieData.map((_entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -222,6 +222,17 @@ export default function FidcHub() {
                         <Tooltip content={<PercentTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
+                    <div className="mt-3 space-y-1.5">
+                      {pieData.map((entry, index) => (
+                        <div key={entry.name} className="flex items-center justify-between text-[10px] font-mono">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            <span className="text-zinc-400 truncate">{entry.name}</span>
+                          </div>
+                          <span className="text-zinc-300">{entry.value}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </motion.div>

@@ -3,6 +3,7 @@ import {
   Activity, TrendingUp, TrendingDown, AlertTriangle, Zap,
   Gauge, ThermometerSun,
 } from "lucide-react";
+import { fmtNum } from "@/lib/format";
 
 /* ─── Types ─── */
 interface MacroNarrativePanelProps {
@@ -123,19 +124,19 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
     signals.push({
       id: "juro-real-alto",
       severity: "alert",
-      text: `Juro real em ${juroReal.toFixed(1)}% — nível restritivo extremo. Impacto negativo sobre investimento e crédito.`,
+      text: `Juro real em ${fmtNum(juroReal, 1)}% — nível restritivo extremo. Impacto negativo sobre investimento e crédito.`,
     });
   } else if (juroReal > 5) {
     signals.push({
       id: "juro-real-elevado",
       severity: "watch",
-      text: `Juro real em ${juroReal.toFixed(1)}%, acima da média histórica (~4%). Peso sobre atividade econômica.`,
+      text: `Juro real em ${fmtNum(juroReal, 1)}%, acima da média histórica (~4%). Peso sobre atividade econômica.`,
     });
   } else if (juroReal > 0) {
     signals.push({
       id: "juro-real-neutro",
       severity: "positive",
-      text: `Juro real em ${juroReal.toFixed(1)}% — nível neutro/moderado para a atividade.`,
+      text: `Juro real em ${fmtNum(juroReal, 1)}% — nível neutro/moderado para a atividade.`,
     });
   }
 
@@ -144,7 +145,7 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
     signals.push({
       id: "superaquecimento-risco",
       severity: "alert",
-      text: `Desemprego em ${desocupacao.toFixed(1)}% (mínima) + IPCA em ${ipca12m.toFixed(1)}% (acima da meta) — risco de superaquecimento.`,
+      text: `Desemprego em ${fmtNum(desocupacao, 1)}% (mínima) + IPCA em ${fmtNum(ipca12m, 1)}% (acima da meta) — risco de superaquecimento.`,
     });
   }
 
@@ -153,7 +154,7 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
     signals.push({
       id: "fiscal-stress",
       severity: dividaPib > 80 ? "alert" : "watch",
-      text: `Dívida/PIB em ${dividaPib.toFixed(1)}% — ${dividaPib > 80 ? "patamar de risco elevado" : "requer atenção fiscal"}. Pressão sobre prêmio de risco.`,
+      text: `Dívida/PIB em ${fmtNum(dividaPib, 1)}% — ${dividaPib > 80 ? "patamar de risco elevado" : "requer atenção fiscal"}. Pressão sobre prêmio de risco.`,
     });
   }
 
@@ -162,13 +163,13 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
     signals.push({
       id: "cambio-depreciado",
       severity: ptax > 6 ? "alert" : "watch",
-      text: `Dólar a R$${ptax.toFixed(2)} — ${ptax > 6 ? "depreciação significativa" : "pressão cambial"}. Impacto inflacionário via importados.`,
+      text: `Dólar a R$${fmtNum(ptax, 2)} — ${ptax > 6 ? "depreciação significativa" : "pressão cambial"}. Impacto inflacionário via importados.`,
     });
   } else if (ptax < 4.8) {
     signals.push({
       id: "cambio-forte",
       severity: "positive",
-      text: `Dólar a R$${ptax.toFixed(2)} — câmbio apreciado contribui para desinflação.`,
+      text: `Dólar a R$${fmtNum(ptax, 2)} — câmbio apreciado contribui para desinflação.`,
     });
   }
 
@@ -178,7 +179,7 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
     signals.push({
       id: "focus-diverge",
       severity: "watch",
-      text: `Focus IPCA 2026 (${focusIpca.toFixed(1)}%) diverge ${dir} do IPCA atual (${ipca12m.toFixed(1)}%). Mercado precifica ${dir === "acima" ? "aceleração" : "desaceleração"}.`,
+      text: `Focus IPCA 2026 (${fmtNum(focusIpca, 1)}%) diverge ${dir} do IPCA atual (${fmtNum(ipca12m, 1)}%). Mercado precifica ${dir === "acima" ? "aceleração" : "desaceleração"}.`,
     });
   }
 
@@ -189,13 +190,13 @@ function generateCrossSignals(props: MacroNarrativePanelProps): Signal[] {
       signals.push({
         id: "selic-corte-esperado",
         severity: "positive",
-        text: `Focus Selic (${focusSelic.toFixed(1)}%) está ${diff.toFixed(1)}pp abaixo da atual (${selic.toFixed(1)}%). Mercado precifica ciclo de corte.`,
+        text: `Focus Selic (${fmtNum(focusSelic, 1)}%) está ${fmtNum(diff, 1)}pp abaixo da atual (${fmtNum(selic, 1)}%). Mercado precifica ciclo de corte.`,
       });
     } else if (diff < -1) {
       signals.push({
         id: "selic-alta-esperada",
         severity: "watch",
-        text: `Focus Selic (${focusSelic.toFixed(1)}%) está acima da atual (${selic.toFixed(1)}%). Mercado espera aperto adicional.`,
+        text: `Focus Selic (${fmtNum(focusSelic, 1)}%) está acima da atual (${fmtNum(selic, 1)}%). Mercado espera aperto adicional.`,
       });
     }
   }
@@ -248,11 +249,11 @@ export const MacroNarrativePanel = (props: MacroNarrativePanelProps) => {
         </p>
         {/* Key metrics strip */}
         <div className="flex items-center gap-4 mt-2 text-[9px] font-mono">
-          <span className="text-zinc-500">Selic <span className="text-zinc-300 font-bold">{props.selic.toFixed(1)}%</span></span>
-          <span className="text-zinc-500">IPCA <span className="text-zinc-300 font-bold">{props.ipca12m.toFixed(1)}%</span></span>
-          <span className="text-zinc-500">Juro Real <span className={`font-bold ${juroReal > 6 ? "text-red-400" : juroReal > 3 ? "text-amber-400" : "text-emerald-400"}`}>{juroReal.toFixed(1)}%</span></span>
-          <span className="text-zinc-500">Desemp. <span className="text-zinc-300 font-bold">{props.desocupacao.toFixed(1)}%</span></span>
-          <span className="text-zinc-500">Dív/PIB <span className="text-zinc-300 font-bold">{props.dividaPib.toFixed(1)}%</span></span>
+          <span className="text-zinc-500">Selic <span className="text-zinc-300 font-bold">{fmtNum(props.selic, 1)}%</span></span>
+          <span className="text-zinc-500">IPCA <span className="text-zinc-300 font-bold">{fmtNum(props.ipca12m, 1)}%</span></span>
+          <span className="text-zinc-500">Juro Real <span className={`font-bold ${juroReal > 6 ? "text-red-400" : juroReal > 3 ? "text-amber-400" : "text-emerald-400"}`}>{fmtNum(juroReal, 1)}%</span></span>
+          <span className="text-zinc-500">Desemp. <span className="text-zinc-300 font-bold">{fmtNum(props.desocupacao, 1)}%</span></span>
+          <span className="text-zinc-500">Dív/PIB <span className="text-zinc-300 font-bold">{fmtNum(props.dividaPib, 1)}%</span></span>
         </div>
       </div>
 
