@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { HubSEO } from "@/lib/seo";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
@@ -266,6 +267,7 @@ const HubRendaFixa = () => {
 
   return (
     <div className="flex gap-4 w-full">
+      <HubSEO title="Renda Fixa" description="Curva DI, NTN-B, Tesouro Direto e crédito privado — simuladores de yield curve, calculadora de bonds e breakeven inflation." path="/renda-fixa" />
       {/* ─── Sidebar ─── */}
       <MacroSidebar
         items={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))}

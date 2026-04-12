@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { HubSEO } from "@/lib/seo";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
@@ -243,6 +244,7 @@ const HubMacro = () => {
 
   return (
     <div className="w-full">
+      <HubSEO title="Panorama Macro" description="Indicadores macroeconômicos em tempo real — Selic, IPCA, câmbio, PIB, mercado de trabalho e expectativas Focus com dados BACEN SGS." path="/macro" />
       {/* ═══ Sticky header ═══ */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4">

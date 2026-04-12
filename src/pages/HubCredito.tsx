@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { HubSEO } from "@/lib/seo";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
@@ -236,6 +237,7 @@ const HubCredito = () => {
 
   return (
     <div className="w-full">
+      <HubSEO title="Overview Crédito" description="Spreads, inadimplência, concessões e análise de risco do SFN com 73 séries BACEN — visão completa do mercado de crédito brasileiro." path="/credito" />
       {/* ─── Sticky header bar ─── */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4 flex-wrap">

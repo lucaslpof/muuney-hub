@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import { HubSEO } from "@/lib/seo";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
 import { FundCategoryRankings } from "@/components/hub/FundCategoryRankings";
 import { FundScreener } from "@/components/hub/FundScreener";
@@ -798,6 +799,7 @@ const HubFundos = () => {
 
   return (
     <div className="w-full">
+      <HubSEO title="Fundos" description="29.491 classes de fundos RCVM 175 — lâminas, screener multi-filtro, comparador cross-class com Fund Score™ e deep modules FIDC e FII." path="/fundos" />
       {/* ─── Sticky Header ─── */}
       <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-4 px-4 py-2 border-b border-[#141414] mb-4">
         <div className="flex items-center justify-between mb-2">

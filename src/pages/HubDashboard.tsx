@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { HubSEO } from "@/lib/seo";
 import {
   TrendingUp, BarChart3, Landmark, Building2, GraduationCap,
-  ArrowRight, Zap, Radio,
+  ArrowRight, Zap, Radio, Database, Layers, ScrollText, Banknote, Briefcase,
 } from "lucide-react";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
@@ -21,16 +22,25 @@ function toSparkline(series: { date: string; value: number }[], points = 20) {
   return series.filter((_, i) => i % step === 0).map((d) => ({ value: d.value }));
 }
 
+/* ─── Hero stats ─── */
+const HERO_STATS = [
+  { label: "Séries BACEN", value: "130", icon: Database },
+  { label: "Fundos CVM", value: "29.491", icon: Layers },
+  { label: "Módulos ativos", value: "6", icon: Zap },
+];
+
 /* ─── Module config ─── */
 const useModules = () => {
   const prefix = useHubPrefix();
   return [
     { path: `${prefix}/macro`, label: "Panorama Macro", desc: "Selic, IPCA, câmbio, PIB, dívida", icon: TrendingUp, color: "#0B6C3E", active: true },
     { path: `${prefix}/credito`, label: "Overview Crédito", desc: "Spreads, inadimplência, concessões", icon: BarChart3, color: "#10B981", active: true },
-    { path: `${prefix}/renda-fixa`, label: "Renda Fixa", desc: "Curva DI, NTN-B, Tesouro, crédito privado", icon: TrendingUp, color: "#6366F1", active: true },
-    { path: `${prefix}/fundos`, label: "Fundos", desc: "Performance, Sharpe, captação", icon: Landmark, color: "#F59E0B", active: true },
-    { path: "#", label: "Empresas", desc: "P/L, ROE, EV/EBITDA", icon: Building2, color: "#F59E0B", active: false },
-    { path: "#", label: "Educacional", desc: "Glossário, calculadoras", icon: GraduationCap, color: "#EC4899", active: false },
+    { path: `${prefix}/renda-fixa`, label: "Renda Fixa", desc: "Curva DI, NTN-B, Tesouro, crédito privado", icon: Banknote, color: "#6366F1", active: true },
+    { path: `${prefix}/fundos`, label: "Fundos", desc: "RCVM 175, lâminas, screener, Fund Score™", icon: Landmark, color: "#F59E0B", active: true },
+    { path: `${prefix}/ofertas`, label: "Ofertas Públicas", desc: "CVM 160, pipeline, timeline", icon: ScrollText, color: "#F59E0B", active: true, badge: "PRO" },
+    { path: `${prefix}/portfolio`, label: "Portfolio", desc: "Alocação, drift, metas", icon: Briefcase, color: "#8B5CF6", active: true, badge: "NEW" },
+    { path: "#", label: "Empresas", desc: "P/L, ROE, EV/EBITDA", icon: Building2, color: "#71717a", active: false },
+    { path: "#", label: "Educacional", desc: "Glossário, calculadoras", icon: GraduationCap, color: "#71717a", active: false },
   ];
 };
 
@@ -78,25 +88,44 @@ const HubDashboard = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* ─── Header ─── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">
-              Hub de Inteligência
-            </h1>
-            <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-1.5 py-0.5 rounded font-mono">
-              <Radio className="w-2.5 h-2.5" />
-              LIVE
-            </span>
+      <HubSEO
+        title="Dashboard"
+        description="Terminal de inteligência de mercado — indicadores macro, crédito, renda fixa e 29.491 fundos CVM em tempo real."
+        path="/dashboard"
+      />
+
+      {/* ─── Hero Banner ─── */}
+      <div className="bg-gradient-to-r from-[#0B6C3E]/8 via-[#111] to-[#111] border border-[#0B6C3E]/15 rounded-xl p-4 md:p-5">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">
+                Hub de Inteligência
+              </h1>
+              <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-1.5 py-0.5 rounded font-mono">
+                <Radio className="w-2.5 h-2.5" />
+                LIVE
+              </span>
+            </div>
+            <p className="text-[10px] text-zinc-500 font-mono">
+              Fontes oficiais BACEN SGS · CVM · PTAX · {macro.length + credito.length} indicadores ativos
+            </p>
           </div>
-          <p className="text-[10px] text-zinc-600 mt-0.5 font-mono">
-            BACEN SGS &middot; PTAX &middot; IF.data &middot; {macro.length + credito.length} indicadores ativos
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono">
-          <Zap className="w-3 h-3 text-[#0B6C3E]" />
-          {new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+          <div className="flex items-center gap-4 md:gap-6">
+            {HERO_STATS.map((s) => (
+              <div key={s.label} className="flex items-center gap-2">
+                <s.icon className="w-4 h-4 text-[#0B6C3E]/60" />
+                <div>
+                  <div className="text-sm font-semibold text-zinc-200 font-mono">{s.value}</div>
+                  <div className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider">{s.label}</div>
+                </div>
+              </div>
+            ))}
+            <div className="hidden md:flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono pl-4 border-l border-[#1a1a1a]">
+              <Zap className="w-3 h-3 text-[#0B6C3E]" />
+              {new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -208,12 +237,15 @@ const HubDashboard = () => {
                   >
                     <mod.icon className="w-3.5 h-3.5" style={{ color: mod.color }} />
                   </div>
-                  {!mod.active && (
+                  {!mod.active ? (
                     <span className="text-[8px] bg-zinc-800 text-zinc-600 px-1 py-0.5 rounded font-mono">
                       Q3
                     </span>
-                  )}
-                  {mod.active && (
+                  ) : mod.badge ? (
+                    <span className="text-[8px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-1 py-0.5 rounded font-mono">
+                      {mod.badge}
+                    </span>
+                  ) : (
                     <ArrowRight className="w-3 h-3 text-zinc-800 group-hover:text-[#0B6C3E] transition-colors" />
                   )}
                 </div>

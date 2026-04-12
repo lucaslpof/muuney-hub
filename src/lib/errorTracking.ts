@@ -50,8 +50,29 @@ export function logError(error: Error, context?: ErrorContext): void {
     // localStorage unavailable — silent fail
   }
 
-  // TODO: Send to Sentry/external service
-  // Sentry.captureException(error, { extra: context });
+  // Auto-report critical errors to hub_feedback (for beta debugging)
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (supabaseUrl && supabaseKey) {
+      fetch(`${supabaseUrl}/rest/v1/hub_feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          page: window.location.pathname,
+          category: "bug",
+          rating: 1,
+          message: `[Auto] ${error.message}`,
+          metadata: { stack: error.stack?.slice(0, 500), source: context?.source, auto: true },
+        }),
+      }).catch(() => { /* silent — best effort */ });
+    }
+  } catch { /* silent */ }
 }
 
 /**
