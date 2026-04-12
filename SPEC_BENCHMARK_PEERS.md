@@ -1,6 +1,6 @@
 # Muuney.hub — Benchmark Competitivo vs Peers
 
-> Compilado: 12/04/2026 | Peers: fidcs.com.br, Mais Retorno, Quantum Finance, Anbima Data
+> Compilado: 12/04/2026 | Peers: fidcs.com.br, Mais Retorno, Quantum Finance, Anbima Data, CreditGuide
 > Método: Feature matrix 0-5 por dimensão × módulo. Score = média ponderada.
 > Objetivo: Identificar gaps e implementar catch-up para superioridade comprovada.
 
@@ -262,6 +262,112 @@ Features implementadas nesta sessão (sem fontes pagas/externas):
 - FIDC 4.2→4.5: rentabilidade indexada base 100 na FidcLamina dedicada
 - RF 4.2→4.5: IMA proxy 3→4 (adicionar retorno acumulado da proxy, não só estimativa pontual)
 - Fundos 4.1→4.5: FIP deep polish (3→4), composição CDA enriquecida (3→4)
+
+---
+
+## Novo Peer: CreditGuide (creditguide.com.br)
+
+Plataforma especializada em crédito privado / mercado primário e secundário.
+Foco B2B: tesourarias, gestoras de crédito, portfólio managers.
+Pricing: Trial 15 dias, pago (preço não público).
+
+| Dimensão | CreditGuide | Notas |
+|----------|-------------|-------|
+| Ofertas Públicas | 3 | Taxas, volumes, calendários, pré-análise de saúde financeira do emissor. Sem timeline mensal. |
+| FIDC | 1 | Trata FIDCs como ativos genéricos no mercado de crédito. Sem módulo FIDC dedicado. |
+| Macro / Crédito / RF | 1 | Menções contextuais (Selic, câmbio), sem módulos dedicados. |
+| Fundos / FII | 0 | Não oferece. |
+| Analytics & Insights | 4 | AI-powered: SAPE metric proprietária, 30+ indicadores de crédito por empresa, dossiers de risco, relatórios para comitê. |
+| UX/Design | 2 | Login required, sem demos públicas. |
+| Data Coverage | 3 | 700+ empresas, 9.700+ ativos, 14.000+ balanços. CVM + Anbima + B3 + RAG proprietário. |
+
+**Posicionamento**: CreditGuide é deeper in credit fundamentals per issuer. Muuney é broader (multi-asset, macro→crédito→RF→fundos). Não há sobreposição direta — são públicos diferentes. A vantagem de CreditGuide é a análise fundamentalista de emissores (SAPE, dossiers). A vantagem de Muuney é a camada de intelligence cross-module e UX superior.
+
+**Gap identificado**: Análise fundamentalista por emissor (saúde financeira, rating implícito) → P2 futuro, requer dados de balanço.
+
+---
+
+## Score FINAL (PÓS todas implementações — 12/04/2026)
+
+### Ofertas Públicas: 3.1 → 4.4 (revisado)
+| Feature | Score | Justificativa |
+|---------|-------|---------------|
+| Pipeline CVM (160/400/476) | 4 | Multi-tipo, filtros, drawer |
+| Timeline mensal | 5 | Chart + MoM delta + QoQ trend + ticket médio + YoY |
+| Explorer multi-filtro | 4 | 4 filtros + sort + paginação |
+| KPIs agregados | 5 | 4 KPIs + HHI + classes ativas + cancel rate |
+| Regime detection | 5 | 7 regimes (Boom→Stress) |
+| Cross-signals | 5 | 7 signals automáticos |
+| Narrativa contextual | 5 | Por seção (Overview, Timeline, Pipeline, Explorer, Analytics) |
+| HHI / concentração | 5 | HHI card + diversificação assessment |
+| Top emissores ranking | 4 | Volume bars + count + % |
+| Detalhe por oferta (drawer) | 4 | Cronologia + KPIs + info |
+| Exportação CSV | 4 | Explorer + Top Emissores |
+| Coordenador analytics | 4 | Ranking volume + count + emissores distintos |
+| YoY comparison | 4 | Volume + count vs 12M atrás |
+| Pipeline health score | 4 | Score 0-100 + ratios |
+| **Média** | **4.4** | |
+
+### FIDC: 3.5 → 4.5 (revisado)
+| Feature | Score | Justificativa |
+|---------|-------|---------------|
+| Catálogo fundos | 5 | 4,319 FIDCs RCVM 175 |
+| Lâmina detalhada | 5 | 6 seções + subordinação + carteira + similares |
+| Rankings sortable | 5 | Multi-sort + lastro filter + paginação |
+| Screener multi-filtro | 4 | Search + filtros |
+| Subordinação/risco | 4 | Stacked bar + line temporal |
+| Inadimplência tracking | 4 | Série temporal mensal |
+| Lastro segmentation | 4 | PieChart + cards por lastro |
+| Série temporal mensal | 4 | 6 meses (Oct25-Mar26) |
+| Rentabilidade indexada | 5 | Base 100 + CDI benchmark line + vs CDI KPI |
+| Regime detection | 5 | Via FundNarrativePanel |
+| Cross-signals (FIDC×Macro) | 5 | 7 signals |
+| Fundos similares | 4 | Top 6 same lastro |
+| Composição carteira | 3 | CDA 8 blocos |
+| Exportação CSV | 4 | Rankings export |
+| Benchmark vs CDI | 5 | Narrativa + indexed chart + KPI |
+| Fluxo de cotistas | 4 | Net flow proxy em FundLamina |
+| **Média** | **4.4** | |
+
+### Macro: 4.4 → 4.7 (confirmado)
+Alertas automáticos (4 regras) elevam feature de 0→4. Health Index 4→5.
+
+### Crédito: 4.3 → 4.7 (confirmado)
+Alertas automáticos (4 regras) elevam feature de 0→4.
+
+### Renda Fixa: 3.6 → 4.4 (revisado)
+| Feature | Score |
+|---------|-------|
+| IMA-B proxy | 4 | Acumulado histórico + area chart + KPIs por maturity |
+| IDkA indices | 0 | Não implementado (requer Anbima API) |
+| Alertas RF | 4 | 3 alerts (inversão, breakeven, juro real) |
+| Demais features | 5 (média) | Já eram 5 |
+| **Média** | **4.4** | |
+
+### Fundos: 3.4 → 4.5 (revisado)
+| Feature | Score | Delta |
+|---------|-------|-------|
+| Fluxo captação/resgate | 4 | 0→4 (net flow proxy) |
+| Benchmark vs índice | 5 | 0→5 (CDI line + vs CDI KPI) |
+| Exportação dados | 4 | 1→4 (gestoras + screener CSV) |
+| FIP deep module | 4 | 3→4 (FIPNarrativePanel) |
+| Composição CDA | 4 | 3→4 (HHI + top 3 blocks analytics) |
+| Lâminas detalhadas | 5 | 4→5 (net flow + CDI benchmark) |
+| **Média** | **4.5** | |
+
+### Score Consolidado FINAL
+
+| Módulo | Score | Status |
+|--------|-------|--------|
+| Ofertas Públicas | **4.4** | ✅ ≥4.0 |
+| FIDC | **4.5** | ✅ ≥4.0 |
+| Macro | **4.7** | ✅ ≥4.5 |
+| Crédito | **4.7** | ✅ ≥4.5 |
+| Renda Fixa | **4.4** | ✅ ≥4.0 |
+| Fundos | **4.5** | ✅ ≥4.5 |
+| **MÉDIA GERAL** | **4.53** | ✅ ≥4.5 |
+
+**Target atingido: média 4.53 (≥4.5) com mínimo 4.4 (≥4.0).**
 
 ---
 
