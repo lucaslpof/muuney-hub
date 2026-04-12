@@ -11,6 +11,7 @@ import {
   Calendar,
   Building2,
   Eye,
+  Brain,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -41,6 +42,7 @@ import { HubSEO } from "@/lib/seo";
 import { SkeletonKPI, SkeletonChart, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { formatBRL, formatDate, formatMonthLabel, formatCount, fmtNum } from "@/lib/format";
+import OfertasNarrativePanel from "@/components/hub/OfertasNarrativePanel";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -94,6 +96,7 @@ const SECTIONS = [
   { id: "timeline", label: "Timeline", icon: Calendar },
   { id: "pipeline", label: "Pipeline", icon: TrendingUp },
   { id: "explorer", label: "Explorer", icon: Search },
+  { id: "analytics", label: "Analytics", icon: Brain },
 ];
 
 const COLORS = ["#0B6C3E", "#F59E0B", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316", "#06B6D4", "#10B981"];
@@ -222,28 +225,85 @@ export default function OfertasRadar() {
       }));
   }, [timelineData]);
 
-  /* ─── Narrative insights (computed from stats) ─── */
+  /* ─── Narrative insights (computed from stats + timeline) ─── */
   const narrativeOverview = useMemo(() => {
     if (!stats) return null;
     const pct_analise = stats.total_ofertas > 0
       ? ((stats.em_analise / stats.total_ofertas) * 100)
       : 0;
     const topAtivo = stats.by_tipo_ativo?.[0];
+    // Concentration: top class share
+    const topClassShare = topAtivo && stats.total_valor > 0
+      ? (topAtivo.valor / stats.total_valor) * 100 : 0;
+    // HHI
+    const hhi = stats.by_tipo_ativo.length > 0 && stats.total_valor > 0
+      ? stats.by_tipo_ativo.reduce((s, t) => {
+          const sh = (t.valor / stats.total_valor) * 100;
+          return s + sh * sh;
+        }, 0)
+      : 0;
+    // Cancellation rate
+    const cancelSuspenso = stats.by_status
+      .filter((s) => s.status === "cancelado" || s.status === "suspenso")
+      .reduce((s, x) => s + x.count, 0);
+    const cancelRate = stats.total_ofertas > 0 ? (cancelSuspenso / stats.total_ofertas) * 100 : 0;
+
     return {
       pct_analise,
       topAtivo,
+      topClassShare,
+      hhi,
+      cancelRate,
+      cancelSuspenso,
       total: stats.total_ofertas,
       distrib: stats.em_distribuicao,
+      activeClasses: stats.by_tipo_ativo.filter((t) => t.count >= 2).length,
     };
   }, [stats]);
 
   const narrativeTimeline = useMemo(() => {
     if (!timelineData?.timeline?.length) return null;
-    const sorted = [...timelineData.timeline].sort((a, b) => b.valor_total - a.valor_total);
+    const tl = timelineData.timeline;
+    const sorted = [...tl].sort((a, b) => b.valor_total - a.valor_total);
     const peakMonth = sorted[0];
-    const recent = timelineData.timeline[0]; // most recent
-    return { peakMonth, recent, total: timelineData.timeline.length };
+    const recent = tl[0]; // most recent
+    // MoM delta
+    const momDelta = tl.length >= 2 && tl[1].valor_total > 0
+      ? ((tl[0].valor_total - tl[1].valor_total) / tl[1].valor_total) * 100
+      : null;
+    // 3-month trend (average of recent 3 vs prior 3)
+    const recent3 = tl.slice(0, 3);
+    const prior3 = tl.slice(3, 6);
+    const avgRecent = recent3.length > 0 ? recent3.reduce((s, b) => s + b.valor_total, 0) / recent3.length : 0;
+    const avgPrior = prior3.length > 0 ? prior3.reduce((s, b) => s + b.valor_total, 0) / prior3.length : 0;
+    const qoqDelta = avgPrior > 0 ? ((avgRecent - avgPrior) / avgPrior) * 100 : null;
+    // Ticket médio
+    const ticketRecent = recent.count > 0 ? recent.valor_total / recent.count : 0;
+    const ticketAvg = tl.length > 0
+      ? tl.reduce((s, b) => s + (b.count > 0 ? b.valor_total / b.count : 0), 0) / tl.length
+      : 0;
+    return { peakMonth, recent, total: tl.length, momDelta, qoqDelta, ticketRecent, ticketAvg };
   }, [timelineData]);
+
+  /* ─── Pipeline analytics ─── */
+  const pipelineAnalytics = useMemo(() => {
+    if (!stats) return null;
+    const distribRatio = stats.total_ofertas > 0
+      ? (stats.em_distribuicao / stats.total_ofertas) * 100 : 0;
+    const pipelineRatio = stats.total_ofertas > 0
+      ? (stats.em_analise / stats.total_ofertas) * 100 : 0;
+    // Top emissores from list data (if available)
+    const topSegmentos = stats.by_segmento.slice(0, 5);
+    const topAtivos = stats.by_tipo_ativo.slice(0, 5);
+    // Score 0-100 (pipeline health heuristic)
+    const healthScore = Math.min(100, Math.round(
+      (pipelineRatio > 5 ? 30 : pipelineRatio * 6) +
+      (distribRatio > 5 ? 30 : distribRatio * 6) +
+      (topAtivos.length >= 3 ? 20 : topAtivos.length * 7) +
+      (stats.total_ofertas > 50 ? 20 : (stats.total_ofertas / 50) * 20)
+    ));
+    return { distribRatio, pipelineRatio, healthScore, topSegmentos, topAtivos };
+  }, [stats]);
 
   /* ─── Explorer summary (computed from filtered list) ─── */
   const explorerSummary = useMemo(() => {
@@ -302,17 +362,43 @@ export default function OfertasRadar() {
               <div className="space-y-6">
                 {/* Narrative insight */}
                 {narrativeOverview && (
-                  <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
-                    {formatCount(narrativeOverview.total)} ofertas rastreadas nos últimos 12 meses,
-                    com {fmtNum(narrativeOverview.pct_analise, 1)}% ainda em análise na CVM.
-                    {narrativeOverview.topAtivo && (
-                      <> A classe dominante é <span className="text-zinc-200">{narrativeOverview.topAtivo.tipo}</span> ({formatBRL(narrativeOverview.topAtivo.valor)}).
-                      </>
-                    )}
-                    {narrativeOverview.distrib > 0 && (
-                      <> {formatCount(narrativeOverview.distrib)} ofertas em distribuição ativa.</>
-                    )}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                      <span className="text-zinc-200">{formatCount(narrativeOverview.total)}</span> ofertas rastreadas nos últimos 12 meses,
+                      com {fmtNum(narrativeOverview.pct_analise, 1)}% ainda em análise na CVM.
+                      {narrativeOverview.topAtivo && (
+                        <> A classe dominante é <span className="text-zinc-200">{narrativeOverview.topAtivo.tipo}</span> ({formatBRL(narrativeOverview.topAtivo.valor)}, {fmtNum(narrativeOverview.topClassShare, 1)}% do volume).
+                        </>
+                      )}
+                      {narrativeOverview.distrib > 0 && (
+                        <> {formatCount(narrativeOverview.distrib)} ofertas em distribuição ativa.</>
+                      )}
+                    </p>
+                    {/* Mini-analytics cards */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Diversificação (HHI)</div>
+                        <div className={`text-sm font-mono font-semibold ${narrativeOverview.hhi > 5000 ? "text-red-400" : narrativeOverview.hhi > 2500 ? "text-amber-400" : "text-emerald-400"}`}>
+                          {formatCount(Math.round(narrativeOverview.hhi))}
+                        </div>
+                        <div className="text-[8px] text-zinc-600 font-mono">
+                          {narrativeOverview.hhi > 5000 ? "Concentrado" : narrativeOverview.hhi > 2500 ? "Moderado" : "Diversificado"}
+                        </div>
+                      </div>
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Classes Ativas</div>
+                        <div className="text-sm font-mono font-semibold text-zinc-200">{narrativeOverview.activeClasses}</div>
+                        <div className="text-[8px] text-zinc-600 font-mono">com ≥2 ofertas</div>
+                      </div>
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Cancel./Suspenso</div>
+                        <div className={`text-sm font-mono font-semibold ${narrativeOverview.cancelRate > 10 ? "text-red-400" : narrativeOverview.cancelRate > 5 ? "text-amber-400" : "text-emerald-400"}`}>
+                          {fmtNum(narrativeOverview.cancelRate, 1)}%
+                        </div>
+                        <div className="text-[8px] text-zinc-600 font-mono">{formatCount(narrativeOverview.cancelSuspenso)} ofertas</div>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {stats && !statsLoading ? (
@@ -447,12 +533,53 @@ export default function OfertasRadar() {
               <div className="space-y-6">
                 {/* Narrative insight */}
                 {narrativeTimeline && (
-                  <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
-                    {formatCount(narrativeTimeline.total)} meses rastreados.
-                    {narrativeTimeline.peakMonth && (
-                      <> Pico de volume em <span className="text-zinc-200">{formatMonthLabel(narrativeTimeline.peakMonth.month)}</span> ({formatBRL(narrativeTimeline.peakMonth.valor_total)}, {formatCount(narrativeTimeline.peakMonth.count)} ofertas).</>
-                    )}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                      {formatCount(narrativeTimeline.total)} meses rastreados.
+                      {narrativeTimeline.peakMonth && (
+                        <> Pico de volume em <span className="text-zinc-200">{formatMonthLabel(narrativeTimeline.peakMonth.month)}</span> ({formatBRL(narrativeTimeline.peakMonth.valor_total)}, {formatCount(narrativeTimeline.peakMonth.count)} ofertas).</>
+                      )}
+                      {narrativeTimeline.momDelta != null && (
+                        <> Variação MoM: <span className={narrativeTimeline.momDelta >= 0 ? "text-emerald-400" : "text-red-400"}>{narrativeTimeline.momDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.momDelta, 1)}%</span>.</>
+                      )}
+                      {narrativeTimeline.qoqDelta != null && (
+                        <> Tendência trimestral: <span className={narrativeTimeline.qoqDelta >= 0 ? "text-emerald-400" : "text-red-400"}>{narrativeTimeline.qoqDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.qoqDelta, 1)}%</span>.</>
+                      )}
+                    </p>
+                    {/* Momentum cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {narrativeTimeline.momDelta != null && (
+                        <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                          <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">MoM Volume</div>
+                          <div className={`text-sm font-mono font-semibold ${narrativeTimeline.momDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {narrativeTimeline.momDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.momDelta, 1)}%
+                          </div>
+                        </div>
+                      )}
+                      {narrativeTimeline.qoqDelta != null && (
+                        <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                          <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Tendência 3M</div>
+                          <div className={`text-sm font-mono font-semibold ${narrativeTimeline.qoqDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {narrativeTimeline.qoqDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.qoqDelta, 1)}%
+                          </div>
+                        </div>
+                      )}
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Ticket Médio</div>
+                        <div className="text-sm font-mono font-semibold text-zinc-200">
+                          {formatBRL(narrativeTimeline.ticketRecent)}
+                        </div>
+                        <div className="text-[8px] text-zinc-600 font-mono">último mês</div>
+                      </div>
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Ticket Média 12M</div>
+                        <div className="text-sm font-mono font-semibold text-zinc-200">
+                          {formatBRL(narrativeTimeline.ticketAvg)}
+                        </div>
+                        <div className="text-[8px] text-zinc-600 font-mono">referência</div>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Quick filter chips */}
@@ -578,6 +705,40 @@ export default function OfertasRadar() {
           >
             <SectionErrorBoundary sectionName="Pipeline Ofertas">
               <div className="space-y-6">
+                {/* Pipeline narrative */}
+                {pipelineAnalytics && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                      Pipeline com <span className="text-zinc-200">{fmtNum(pipelineAnalytics.pipelineRatio, 1)}%</span> em análise CVM
+                      e <span className="text-zinc-200">{fmtNum(pipelineAnalytics.distribRatio, 1)}%</span> em distribuição ativa.
+                      {pipelineAnalytics.topAtivos.length > 0 && (
+                        <> {pipelineAnalytics.topAtivos.length} classes com ofertas ativas — lideradas por {pipelineAnalytics.topAtivos[0].tipo}.</>
+                      )}
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Health Score</div>
+                        <div className={`text-lg font-mono font-bold ${pipelineAnalytics.healthScore >= 70 ? "text-emerald-400" : pipelineAnalytics.healthScore >= 40 ? "text-amber-400" : "text-red-400"}`}>
+                          {pipelineAnalytics.healthScore}
+                          <span className="text-[9px] text-zinc-600 font-normal">/100</span>
+                        </div>
+                        <div className="text-[8px] text-zinc-600 font-mono">
+                          {pipelineAnalytics.healthScore >= 70 ? "Saudável" : pipelineAnalytics.healthScore >= 40 ? "Moderado" : "Fraco"}
+                        </div>
+                      </div>
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Em Análise</div>
+                        <div className="text-sm font-mono font-semibold text-amber-400">{fmtNum(pipelineAnalytics.pipelineRatio, 1)}%</div>
+                        <div className="text-[8px] text-zinc-600 font-mono">pipeline CVM</div>
+                      </div>
+                      <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                        <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Distribuindo</div>
+                        <div className="text-sm font-mono font-semibold text-emerald-400">{fmtNum(pipelineAnalytics.distribRatio, 1)}%</div>
+                        <div className="text-[8px] text-zinc-600 font-mono">colocação ativa</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {sectionVisible("pipeline") && stats && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -897,6 +1058,120 @@ export default function OfertasRadar() {
                       · {formatCount(stats.total_ofertas)} registros
                     </span>
                   )}
+                </div>
+              </div>
+            </SectionErrorBoundary>
+          </MacroSection>
+
+          {/* === SECTION 5: Analytics === */}
+          <MacroSection
+            ref={(el) => {
+              sectionRefs.current["analytics"] = el;
+            }}
+            id="analytics"
+            title="Analytics"
+            icon={Brain}
+          >
+            <SectionErrorBoundary sectionName="Analytics Ofertas">
+              <div className="space-y-6">
+                {/* Narrative Intelligence Panel */}
+                {stats && timelineData?.timeline && (
+                  <OfertasNarrativePanel
+                    totalOfertas={stats.total_ofertas}
+                    totalValor={stats.total_valor}
+                    emAnalise={stats.em_analise}
+                    emDistribuicao={stats.em_distribuicao}
+                    timeline={timelineData.timeline}
+                    byTipoAtivo={stats.by_tipo_ativo}
+                    byStatus={stats.by_status}
+                    bySegmento={stats.by_segmento}
+                  />
+                )}
+
+                {/* Concentration Matrix: top emissores from Explorer data */}
+                {listData && listData.ofertas.length > 0 && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
+                      <Building2 className="w-3 h-3" />
+                      Top Emissores por Volume
+                    </h3>
+                    <div className="space-y-2">
+                      {(() => {
+                        const emissorMap = new Map<string, { nome: string; valor: number; count: number }>();
+                        for (const o of listData.ofertas) {
+                          const key = o.emissor_cnpj || o.emissor_nome;
+                          const prev = emissorMap.get(key) ?? { nome: o.emissor_nome, valor: 0, count: 0 };
+                          emissorMap.set(key, { nome: prev.nome, valor: prev.valor + (o.valor_total ?? 0), count: prev.count + 1 });
+                        }
+                        const sorted = [...emissorMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
+                        const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
+                        const totalVol = sorted.reduce((s, e) => s + e.valor, 0);
+                        return sorted.map((em, i) => {
+                          const pct = totalVol > 0 ? (em.valor / totalVol) * 100 : 0;
+                          return (
+                            <div key={em.nome + i} className="space-y-0.5">
+                              <div className="flex justify-between text-[10px] font-mono">
+                                <span className="text-zinc-400 truncate max-w-[50%]">{em.nome}</span>
+                                <span className="text-zinc-300">
+                                  {formatBRL(em.valor)} · {formatCount(em.count)} ofertas · {fmtNum(pct, 1)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-[#0B6C3E]/70 rounded"
+                                  style={{ width: `${(em.valor / maxVal) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Class evolution: mini sparklines per tipo_ativo from timeline */}
+                {timelineData?.timeline && timelineData.timeline.length > 0 && stats && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
+                      <BarChart3 className="w-3 h-3" />
+                      Composição do Volume por Classe
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 font-mono mb-3">
+                      Distribuição das {stats.by_tipo_ativo.length} classes ativas — proporção relativa do volume total.
+                    </p>
+                    <div className="space-y-3">
+                      {stats.by_tipo_ativo.map((t, i) => {
+                        const share = stats.total_valor > 0 ? (t.valor / stats.total_valor) * 100 : 0;
+                        return (
+                          <div key={t.tipo} className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-zinc-300">{t.tipo}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-zinc-400">
+                                <span>{formatCount(t.count)} ofertas</span>
+                                <span className="text-zinc-200">{formatBRL(t.valor)}</span>
+                                <span className="w-12 text-right text-zinc-500">{fmtNum(share, 1)}%</span>
+                              </div>
+                            </div>
+                            <div className="h-2 bg-[#0a0a0a] rounded overflow-hidden">
+                              <div
+                                className="h-full rounded transition-all"
+                                style={{ width: `${share}%`, backgroundColor: COLORS[i % COLORS.length] + "CC" }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-[9px] text-zinc-600 font-mono flex items-center gap-1">
+                  <Brain className="w-3 h-3" />
+                  Analytics computados a partir dos dados ingeridos via pipeline CVM. Regime e sinais atualizados automaticamente.
                 </div>
               </div>
             </SectionErrorBoundary>
