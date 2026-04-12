@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import { useDebouncedValue } from "@/hooks/useDebounce";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { LayoutGrid, Zap, Search, TrendingUp, Building2 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
@@ -54,6 +55,7 @@ export default function FiiHub() {
   const [minPl, setMinPl] = useState<number>(0);
   const [minDy, setMinDy] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   /* ─── Rankings Sorting ─── */
   const [rankingOrderBy, setRankingOrderBy] = useState<string>("patrimonio_liquido");
@@ -78,16 +80,16 @@ export default function FiiHub() {
       tipoGestao: selectedTipoGestao || undefined,
       minPl: minPl > 0 ? minPl : undefined,
       minDy: minDy > 0 ? minDy : undefined,
-      search: searchQuery || undefined,
+      search: debouncedSearch || undefined,
       enabled: sectionVisible("rankings") || sectionVisible("screener"),
     }
   );
   const rankingsFunds = rankingsData?.funds || [];
 
   /* ─── Data: Search ─── */
-  const { data: searchData } = useFiiSearchV4(searchQuery, {
+  const { data: searchData } = useFiiSearchV4(debouncedSearch, {
     limit: 10,
-    enabled: searchQuery.length >= 2 && sectionVisible("screener"),
+    enabled: debouncedSearch.length >= 2 && sectionVisible("screener"),
   });
   const searchResults = searchData?.results || [];
 

@@ -122,6 +122,11 @@ async function fetchCvm(endpoint: string, params: Record<string, string> = {}): 
   return res.json();
 }
 
+/* ─── Cache durations ─── */
+const STALE_REALTIME = 10 * 60_000;  // 10min — daily/detail data
+const STALE_FREQUENT = 30 * 60_000;  // 30min — stats, rankings, overview
+const STALE_MONTHLY  = 60 * 60_000;  // 60min — monthly/composition data (updates once/month)
+
 /* ─── Hooks ─── */
 
 /** Paginated fund catalog */
@@ -147,7 +152,7 @@ export function useFundCatalog(opts: {
       if (search) params.search = search;
       return fetchCvm("catalog", params) as Promise<FundCatalogResponse>;
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -165,7 +170,7 @@ export function useFundDetail(identifier: string | null, period: string = "3m") 
       return fetchCvm("fund", params) as Promise<FundDetail>;
     },
     enabled: !!identifier,
-    staleTime: 10 * 60 * 1000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -179,7 +184,7 @@ export function useFundRankings(classe?: string, limit: number = 20) {
       if (classe) params.classe = classe;
       return fetchCvm("rankings", params) as Promise<{ classe: string; funds: FundRankingItem[]; count: number }>;
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_FREQUENT,
     retry: 2,
   });
 }
@@ -189,7 +194,7 @@ export function useFundStats() {
   return useQuery<FundStatsResponse>({
     queryKey: ["fundos", "stats"],
     queryFn: () => fetchCvm("stats") as Promise<FundStatsResponse>,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_FREQUENT,
     retry: 2,
   });
 }
@@ -199,7 +204,7 @@ export function useFundOverview() {
   return useQuery<FundOverviewResponse>({
     queryKey: ["fundos", "overview"],
     queryFn: () => fetchCvm("overview") as Promise<FundOverviewResponse>,
-    staleTime: 15 * 60 * 1000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -210,7 +215,7 @@ export function useFundCompare(cnpjs: string[], period: string = "3m") {
     queryKey: ["fundos", "compare", [...cnpjs].sort().join(","), period],
     queryFn: () => fetchCvm("compare", { cnpjs: cnpjs.join(","), period }) as Promise<FundCompareItem[]>,
     enabled: cnpjs.length >= 2,
-    staleTime: 10 * 60 * 1000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -259,7 +264,7 @@ export function useFundMonthly(cnpj: string | null, months: number = 24) {
     queryKey: ["fundos", "monthly", cnpj, months],
     queryFn: () => fetchCvm("monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; months: FundMonthly[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -275,7 +280,7 @@ export function useMonthlyRankings(period: string, opts: { classe?: string; limi
       return fetchCvm("monthly_rankings", params) as Promise<{ period: string; classe: string; funds: MonthlyRankingItem[]; count: number }>;
     },
     enabled: !!period,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -285,7 +290,7 @@ export function useMonthlyOverview(months: number = 12) {
   return useQuery<{ months: MonthlyOverviewItem[]; count: number }>({
     queryKey: ["fundos", "monthly_overview", months],
     queryFn: () => fetchCvm("monthly_overview", { months: String(months) }) as Promise<{ months: MonthlyOverviewItem[]; count: number }>,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -319,7 +324,7 @@ export function useFundComposition(cnpj: string | null) {
     queryKey: ["fundos", "composition", cnpj],
     queryFn: () => fetchCvm("composition", { cnpj: cnpj! }) as Promise<{ cnpj: string; assets: FundCdaItem[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -330,7 +335,7 @@ export function useFundCompositionSummary(cnpj: string | null) {
     queryKey: ["fundos", "composition_summary", cnpj],
     queryFn: () => fetchCvm("composition_summary", { cnpj: cnpj! }) as Promise<{ cnpj: string; summary: FundCdaSummary[]; total_pl: number }>,
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -400,7 +405,7 @@ export function useFidcMonthly(cnpj: string | null, months: number = 24) {
     queryKey: ["fundos", "fidc_monthly", cnpj, months],
     queryFn: () => fetchCvm("fidc_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; months: FidcMonthlyItem[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -417,7 +422,7 @@ export function useFidcRankings(opts: { orderBy?: string; order?: string; limit?
       if (minPl > 0) params.min_pl = String(minPl);
       return fetchCvm("fidc_rankings", params) as Promise<{ funds: FidcRankingItem[]; count: number }>;
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_FREQUENT,
     retry: 2,
   });
 }
@@ -445,7 +450,7 @@ export function useFidcOverview() {
         avg_pdd_cobertura: null,
       };
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -485,7 +490,7 @@ export function useFiiMonthly(cnpj: string | null, months: number = 24) {
     queryKey: ["fundos", "fii_monthly", cnpj, months],
     queryFn: () => fetchCvm("fii_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -500,7 +505,7 @@ export function useFiiRankings(opts: { orderBy?: string; order?: string; limit?:
       if (segmento) params.segmento = segmento;
       return fetchCvm("fii_rankings", params) as Promise<{ date: string; funds: FiiMonthlyItem[]; count: number }>;
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_FREQUENT,
     retry: 2,
   });
 }
@@ -536,7 +541,7 @@ export function useFiiOverview() {
         })),
       };
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -606,7 +611,7 @@ export function useFipQuarterly(cnpj: string | null) {
       return raw;
     },
     enabled: !!cnpj,
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -627,7 +632,7 @@ export function useFipRankings(opts: { orderBy?: string; order?: string; limit?:
       };
       return { date: raw.date, funds: raw.funds ?? [], count: raw.count ?? 0 };
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -667,7 +672,7 @@ export function useFipOverview() {
         })),
       };
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -708,7 +713,7 @@ export function useGestoraRankings(opts?: { limit?: number; orderBy?: string; en
   return useQuery<{ gestoras: GestoraRankingItem[]; total: number }>({
     queryKey: ["cvm", "gestora_rankings", limit, orderBy],
     queryFn: () => fetchCvm("gestora_rankings", { limit: String(limit), order_by: orderBy }) as Promise<{ gestoras: GestoraRankingItem[]; total: number }>,
-    staleTime: 30 * 60_000,
+    staleTime: STALE_FREQUENT,
     enabled: opts?.enabled !== false,
   });
 }
@@ -728,7 +733,7 @@ export function useAdminRankings(opts?: { limit?: number; orderBy?: string; enab
   return useQuery<{ admins: AdminRankingItem[]; total: number }>({
     queryKey: ["cvm", "admin_rankings", limit, orderBy],
     queryFn: () => fetchCvm("admin_rankings", { limit: String(limit), order_by: orderBy }) as Promise<{ admins: AdminRankingItem[]; total: number }>,
-    staleTime: 30 * 60_000,
+    staleTime: STALE_FREQUENT,
     enabled: opts?.enabled !== false,
   });
 }
@@ -755,7 +760,7 @@ export function useFundSearch(query: string, opts?: { limit?: number; enabled?: 
   return useQuery<{ query: string; results: FundSearchResult[]; count: number }>({
     queryKey: ["cvm", "fund_search", trimmed, limit],
     queryFn: () => fetchCvm("fund_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FundSearchResult[]; count: number }>,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_REALTIME,
     enabled: (opts?.enabled !== false) && trimmed.length >= 2,
   });
 }
@@ -812,7 +817,7 @@ export function useInsightsFeed(opts?: {
   return useQuery<InsightsFeedResponse>({
     queryKey: ["cvm", "insights", params],
     queryFn: () => fetchCvm("insights", params) as Promise<InsightsFeedResponse>,
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     enabled: opts?.enabled !== false,
   });
 }
@@ -828,7 +833,7 @@ export function useInsightsForFund(identifier: string | null) {
   return useQuery<{ insights: FundInsight[]; cnpj: string }>({
     queryKey: ["cvm", "insights_for_fund", identifier],
     queryFn: () => fetchCvm("insights_for_fund", params) as Promise<{ insights: FundInsight[]; cnpj: string }>,
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     enabled: !!identifier,
   });
 }
@@ -931,7 +936,7 @@ export function useFidcDetail(identifier: string | null) {
       return fetchFidc("fidc_detail", params) as Promise<FidcDetailResponse>;
     },
     enabled: !!identifier,
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -963,7 +968,7 @@ export function useFidcV4Rankings(opts: {
       if (search) params.search = search;
       return fetchFidc("fidc_rankings", params) as Promise<{ date: string; order_by: string; funds: FidcV4RankingItem[]; count: number }>;
     },
-    staleTime: 15 * 60_000,
+    staleTime: STALE_FREQUENT,
     enabled: opts.enabled !== false,
     retry: 2,
   });
@@ -974,7 +979,7 @@ export function useFidcV4Overview() {
   return useQuery<FidcV4OverviewResponse>({
     queryKey: ["fidc", "v4_overview"],
     queryFn: () => fetchFidc("fidc_overview") as Promise<FidcV4OverviewResponse>,
-    staleTime: 30 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -986,7 +991,7 @@ export function useFidcSearch(query: string, opts?: { limit?: number; enabled?: 
   return useQuery<{ query: string; results: FidcSearchResult[]; count: number }>({
     queryKey: ["fidc", "search", trimmed, limit],
     queryFn: () => fetchFidc("fidc_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FidcSearchResult[]; count: number }>,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_REALTIME,
     enabled: (opts?.enabled !== false) && trimmed.length >= 2,
   });
 }
@@ -996,7 +1001,7 @@ export function useFidcSegments() {
   return useQuery<{ date: string; segments: FidcSegment[] }>({
     queryKey: ["fidc", "segments"],
     queryFn: () => fetchFidc("fidc_segments") as Promise<{ date: string; segments: FidcSegment[] }>,
-    staleTime: 60 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -1007,7 +1012,7 @@ export function useFidcV4Monthly(cnpj: string | null, months: number = 24) {
     queryKey: ["fidc", "v4_monthly", cnpj, months],
     queryFn: () => fetchFidc("fidc_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FidcMonthlyItem[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 15 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -1088,7 +1093,7 @@ export function useFiiDetail(identifier: string | null) {
       return fetchFii("fii_detail", params) as Promise<FiiDetailResponse>;
     },
     enabled: !!identifier,
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -1120,7 +1125,7 @@ export function useFiiV4Rankings(opts: {
       if (search) params.search = search;
       return fetchFii("fii_rankings", params) as Promise<{ date: string; order_by: string; funds: FiiV4RankingItem[]; count: number }>;
     },
-    staleTime: 15 * 60_000,
+    staleTime: STALE_FREQUENT,
     enabled: opts.enabled !== false,
     retry: 2,
   });
@@ -1131,7 +1136,7 @@ export function useFiiV4Overview() {
   return useQuery<FiiV4OverviewResponse>({
     queryKey: ["fii", "v4_overview"],
     queryFn: () => fetchFii("fii_overview") as Promise<FiiV4OverviewResponse>,
-    staleTime: 30 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -1143,7 +1148,7 @@ export function useFiiSearchV4(query: string, opts?: { limit?: number; enabled?:
   return useQuery<{ query: string; results: FiiSearchResult[]; count: number }>({
     queryKey: ["fii", "search", trimmed, limit],
     queryFn: () => fetchFii("fii_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FiiSearchResult[]; count: number }>,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_REALTIME,
     enabled: (opts?.enabled !== false) && trimmed.length >= 2,
   });
 }
@@ -1153,7 +1158,7 @@ export function useFiiSegmentsV4() {
   return useQuery<{ date: string; segments: FiiSegment[] }>({
     queryKey: ["fii", "segments"],
     queryFn: () => fetchFii("fii_segments") as Promise<{ date: string; segments: FiiSegment[] }>,
-    staleTime: 60 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -1164,7 +1169,7 @@ export function useFiiV4Monthly(cnpj: string | null, months: number = 24) {
     queryKey: ["fii", "v4_monthly", cnpj, months],
     queryFn: () => fetchFii("fii_monthly", { cnpj: cnpj!, months: String(months) }) as Promise<{ cnpj: string; data: FiiMonthlyItem[]; count: number }>,
     enabled: !!cnpj,
-    staleTime: 15 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }
@@ -1286,7 +1291,7 @@ export function useOfertasList(filters: OfertasListFilters = {}) {
       });
       return fetchOfertas("ofertas_list", params) as Promise<OfertasListResponse>;
     },
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -1297,7 +1302,7 @@ export function useOfertaDetail(protocolo: string | null) {
     queryKey: ["ofertas", "detail", protocolo],
     queryFn: () => fetchOfertas("ofertas_detail", { protocolo: protocolo! }) as Promise<OfertaDetailResponse>,
     enabled: !!protocolo,
-    staleTime: 30 * 60_000,
+    staleTime: STALE_FREQUENT,
     retry: 2,
   });
 }
@@ -1312,7 +1317,7 @@ export function useOfertasTimeline(months = 12, tipoAtivo?: string, status?: str
       if (status) params.status = status;
       return fetchOfertas("ofertas_timeline", params) as Promise<OfertasTimelineResponse>;
     },
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -1327,7 +1332,7 @@ export function useOfertasStats(fromDate?: string, toDate?: string) {
       if (toDate) params.to_date = toDate;
       return fetchOfertas("ofertas_stats", params) as Promise<OfertasStatsResponse>;
     },
-    staleTime: 10 * 60_000,
+    staleTime: STALE_REALTIME,
     retry: 2,
   });
 }
@@ -1337,7 +1342,7 @@ export function useOfertasFilters() {
   return useQuery<OfertasFiltersResponse>({
     queryKey: ["ofertas", "filters"],
     queryFn: () => fetchOfertas("ofertas_filters") as Promise<OfertasFiltersResponse>,
-    staleTime: 60 * 60_000,
+    staleTime: STALE_MONTHLY,
     retry: 2,
   });
 }

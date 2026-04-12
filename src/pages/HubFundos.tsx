@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
+import { useDebouncedValue } from "@/hooks/useDebounce";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
 import { FundCategoryRankings } from "@/components/hub/FundCategoryRankings";
 import { FundScreener } from "@/components/hub/FundScreener";
@@ -571,7 +572,8 @@ const ComparadorSection = ({ period }: { period: string }) => {
 const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const { data: results, isLoading } = useFundSearch(query, { limit: 12 });
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const { data: results, isLoading } = useFundSearch(debouncedQuery, { limit: 12 });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -804,6 +806,36 @@ const HubFundos = () => {
       { title: "Top PL", value: formatPL(catalog.funds[0]?.vl_patrim_liq), icon: Trophy },
     ];
   }, [stats, catalog]);
+
+  /* ─── Analytics memoized data ─── */
+  const benchmarks = useMemo(() => [
+    { label: "Classes catalogadas", current: stats?.total_funds || 0, target: 27000, unit: "" },
+    { label: "Classes RCVM 175", current: Object.keys(stats?.by_classe_rcvm175 || stats?.by_classe || {}).length, target: 7, unit: "" },
+    { label: "Dados diários (meses)", current: 6, target: 12, unit: "" },
+  ], [stats]);
+
+  const analyticsInsights = useMemo(() => [
+    {
+      title: "RCVM 175 Adaptado",
+      desc: "27k+ classes com cnpj_fundo_classe como chave primária. Hierarquia Fundo→Classe→Subclasse implementada. Badge ✓ RCVM 175 visível.",
+      color: "#0B6C3E",
+    },
+    {
+      title: "Cobertura de Dados",
+      desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · 2.6M+ registros diários · 6 meses (Out 2025 — Mar 2026) · Ingestão via pg_cron D+1.`,
+      color: "#3B82F6",
+    },
+    {
+      title: "Modo Assessor",
+      desc: "Toggle entre visão Investidor (simplificada, Fund Score™) e Assessor (Sharpe, Sortino, Calmar, VaR, composição CDA, due diligence).",
+      color: "#06B6D4",
+    },
+    {
+      title: "Cross-module",
+      desc: "Correlação fundos × Selic: fundos RF tendem a captar mais em ciclos de alta. Monitorar spread DI vs cota.",
+      color: "#EC4899",
+    },
+  ], [stats]);
 
   /* ─── Scroll to section ─── */
   const scrollTo = useCallback((id: string) => {
@@ -1176,11 +1208,7 @@ const HubFundos = () => {
                       Benchmarks vs Metas
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { label: "Classes catalogadas", current: stats?.total_funds || 0, target: 27000, unit: "" },
-                        { label: "Classes RCVM 175", current: Object.keys(stats?.by_classe_rcvm175 || stats?.by_classe || {}).length, target: 7, unit: "" },
-                        { label: "Dados diários (meses)", current: 6, target: 12, unit: "" },
-                      ].map((b) => (
+                      {benchmarks.map((b) => (
                         <div key={b.label}>
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] text-zinc-500 font-mono">{b.label}</span>
@@ -1205,28 +1233,7 @@ const HubFundos = () => {
                       Insights
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        {
-                          title: "RCVM 175 Adaptado",
-                          desc: "27k+ classes com cnpj_fundo_classe como chave primária. Hierarquia Fundo→Classe→Subclasse implementada. Badge ✓ RCVM 175 visível.",
-                          color: "#0B6C3E",
-                        },
-                        {
-                          title: "Cobertura de Dados",
-                          desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · 2.6M+ registros diários · 6 meses (Out 2025 — Mar 2026) · Ingestão via pg_cron D+1.`,
-                          color: "#3B82F6",
-                        },
-                        {
-                          title: "Modo Assessor",
-                          desc: "Toggle entre visão Investidor (simplificada, Fund Score™) e Assessor (Sharpe, Sortino, Calmar, VaR, composição CDA, due diligence).",
-                          color: "#06B6D4",
-                        },
-                        {
-                          title: "Cross-module",
-                          desc: "Correlação fundos × Selic: fundos RF tendem a captar mais em ciclos de alta. Monitorar spread DI vs cota.",
-                          color: "#EC4899",
-                        },
-                      ].map((insight) => (
+                      {analyticsInsights.map((insight) => (
                         <div key={insight.title} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1.5">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: insight.color }} />

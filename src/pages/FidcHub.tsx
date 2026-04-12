@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { useDebouncedValue } from "@/hooks/useDebounce";
 import { LayoutGrid, Zap, Search, TrendingUp, BarChart3 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { PercentTooltip } from "@/components/hub/ChartTooltip";
@@ -54,6 +55,7 @@ export default function FidcHub() {
   const [maxInadim, setMaxInadim] = useState<number>(100);
   const [minSubord, setMinSubord] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   /* ─── Rankings Sorting ─── */
   const [rankingOrderBy, setRankingOrderBy] = useState<string>("vl_pl_total");
@@ -78,16 +80,16 @@ export default function FidcHub() {
       minPl: minPl > 0 ? minPl : undefined,
       maxInadim: maxInadim < 100 ? maxInadim : undefined,
       minSubord: minSubord > 0 ? minSubord : undefined,
-      search: searchQuery || undefined,
+      search: debouncedSearch || undefined,
       enabled: sectionVisible("rankings") || sectionVisible("screener"),
     }
   );
   const rankingsFunds = rankingsData?.funds || [];
 
   /* ─── Data: Search ─── */
-  const { data: searchData } = useFidcSearch(searchQuery, {
+  const { data: searchData } = useFidcSearch(debouncedSearch, {
     limit: 10,
-    enabled: searchQuery.length >= 2 && sectionVisible("screener"),
+    enabled: debouncedSearch.length >= 2 && sectionVisible("screener"),
   });
   const searchResults = searchData?.results || [];
 

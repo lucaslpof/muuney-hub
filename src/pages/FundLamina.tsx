@@ -24,6 +24,18 @@ import { InlinePaywall } from "@/components/hub/RequireTier";
 
 const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
 
+/** CDA asset block labels */
+const BLOCO_LABELS: Record<string, string> = {
+  titulo_publico: "Títulos Públicos",
+  cota_fi: "Cotas de FI",
+  swap: "Swaps",
+  ativo_codificado: "Ativos Codificados",
+  deposito_titfi: "Depósitos/TIT-FI",
+  agro_credpriv: "Agro/Crédito Privado",
+  investimento_exterior: "Investimento Exterior",
+  ativo_nao_codificado: "Ativos Não Codificados",
+};
+
 /** Compute base-100 index from quota data */
 function computeIndexSeries(daily: Array<{ dt_comptc: string; vl_quota?: number | null }>) {
   if (!daily || daily.length === 0) return [];
@@ -533,17 +545,8 @@ export default function FundLamina() {
                       const hhi = summary.reduce((sum, b) => sum + Math.pow(b.pct_pl, 2), 0);
                       const hhiLabel = hhi > 2500 ? "concentrada" : hhi > 1500 ? "moderadamente concentrada" : "diversificada";
 
-                      // Asset block labels mapping
-                      const blocoLabels: Record<string, string> = {
-                        titulo_publico: "Títulos Públicos",
-                        cota_fi: "Cotas de FI",
-                        swap: "Swaps",
-                        ativo_codificado: "Ativos Codificados",
-                        deposito_titfi: "Depósitos/TIT-FI",
-                        agro_credpriv: "Agro/Crédito Privado",
-                        investimento_exterior: "Investimento Exterior",
-                        ativo_nao_codificado: "Ativos Não Codificados",
-                      };
+                      // Asset block labels mapping (module-level constant)
+                      const blocoLabels = BLOCO_LABELS;
 
                       return (
                         <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">

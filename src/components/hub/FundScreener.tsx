@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import { useDebouncedValue } from "@/hooks/useDebounce";
 import { Link } from "react-router-dom";
 import { SkeletonTableRow } from "./SkeletonLoader";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, Sliders, X } from "lucide-react";
@@ -44,18 +45,19 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
   const [plMax, setPlMax] = useState<number | undefined>();
   const [taxaAdmMax, setTaxaAdmMax] = useState<number | undefined>();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [sortKey, setSortKey] = useState<SortKey>("vl_patrim_liq");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(0);
 
   const ITEMS_PER_PAGE = 25;
 
-  // Fetch data with active filters
+  // Fetch data with active filters (debounced search)
   const { data: catalogData, isLoading } = useFundCatalog({
     limit: 100, // fetch more to allow client-side filtering
     offset: 0,
     classe: classe,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     orderBy: sortKey,
   });
 

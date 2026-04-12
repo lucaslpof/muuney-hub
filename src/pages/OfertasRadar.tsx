@@ -364,6 +364,40 @@ export default function OfertasRadar() {
     return { count: listData.count, totalValor, topStatus };
   }, [listData]);
 
+  /* ─── Top emissores (memoized) ─── */
+  const topEmissores = useMemo(() => {
+    if (!listData?.ofertas?.length) return [];
+    const emissorMap = new Map<string, { nome: string; valor: number; count: number }>();
+    for (const o of listData.ofertas) {
+      const key = o.emissor_cnpj || o.emissor_nome;
+      const prev = emissorMap.get(key) ?? { nome: o.emissor_nome, valor: 0, count: 0 };
+      emissorMap.set(key, { nome: prev.nome, valor: prev.valor + (o.valor_total ?? 0), count: prev.count + 1 });
+    }
+    const sorted = [...emissorMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
+    const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
+    const totalVol = sorted.reduce((s, e) => s + e.valor, 0);
+    return sorted.map((em) => ({ ...em, pct: totalVol > 0 ? (em.valor / totalVol) * 100 : 0, barW: (em.valor / maxVal) * 100 }));
+  }, [listData]);
+
+  /* ─── Coordenadores líderes (memoized) ─── */
+  const topCoordenadores = useMemo(() => {
+    if (!listData?.ofertas?.length) return [];
+    const coordMap = new Map<string, { nome: string; valor: number; count: number; emissores: Set<string> }>();
+    for (const o of listData.ofertas) {
+      if (!o.coordenador_lider) continue;
+      const nome = o.coordenador_lider;
+      const prev = coordMap.get(nome) ?? { nome, valor: 0, count: 0, emissores: new Set<string>() };
+      prev.valor += o.valor_total ?? 0;
+      prev.count += 1;
+      if (o.emissor_cnpj) prev.emissores.add(o.emissor_cnpj);
+      coordMap.set(nome, prev);
+    }
+    const sorted = [...coordMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
+    const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
+    const totalVol = sorted.reduce((s, c) => s + c.valor, 0);
+    return sorted.map((c) => ({ ...c, emissorCount: c.emissores.size, pct: totalVol > 0 ? (c.valor / totalVol) * 100 : 0, barW: (c.valor / maxVal) * 100 }));
+  }, [listData]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
       {/* Header */}
@@ -1163,36 +1197,22 @@ export default function OfertasRadar() {
                       <ExportButton onClick={handleExportTopEmissores} disabled={!listData?.ofertas.length} />
                     </div>
                     <div className="space-y-2">
-                      {(() => {
-                        const emissorMap = new Map<string, { nome: string; valor: number; count: number }>();
-                        for (const o of listData.ofertas) {
-                          const key = o.emissor_cnpj || o.emissor_nome;
-                          const prev = emissorMap.get(key) ?? { nome: o.emissor_nome, valor: 0, count: 0 };
-                          emissorMap.set(key, { nome: prev.nome, valor: prev.valor + (o.valor_total ?? 0), count: prev.count + 1 });
-                        }
-                        const sorted = [...emissorMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
-                        const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
-                        const totalVol = sorted.reduce((s, e) => s + e.valor, 0);
-                        return sorted.map((em, i) => {
-                          const pct = totalVol > 0 ? (em.valor / totalVol) * 100 : 0;
-                          return (
-                            <div key={em.nome + i} className="space-y-0.5">
-                              <div className="flex justify-between text-[10px] font-mono">
-                                <span className="text-zinc-400 truncate max-w-[50%]">{em.nome}</span>
-                                <span className="text-zinc-300">
-                                  {formatBRL(em.valor)} · {formatCount(em.count)} ofertas · {fmtNum(pct, 1)}%
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
-                                <div
-                                  className="h-full bg-[#0B6C3E]/70 rounded"
-                                  style={{ width: `${(em.valor / maxVal) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
+                      {topEmissores.map((em, i) => (
+                        <div key={em.nome + i} className="space-y-0.5">
+                          <div className="flex justify-between text-[10px] font-mono">
+                            <span className="text-zinc-400 truncate max-w-[50%]">{em.nome}</span>
+                            <span className="text-zinc-300">
+                              {formatBRL(em.valor)} · {formatCount(em.count)} ofertas · {fmtNum(em.pct, 1)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
+                            <div
+                              className="h-full bg-[#0B6C3E]/70 rounded"
+                              style={{ width: `${em.barW}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1205,40 +1225,22 @@ export default function OfertasRadar() {
                       Coordenadores Líderes
                     </h3>
                     <div className="space-y-2">
-                      {(() => {
-                        const coordMap = new Map<string, { nome: string; valor: number; count: number; emissores: Set<string> }>();
-                        for (const o of listData.ofertas) {
-                          if (!o.coordenador_lider) return;
-                          const nome = o.coordenador_lider;
-                          const prev = coordMap.get(nome) ?? { nome, valor: 0, count: 0, emissores: new Set() };
-                          prev.valor += o.valor_total ?? 0;
-                          prev.count += 1;
-                          if (o.emissor_cnpj) prev.emissores.add(o.emissor_cnpj);
-                          coordMap.set(nome, prev);
-                        }
-                        const sorted = [...coordMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
-                        const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
-                        const totalVol = sorted.reduce((s, c) => s + c.valor, 0);
-                        return sorted.map((coord, i) => {
-                          const pct = totalVol > 0 ? (coord.valor / totalVol) * 100 : 0;
-                          return (
-                            <div key={coord.nome + i} className="space-y-0.5">
-                              <div className="flex justify-between text-[10px] font-mono">
-                                <span className="text-zinc-400 truncate max-w-[50%]">{coord.nome}</span>
-                                <span className="text-zinc-300">
-                                  {formatBRL(coord.valor)} · {formatCount(coord.count)} ofertas · {formatCount(coord.emissores.size)} emissores · {fmtNum(pct, 1)}%
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
-                                <div
-                                  className="h-full bg-[#0B6C3E]/70 rounded"
-                                  style={{ width: `${(coord.valor / maxVal) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
+                      {topCoordenadores.map((coord, i) => (
+                        <div key={coord.nome + i} className="space-y-0.5">
+                          <div className="flex justify-between text-[10px] font-mono">
+                            <span className="text-zinc-400 truncate max-w-[50%]">{coord.nome}</span>
+                            <span className="text-zinc-300">
+                              {formatBRL(coord.valor)} · {formatCount(coord.count)} ofertas · {formatCount(coord.emissorCount)} emissores · {fmtNum(coord.pct, 1)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
+                            <div
+                              className="h-full bg-[#0B6C3E]/70 rounded"
+                              style={{ width: `${coord.barW}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
