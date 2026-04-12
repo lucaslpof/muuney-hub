@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { throwApiError } from "@/lib/apiError";
 
 const CVM_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-cvm-api";
 
@@ -117,7 +118,7 @@ async function fetchCvm(endpoint: string, params: Record<string, string> = {}): 
   url.searchParams.set("endpoint", endpoint);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`CVM API error: ${res.status}`);
+  if (!res.ok) throwApiError(res, "Fundos");
   return res.json();
 }
 
@@ -588,7 +589,7 @@ async function fetchFip(endpoint: string, params: Record<string, string> = {}): 
     headers["apikey"] = anonKey;
   }
   const res = await fetch(url.toString(), { headers });
-  if (!res.ok) throw new Error(`FIP API error: ${res.status}`);
+  if (!res.ok) throwApiError(res, "FIP");
   return res.json();
 }
 
@@ -892,7 +893,7 @@ async function fetchFidc(endpoint: string, params: Record<string, string> = {}):
   url.searchParams.set("endpoint", endpoint);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`FIDC API error: ${res.status}`);
+  if (!res.ok) throwApiError(res, "FIDC");
   return res.json();
 }
 
@@ -1047,7 +1048,7 @@ async function fetchFii(endpoint: string, params: Record<string, string> = {}): 
     headers["apikey"] = anonKey;
   }
   const res = await fetch(url.toString(), { headers });
-  if (!res.ok) throw new Error(`FII API error: ${res.status}`);
+  if (!res.ok) throwApiError(res, "FII");
   return res.json();
 }
 
@@ -1200,7 +1201,7 @@ async function fetchOfertas(endpoint: string, params: Record<string, string> = {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   });
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Ofertas API error: ${res.status}`);
+  if (!res.ok) throwApiError(res, "Ofertas");
   return res.json();
 }
 

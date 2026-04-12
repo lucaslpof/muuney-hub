@@ -23,10 +23,18 @@ const SidebarContext = createContext<SidebarContextType>({
 export const useSidebar = () => useContext(SidebarContext);
 
 /* ─── Provider wraps entire Hub layout ─── */
+const SIDEBAR_KEY = "muuney_hub_sidebar_collapsed";
+
 export const SidebarProvider = ({ children }: { children: ReactNode }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_KEY) === "1"; } catch { return false; }
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0"); } catch { /* noop */ }
+  }, [collapsed]);
 
   useEffect(() => {
     if (!isMobile) setMobileOpen(false);

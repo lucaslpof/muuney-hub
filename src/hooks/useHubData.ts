@@ -140,7 +140,10 @@ async function fetchHub(endpoint: string, params: Record<string, string> = {}): 
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Hub API error: ${res.status}`);
+  if (!res.ok) {
+    const { throwApiError } = await import("@/lib/apiError");
+    throwApiError(res, "Macro");
+  }
   return res.json() as Promise<unknown>;
 }
 

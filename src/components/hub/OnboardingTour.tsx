@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   X, ArrowRight, ArrowLeft,
-  TrendingUp, BarChart3, Landmark, PieChart, MessageSquarePlus,
+  TrendingUp, BarChart3, Landmark, PieChart, ScrollText, Banknote, MessageSquarePlus,
 } from "lucide-react";
 
 const TOUR_KEY = "muuney_hub_onboarding_done";
@@ -43,14 +43,20 @@ const STEPS: TourStep[] = [
   {
     title: "Renda Fixa",
     description: "Curva DI, NTN-B, Tesouro Direto, crédito privado — com simuladores de yield curve e calculadora de bonds.",
-    icon: <TrendingUp size={24} className="text-[#6366F1]" />,
+    icon: <Banknote size={24} className="text-[#6366F1]" />,
     route: "/renda-fixa",
   },
   {
     title: "Módulo Fundos",
-    description: "29.491 classes de fundos RCVM 175. Lâminas, screener multi-filtro, comparador cross-class com Fund Score™, alertas automáticos.",
+    description: "29.491 classes de fundos RCVM 175. Lâminas, screener multi-filtro, comparador cross-class com Fund Score™, deep modules FIDC e FII.",
     icon: <PieChart size={24} className="text-[#F59E0B]" />,
     route: "/fundos",
+  },
+  {
+    title: "Ofertas Públicas",
+    description: "Pipeline de emissões CVM — debêntures, CRI, CRA, FIDCs, FIIs e ações. Timeline, filtros avançados e estatísticas por tipo de ativo.",
+    icon: <ScrollText size={24} className="text-amber-400" />,
+    route: "/ofertas",
   },
   {
     title: "Seu feedback é essencial",
