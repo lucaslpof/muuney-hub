@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, Info, Building2 } from "lucide-react";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { motion } from "framer-motion";
 
 import {
@@ -111,21 +112,28 @@ export default function FiiLamina() {
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header Navigation */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a]">
-        <div className="w-full px-6 py-4 flex items-center gap-3">
-          <Link to="/fundos/fii" className="p-1.5 hover:bg-[#1a1a1a] rounded transition-colors group">
-            <ArrowLeft className="w-5 h-5 text-zinc-600 group-hover:text-[#EC4899]" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold text-zinc-100 truncate flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#EC4899] shrink-0" />
-              {fundName}
-            </h1>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <ClasseBadge classe="FII" size="md" />
-              <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
-              {segmento !== "—" && (
-                <span className="text-[8px] text-zinc-500 font-mono">· {segmento}</span>
-              )}
+        <div className="w-full px-4 md:px-6 py-3">
+          <Breadcrumbs
+            items={[
+              { label: "Fundos", to: "/fundos" },
+              { label: "FII", to: "/fundos/fii" },
+              { label: fundName },
+            ]}
+            className="mb-2"
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-semibold text-zinc-100 truncate flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#EC4899] shrink-0" />
+                {fundName}
+              </h1>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <ClasseBadge classe="FII" size="md" />
+                <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
+                {segmento !== "—" && (
+                  <span className="text-[8px] text-zinc-500 font-mono">· {segmento}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

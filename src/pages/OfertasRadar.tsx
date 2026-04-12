@@ -34,6 +34,7 @@ import {
 } from "@/hooks/useHubFundos";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+import { ChartTooltip } from "@/components/hub/ChartTooltip";
 
 /* ─── Formatters ─── */
 const formatMoney = (v: number | null | undefined): string => {
@@ -299,15 +300,7 @@ export default function OfertasRadar() {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "#0a0a0a",
-                              border: "1px solid #1a1a1a",
-                              borderRadius: 4,
-                              fontSize: 11,
-                            }}
-                            formatter={(v: number | string) => formatMoney(Number(v))}
-                          />
+                          <Tooltip content={<ChartTooltip />} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -419,14 +412,7 @@ export default function OfertasRadar() {
                           stroke="#F59E0B"
                           style={{ fontSize: 10 }}
                         />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#0a0a0a",
-                            border: "1px solid #1a1a1a",
-                            borderRadius: 4,
-                            fontSize: 11,
-                          }}
-                        />
+                        <Tooltip content={<ChartTooltip />} />
                         <Bar yAxisId="left" dataKey="valor" fill="#0B6C3E" name="Volume (R$B)" />
                         <Bar yAxisId="right" dataKey="count" fill="#F59E0B" name="Nº Ofertas" />
                       </BarChart>

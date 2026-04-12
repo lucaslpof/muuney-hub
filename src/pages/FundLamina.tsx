@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, PieChart, Info } from "lucide-react";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { motion } from "framer-motion";
 
 import {
@@ -138,20 +139,26 @@ export default function FundLamina() {
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header Navigation */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-3">
-          <Link to="/fundos" className="p-1.5 hover:bg-[#1a1a1a] rounded transition-colors group">
-            <ArrowLeft className="w-5 h-5 text-zinc-600 group-hover:text-[#0B6C3E]" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold text-zinc-100 truncate">{fundDisplayName(meta)}</h1>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <ClasseBadge classe={meta.classe_rcvm175 || meta.classe || meta.tp_fundo} size="md" />
-              <span className="text-[8px] text-zinc-700">{formatCnpj(primaryCnpj(meta))}</span>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
+          <Breadcrumbs
+            items={[
+              { label: "Fundos", to: "/fundos" },
+              { label: fundDisplayName(meta) },
+            ]}
+            className="mb-2"
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-semibold text-zinc-100 truncate">{fundDisplayName(meta)}</h1>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <ClasseBadge classe={meta.classe_rcvm175 || meta.classe || meta.tp_fundo} size="md" />
+                <span className="text-[8px] text-zinc-700">{formatCnpj(primaryCnpj(meta))}</span>
+              </div>
             </div>
+            {score && <span className="text-sm font-semibold font-mono px-2 py-1 rounded bg-[#0B6C3E]/10 text-[#0B6C3E]">
+              Score: {score.score.toFixed(0)}
+            </span>}
           </div>
-          {score && <span className="text-sm font-semibold font-mono px-2 py-1 rounded bg-[#0B6C3E]/10 text-[#0B6C3E]">
-            Score: {score.score.toFixed(0)}
-          </span>}
         </div>
       </div>
 

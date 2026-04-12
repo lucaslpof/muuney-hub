@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { LayoutGrid, Zap, Search, TrendingUp, Building2 } from "lucide-react";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
 
 import {
@@ -131,9 +133,16 @@ export default function FiiHub() {
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
-          <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-[#EC4899]" />
+        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-4">
+          <Breadcrumbs
+            items={[
+              { label: "Fundos", to: "/fundos" },
+              { label: "FII" },
+            ]}
+            className="mb-2"
+          />
+          <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-[#EC4899]" />
             Módulo FII
           </h1>
           <p className="text-[9px] text-zinc-500 mt-2 font-mono">Fundos Imobiliários. Renda passiva. Inteligência.</p>
@@ -210,11 +219,7 @@ export default function FiiHub() {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
-                          labelStyle={{ color: "#d4d4d8" }}
-                          formatter={(v: any) => `${v}%`}
-                        />
+                        <Tooltip content={<PercentTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>

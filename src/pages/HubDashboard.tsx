@@ -77,12 +77,12 @@ const HubDashboard = () => {
   const allKPIs = useMemo(() => [...macro, ...credito], [macro, credito]);
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-6 w-full">
       {/* ─── Header ─── */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-zinc-100 tracking-tight">
+            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">
               Hub de Inteligência
             </h1>
             <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-1.5 py-0.5 rounded font-mono">
@@ -110,7 +110,7 @@ const HubDashboard = () => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 rounded-full bg-[#0B6C3E]" />
-              <h2 className="text-[11px] text-zinc-500 uppercase tracking-wider font-mono">
+              <h2 className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
                 Macro
               </h2>
             </div>
@@ -144,7 +144,7 @@ const HubDashboard = () => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-1 h-4 rounded-full bg-[#10B981]" />
-              <h2 className="text-[11px] text-zinc-500 uppercase tracking-wider font-mono">
+              <h2 className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
                 Crédito
               </h2>
             </div>
