@@ -43,6 +43,8 @@ import { SkeletonKPI, SkeletonChart, SkeletonTableRow } from "@/components/hub/S
 import { EmptyState } from "@/components/hub/EmptyState";
 import { formatBRL, formatDate, formatMonthLabel, formatCount, fmtNum } from "@/lib/format";
 import OfertasNarrativePanel from "@/components/hub/OfertasNarrativePanel";
+import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
+import { ExportButton } from "@/components/hub/ExportButton";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -203,6 +205,44 @@ export default function OfertasRadar() {
     limit: 50,
     offset: page * 50,
   });
+
+  /* ─── CSV Export ─── */
+  const handleExportExplorer = useCallback(() => {
+    if (!listData?.ofertas.length) return;
+    const columns: CsvColumn<OfertaPublica>[] = [
+      { header: "Emissor", accessor: (o) => o.emissor_nome },
+      { header: "CNPJ", accessor: (o) => o.emissor_cnpj || "" },
+      { header: "Tipo Ativo", accessor: (o) => o.tipo_ativo },
+      { header: "Tipo Oferta", accessor: (o) => o.tipo_oferta },
+      { header: "Modalidade", accessor: (o) => o.modalidade || "" },
+      { header: "Valor (R$)", accessor: (o) => o.valor_total || "" },
+      { header: "Volume Final (R$)", accessor: (o) => o.volume_final || "" },
+      { header: "Status", accessor: (o) => STATUS_COLORS[o.status]?.label || o.status },
+      { header: "Data Protocolo", accessor: (o) => o.data_protocolo },
+      { header: "Rating", accessor: (o) => o.rating || "" },
+      { header: "Coordenador Líder", accessor: (o) => o.coordenador_lider || "" },
+      { header: "Segmento", accessor: (o) => o.segmento || "" },
+    ];
+    exportCsv(listData.ofertas, columns, csvFilename("ofertas", "explorer"));
+  }, [listData?.ofertas]);
+
+  const handleExportTopEmissores = useCallback(() => {
+    if (!listData?.ofertas.length) return;
+    const emissorMap = new Map<string, { nome: string; valor: number; count: number }>();
+    for (const o of listData.ofertas) {
+      const key = o.emissor_cnpj || o.emissor_nome;
+      const prev = emissorMap.get(key) ?? { nome: o.emissor_nome, valor: 0, count: 0 };
+      emissorMap.set(key, { nome: prev.nome, valor: prev.valor + (o.valor_total ?? 0), count: prev.count + 1 });
+    }
+    const sorted = [...emissorMap.values()].sort((a, b) => b.valor - a.valor);
+    type TopEmissor = { nome: string; valor: number; count: number };
+    const columns: CsvColumn<TopEmissor>[] = [
+      { header: "Emissor", accessor: (e) => e.nome },
+      { header: "Volume Total (R$)", accessor: (e) => e.valor },
+      { header: "Quantidade Ofertas", accessor: (e) => e.count },
+    ];
+    exportCsv(sorted, columns, csvFilename("ofertas", "top-emissores"));
+  }, [listData?.ofertas]);
 
   /* ─── Pie data ─── */
   const pieDataByAtivo = useMemo(() => {
@@ -921,8 +961,9 @@ export default function OfertasRadar() {
                     >
                       {order === "desc" ? "↓ DESC" : "↑ ASC"}
                     </button>
-                    <div className="flex-1 text-right text-[9px] font-mono text-zinc-600">
-                      {formatCount(listData?.count ?? 0)} ofertas encontradas
+                    <div className="flex-1 text-right text-[9px] font-mono text-zinc-600 flex items-center justify-end gap-3">
+                      <span>{formatCount(listData?.count ?? 0)} ofertas encontradas</span>
+                      <ExportButton onClick={handleExportExplorer} disabled={!listData?.ofertas.length} />
                     </div>
                   </div>
                 </div>
@@ -1091,10 +1132,13 @@ export default function OfertasRadar() {
                 {/* Concentration Matrix: top emissores from Explorer data */}
                 {listData && listData.ofertas.length > 0 && (
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
-                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
-                      <Building2 className="w-3 h-3" />
-                      Top Emissores por Volume
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono flex items-center gap-2">
+                        <Building2 className="w-3 h-3" />
+                        Top Emissores por Volume
+                      </h3>
+                      <ExportButton onClick={handleExportTopEmissores} disabled={!listData?.ofertas.length} />
+                    </div>
                     <div className="space-y-2">
                       {(() => {
                         const emissorMap = new Map<string, { nome: string; valor: number; count: number }>();
@@ -1120,6 +1164,52 @@ export default function OfertasRadar() {
                                 <div
                                   className="h-full bg-[#0B6C3E]/70 rounded"
                                   style={{ width: `${(em.valor / maxVal) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Coordenadores Líderes: leading coordinators by volume, count, and distinct emissores */}
+                {listData && listData.ofertas.length > 0 && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
+                      <Building2 className="w-3 h-3" />
+                      Coordenadores Líderes
+                    </h3>
+                    <div className="space-y-2">
+                      {(() => {
+                        const coordMap = new Map<string, { nome: string; valor: number; count: number; emissores: Set<string> }>();
+                        for (const o of listData.ofertas) {
+                          if (!o.coordenador_lider) return;
+                          const nome = o.coordenador_lider;
+                          const prev = coordMap.get(nome) ?? { nome, valor: 0, count: 0, emissores: new Set() };
+                          prev.valor += o.valor_total ?? 0;
+                          prev.count += 1;
+                          if (o.emissor_cnpj) prev.emissores.add(o.emissor_cnpj);
+                          coordMap.set(nome, prev);
+                        }
+                        const sorted = [...coordMap.values()].sort((a, b) => b.valor - a.valor).slice(0, 8);
+                        const maxVal = sorted.length > 0 ? sorted[0].valor : 1;
+                        const totalVol = sorted.reduce((s, c) => s + c.valor, 0);
+                        return sorted.map((coord, i) => {
+                          const pct = totalVol > 0 ? (coord.valor / totalVol) * 100 : 0;
+                          return (
+                            <div key={coord.nome + i} className="space-y-0.5">
+                              <div className="flex justify-between text-[10px] font-mono">
+                                <span className="text-zinc-400 truncate max-w-[50%]">{coord.nome}</span>
+                                <span className="text-zinc-300">
+                                  {formatBRL(coord.valor)} · {formatCount(coord.count)} ofertas · {formatCount(coord.emissores.size)} emissores · {fmtNum(pct, 1)}%
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-[#0a0a0a] rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-[#0B6C3E]/70 rounded"
+                                  style={{ width: `${(coord.valor / maxVal) * 100}%` }}
                                 />
                               </div>
                             </div>

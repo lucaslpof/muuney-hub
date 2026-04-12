@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, PieChart, Info } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { motion } from "framer-motion";
@@ -9,6 +9,7 @@ import {
   useFundDetail, useFundCatalog, useFundCompositionSummary, useFundComposition,
   formatPL, formatCnpj, fundDisplayName, primaryCnpj,
 } from "@/hooks/useHubFundos";
+import { useHubSeries } from "@/hooks/useHubData";
 import { computeFundMetrics, fmtMetric, fmtMetricSigned, metricColor } from "@/lib/fundMetrics";
 import { computeFundScore } from "@/lib/fundScore";
 import { ClasseBadge, HierarquiaBadges } from "@/lib/rcvm175";
@@ -33,6 +34,27 @@ function computeIndexSeries(daily: any[]) {
     date: d.dt_comptc,
     index: d.vl_quota ? (d.vl_quota / firstQuota) * 100 : null,
   })).filter((d) => d.index != null);
+}
+
+/** Compute accumulated CDI index from daily CDI rates, normalized to base 100 */
+function computeCDIIndex(cdiDaily: any[]) {
+  if (!cdiDaily || cdiDaily.length === 0) return [];
+
+  let cumulativeReturn = 1.0;
+  const result: any[] = [];
+
+  for (const d of cdiDaily) {
+    const dailyRate = d.value ?? 0; // CDI as annual % rate
+    // Convert annual rate to daily (simple division by 252 trading days, then convert to decimal)
+    const dailyDecimal = (dailyRate / 100) / 252;
+    cumulativeReturn *= (1 + dailyDecimal);
+    result.push({
+      date: d.date,
+      cdi: cumulativeReturn * 100, // normalize to base 100
+    });
+  }
+
+  return result;
 }
 
 /** KPI Card */
@@ -62,6 +84,7 @@ export default function FundLamina() {
   const quota = useLaminaQuota(slug);
 
   const { data: fundData, isLoading: fundLoading } = useFundDetail(slug ?? null, period);
+  const { data: cdiDaily = [] } = useHubSeries("monetaria", period, "macro");
   const cnpj = fundData?.meta ? primaryCnpj(fundData.meta) : null;
   const { data: compositionSummary } = useFundCompositionSummary(cnpj);
   const { data: compositionFull } = useFundComposition(cnpj);
@@ -88,8 +111,75 @@ export default function FundLamina() {
   const metrics = daily.length > 5 ? computeFundMetrics(daily) : null;
   const score = meta && daily.length > 5 ? computeFundScore(meta, daily) : null;
 
-  // Index series for chart
-  const indexSeries = computeIndexSeries(daily);
+  // Index series for chart (fund + CDI benchmark)
+  const indexSeries = useMemo(() => {
+    const fundIndex = computeIndexSeries(daily);
+    const cdiIndex = computeCDIIndex(cdiDaily);
+
+    // Merge CDI data into fund data by date
+    const merged = fundIndex.map((f) => {
+      const cdiPoint = cdiIndex.find((c) => c.date === f.date);
+      return {
+        date: f.date,
+        index: f.index,
+        cdi: cdiPoint?.cdi ?? null,
+      };
+    });
+
+    return merged;
+  }, [daily, cdiDaily]);
+
+  // Compute vs CDI metric
+  const vsCDIMetric = useMemo(() => {
+    if (indexSeries.length < 2) return null;
+    const firstEntry = indexSeries[0];
+    const lastEntry = indexSeries[indexSeries.length - 1];
+
+    if (!firstEntry.index || !lastEntry.index || !lastEntry.cdi) return null;
+
+    const fundReturn = lastEntry.index - 100;
+    const cdiReturn = lastEntry.cdi - 100;
+    const excess = fundReturn - cdiReturn;
+
+    return { fundReturn, cdiReturn, excess };
+  }, [indexSeries]);
+
+  // Net Flow Proxy: ΔPL - (rentab_dia × PL_anterior) — estimates net inflows/outflows
+  const netFlowData = useMemo(() => {
+    if (daily.length < 5) return null;
+    const flows: { date: string; flow: number }[] = [];
+    let totalInflow = 0;
+    let totalOutflow = 0;
+    for (let i = 1; i < daily.length; i++) {
+      const curr = daily[i];
+      const prev = daily[i - 1];
+      const plCurr = curr.vl_patrim_liq ?? 0;
+      const plPrev = prev.vl_patrim_liq ?? 0;
+      const quotaCurr = curr.vl_quota ?? 0;
+      const quotaPrev = prev.vl_quota ?? 0;
+      if (!plPrev || !quotaPrev) continue;
+      const rentabDay = (quotaCurr - quotaPrev) / quotaPrev;
+      const impliedPL = plPrev * (1 + rentabDay);
+      const flow = plCurr - impliedPL; // positive = net inflow
+      flows.push({ date: curr.dt_comptc, flow });
+      if (flow > 0) totalInflow += flow;
+      else totalOutflow += Math.abs(flow);
+    }
+    // Aggregate weekly for smoother display
+    const weekly: { week: string; flow: number }[] = [];
+    let weekBucket = 0;
+    let weekLabel = flows[0]?.date ?? "";
+    for (let i = 0; i < flows.length; i++) {
+      weekBucket += flows[i].flow;
+      if ((i + 1) % 5 === 0 || i === flows.length - 1) {
+        weekly.push({ week: weekLabel, flow: weekBucket });
+        weekBucket = 0;
+        weekLabel = flows[i + 1]?.date ?? "";
+      }
+    }
+    const netTotal = totalInflow - totalOutflow;
+    return { weekly, netTotal, totalInflow, totalOutflow };
+  }, [daily]);
 
     if (fundLoading) {
     return (
@@ -209,7 +299,7 @@ export default function FundLamina() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <KPICard
                 label="Retorno"
                 value={metrics?.return_annualized != null ? fmtMetricSigned(metrics.return_annualized) : "—"}
@@ -233,6 +323,12 @@ export default function FundLamina() {
                 unit="%"
                 color="text-red-400"
               />
+              <KPICard
+                label="vs CDI"
+                value={vsCDIMetric?.excess != null ? fmtMetricSigned(vsCDIMetric.excess) : "—"}
+                unit="%"
+                color={vsCDIMetric?.excess != null && vsCDIMetric.excess >= 0 ? "text-emerald-400" : "text-red-400"}
+              />
             </div>
 
             {/* Indexed Return Chart */}
@@ -254,10 +350,26 @@ export default function FundLamina() {
                       labelStyle={{ color: "#d4d4d8" }}
                       formatter={(v: any) => v?.toFixed(2)}
                     />
+                    <Legend
+                      wrapperStyle={{ paddingTop: 12 }}
+                      iconType="line"
+                      height={24}
+                    />
                     <Line
                       type="monotone"
                       dataKey="index"
+                      name="Fundo"
                       stroke="#0B6C3E"
+                      dot={false}
+                      strokeWidth={2}
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cdi"
+                      name="CDI"
+                      stroke="#a1a1aa"
+                      strokeDasharray="5 5"
                       dot={false}
                       strokeWidth={2}
                       isAnimationActive={false}
@@ -326,6 +438,60 @@ export default function FundLamina() {
             </div>
           </motion.div>
         </SectionErrorBoundary>
+
+        {/* === Section 2b: Net Flow Proxy === */}
+        {netFlowData && netFlowData.weekly.length > 2 && (
+          <SectionErrorBoundary sectionName="Fluxo Captação">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-4 h-4 text-[#0B6C3E]" />
+                <h2 className="text-sm font-semibold text-zinc-300">Fluxo Estimado de Captação</h2>
+                <span className="text-[8px] text-zinc-600 font-mono ml-auto">proxy: ΔPL − rentab×PL</span>
+              </div>
+              <p className="text-[10px] text-zinc-500 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                Estimativa de fluxo líquido baseada na variação patrimonial ajustada pela rentabilidade.
+                {netFlowData.netTotal >= 0
+                  ? <> Captação líquida estimada de <span className="text-emerald-400">{formatPL(netFlowData.netTotal)}</span> no período.</>
+                  : <> Resgate líquido estimado de <span className="text-red-400">{formatPL(Math.abs(netFlowData.netTotal))}</span> no período.</>
+                }
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Fluxo Líquido</div>
+                  <div className={`text-sm font-mono font-semibold ${netFlowData.netTotal >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {netFlowData.netTotal >= 0 ? "+" : ""}{formatPL(netFlowData.netTotal)}
+                  </div>
+                </div>
+                <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Entradas</div>
+                  <div className="text-sm font-mono font-semibold text-emerald-400">{formatPL(netFlowData.totalInflow)}</div>
+                </div>
+                <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Saídas</div>
+                  <div className="text-sm font-mono font-semibold text-red-400">{formatPL(netFlowData.totalOutflow)}</div>
+                </div>
+              </div>
+              {/* Weekly flow bar chart */}
+              <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={netFlowData.weekly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                    <XAxis dataKey="week" stroke="#52525b" style={{ fontSize: 9 }} tickFormatter={(v: string) => v?.slice(5) ?? ""} />
+                    <YAxis stroke="#52525b" style={{ fontSize: 9 }} tickFormatter={(v: number) => {
+                      const abs = Math.abs(v);
+                      if (abs >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+                      if (abs >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+                      if (abs >= 1e3) return `${(v / 1e3).toFixed(0)}k`;
+                      return String(Math.round(v));
+                    }} />
+                    <Tooltip contentStyle={{ backgroundColor: "#111", border: "1px solid #1a1a1a", fontSize: 10, fontFamily: "monospace" }} />
+                    <Line type="monotone" dataKey="flow" stroke="#0B6C3E" strokeWidth={1.5} dot={false} name="Fluxo Semanal" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+          </SectionErrorBoundary>
+        )}
 
         {/* === Section 3: Composição === */}
         {compositionSummary && cnpj && (
