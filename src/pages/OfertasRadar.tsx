@@ -116,11 +116,56 @@ export default function OfertasRadar() {
     [visitedSections]
   );
 
+  /* ─── Deep-linking sync ─── */
   useEffect(() => {
     const next: Record<string, string> = {};
     if (activeSection !== "overview") next.section = activeSection;
     setSearchParams(next, { replace: true });
   }, [activeSection, setSearchParams]);
+
+  /* ─── Scroll to section on navigate ─── */
+  const scrollTo = useCallback((id: string) => {
+    setActiveSection(id);
+    const el = sectionRefs.current[id] || document.getElementById(id);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  /* ─── IntersectionObserver: active section + lazy-load ─── */
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            setActiveSection(id);
+            setVisitedSections((prev) => {
+              if (prev.has(id)) return prev;
+              const next = new Set(prev);
+              next.add(id);
+              return next;
+            });
+          }
+        }
+      },
+      { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
+    );
+    for (const s of SECTIONS) {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  /* ─── Scroll to initial section from URL on mount ─── */
+  useEffect(() => {
+    if (initialSection !== "overview") {
+      const el = document.getElementById(initialSection);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+        setVisitedSections((prev) => new Set([...prev, initialSection]));
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─── Timeline Filters (independent) ─── */
   const [tlTipoAtivo, setTlTipoAtivo] = useState<string>("");
@@ -177,37 +222,73 @@ export default function OfertasRadar() {
       }));
   }, [timelineData]);
 
+  /* ─── Narrative insights (computed from stats) ─── */
+  const narrativeOverview = useMemo(() => {
+    if (!stats) return null;
+    const pct_analise = stats.total_ofertas > 0
+      ? ((stats.em_analise / stats.total_ofertas) * 100)
+      : 0;
+    const topAtivo = stats.by_tipo_ativo?.[0];
+    return {
+      pct_analise,
+      topAtivo,
+      total: stats.total_ofertas,
+      distrib: stats.em_distribuicao,
+    };
+  }, [stats]);
+
+  const narrativeTimeline = useMemo(() => {
+    if (!timelineData?.timeline?.length) return null;
+    const sorted = [...timelineData.timeline].sort((a, b) => b.valor_total - a.valor_total);
+    const peakMonth = sorted[0];
+    const recent = timelineData.timeline[0]; // most recent
+    return { peakMonth, recent, total: timelineData.timeline.length };
+  }, [timelineData]);
+
+  /* ─── Explorer summary (computed from filtered list) ─── */
+  const explorerSummary = useMemo(() => {
+    if (!listData?.ofertas?.length) return null;
+    const totalValor = listData.ofertas.reduce((s, o) => s + (o.valor_total ?? 0), 0);
+    const statusCounts: Record<string, number> = {};
+    for (const o of listData.ofertas) {
+      statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
+    }
+    const topStatus = Object.entries(statusCounts).sort((a, b) => b[1] - a[1])[0];
+    return { count: listData.count, totalValor, topStatus };
+  }, [listData]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
-      <MacroSidebar
-        items={SECTIONS}
-        activeId={activeSection}
-        onNavigate={(id: string) => {
-          setActiveSection(id);
-          const ref = sectionRefs.current[id];
-          if (ref) ref.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      />
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
+        <HubSEO
+          title="Ofertas Públicas"
+          description="Radar de ofertas públicas CVM — pipeline, timeline e explorer de debêntures, CRI, CRA, FIDC, FII e ações."
+          path="/ofertas"
+        />
+        <Breadcrumbs items={[{ label: "Ofertas Públicas" }]} className="mb-3" />
+        <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+          <Radar className="w-5 h-5 text-[#0B6C3E]" />
+          Ofertas Públicas Radar
+        </h1>
+        <p className="text-[9px] text-zinc-500 mt-2 font-mono">
+          CVM 160 · 476 · 400 — Debêntures · CRI · CRA · FIDC · FII · Ações
+        </p>
+      </div>
 
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
-          <HubSEO
-            title="Ofertas Públicas"
-            description="Radar de ofertas públicas CVM — pipeline, timeline e explorer de debêntures, CRI, CRA, FIDC, FII e ações."
-            path="/ofertas"
+      {/* Sidebar + Content flex layout */}
+      <div className="flex gap-6 px-4 md:px-8 py-8">
+        {/* Sidebar — hidden on mobile */}
+        <div className="hidden md:block w-40 flex-shrink-0">
+          <MacroSidebar
+            items={SECTIONS}
+            activeId={activeSection}
+            onNavigate={scrollTo}
           />
-          <Breadcrumbs items={[{ label: "Ofertas Públicas" }]} className="mb-3" />
-          <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-            <Radar className="w-5 h-5 text-[#0B6C3E]" />
-            Ofertas Públicas Radar
-          </h1>
-          <p className="text-[9px] text-zinc-500 mt-2 font-mono">
-            CVM 160 · 476 · 400 — Debêntures · CRI · CRA · FIDC · FII · Ações
-          </p>
         </div>
 
-        <div className="flex-1 px-4 md:px-8 py-8 space-y-8">
+        {/* Main content */}
+        <div className="flex-1 min-w-0 space-y-8">
           {/* === SECTION 1: Visão Geral === */}
           <MacroSection
             ref={(el) => {
@@ -218,18 +299,21 @@ export default function OfertasRadar() {
             icon={LayoutGrid}
           >
             <SectionErrorBoundary sectionName="Visão Geral Ofertas">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() =>
-                  setVisitedSections((s) => new Set(s).add("overview"))
-                }
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <LayoutGrid className="w-4 h-4 text-[#0B6C3E]" />
-                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Visão Geral</h2>
-                </div>
+              <div className="space-y-6">
+                {/* Narrative insight */}
+                {narrativeOverview && (
+                  <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                    {formatCount(narrativeOverview.total)} ofertas rastreadas nos últimos 12 meses,
+                    com {fmtNum(narrativeOverview.pct_analise, 1)}% ainda em análise na CVM.
+                    {narrativeOverview.topAtivo && (
+                      <> A classe dominante é <span className="text-zinc-200">{narrativeOverview.topAtivo.tipo}</span> ({formatBRL(narrativeOverview.topAtivo.valor)}).
+                      </>
+                    )}
+                    {narrativeOverview.distrib > 0 && (
+                      <> {formatCount(narrativeOverview.distrib)} ofertas em distribuição ativa.</>
+                    )}
+                  </p>
+                )}
 
                 {stats && !statsLoading ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -346,7 +430,7 @@ export default function OfertasRadar() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </SectionErrorBoundary>
           </MacroSection>
 
@@ -360,18 +444,16 @@ export default function OfertasRadar() {
             icon={Calendar}
           >
             <SectionErrorBoundary sectionName="Timeline Ofertas">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() =>
-                  setVisitedSections((s) => new Set(s).add("timeline"))
-                }
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Calendar className="w-4 h-4 text-[#0B6C3E]" />
-                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Timeline Mensal</h2>
-                </div>
+              <div className="space-y-6">
+                {/* Narrative insight */}
+                {narrativeTimeline && (
+                  <p className="text-[11px] text-zinc-400 font-mono leading-relaxed border-l-2 border-[#0B6C3E]/40 pl-3">
+                    {formatCount(narrativeTimeline.total)} meses rastreados.
+                    {narrativeTimeline.peakMonth && (
+                      <> Pico de volume em <span className="text-zinc-200">{formatMonthLabel(narrativeTimeline.peakMonth.month)}</span> ({formatBRL(narrativeTimeline.peakMonth.valor_total)}, {formatCount(narrativeTimeline.peakMonth.count)} ofertas).</>
+                    )}
+                  </p>
+                )}
 
                 {/* Quick filter chips */}
                 <div className="flex gap-2 flex-wrap items-center">
@@ -481,7 +563,7 @@ export default function OfertasRadar() {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             </SectionErrorBoundary>
           </MacroSection>
 
@@ -495,18 +577,7 @@ export default function OfertasRadar() {
             icon={TrendingUp}
           >
             <SectionErrorBoundary sectionName="Pipeline Ofertas">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() =>
-                  setVisitedSections((s) => new Set(s).add("pipeline"))
-                }
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <TrendingUp className="w-4 h-4 text-[#0B6C3E]" />
-                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Pipeline por Classe</h2>
-                </div>
+              <div className="space-y-6">
 
                 {sectionVisible("pipeline") && stats && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -573,7 +644,7 @@ export default function OfertasRadar() {
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </div>
             </SectionErrorBoundary>
           </MacroSection>
 
@@ -587,18 +658,28 @@ export default function OfertasRadar() {
             icon={Search}
           >
             <SectionErrorBoundary sectionName="Explorer Ofertas">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() =>
-                  setVisitedSections((s) => new Set(s).add("explorer"))
-                }
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Search className="w-4 h-4 text-[#0B6C3E]" />
-                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Explorer</h2>
-                </div>
+              <div className="space-y-6">
+                {/* Explorer summary card */}
+                {explorerSummary && (
+                  <div className="bg-[#111111] border border-[#0B6C3E]/20 rounded-lg p-4 flex flex-wrap gap-6 items-center">
+                    <div>
+                      <span className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono block">Resultados</span>
+                      <span className="text-lg font-bold text-zinc-100 font-mono">{formatCount(explorerSummary.count)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono block">Volume Total</span>
+                      <span className="text-lg font-bold text-[#0B6C3E] font-mono">{formatBRL(explorerSummary.totalValor)}</span>
+                    </div>
+                    {explorerSummary.topStatus && (
+                      <div>
+                        <span className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono block">Status Dominante</span>
+                        <span className="text-sm font-mono text-zinc-300">
+                          {STATUS_COLORS[explorerSummary.topStatus[0]]?.label ?? explorerSummary.topStatus[0]} ({formatCount(explorerSummary.topStatus[1])})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Filters bar */}
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-3">
@@ -817,7 +898,7 @@ export default function OfertasRadar() {
                     </span>
                   )}
                 </div>
-              </motion.div>
+              </div>
             </SectionErrorBoundary>
           </MacroSection>
         </div>
