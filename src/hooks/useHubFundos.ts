@@ -1200,7 +1200,10 @@ async function fetchOfertas(endpoint: string, params: Record<string, string> = {
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   });
-  const res = await fetch(url.toString());
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${key}`, apikey: key },
+  });
   if (!res.ok) throwApiError(res, "Ofertas");
   return res.json();
 }

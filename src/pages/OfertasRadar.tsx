@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Calendar,
   Building2,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -35,6 +36,10 @@ import {
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { ChartTooltip } from "@/components/hub/ChartTooltip";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { HubSEO } from "@/lib/seo";
+import { SkeletonKPI, SkeletonChart, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 
 /* ─── Formatters ─── */
 const formatMoney = (v: number | null | undefined): string => {
@@ -145,27 +150,33 @@ export default function OfertasRadar() {
     setSearchParams(next, { replace: true });
   }, [activeSection, setSearchParams]);
 
-  /* ─── Filters ─── */
-  const [filterTipoAtivo, setFilterTipoAtivo] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterModalidade, setFilterModalidade] = useState<string>("");
+  /* ─── Timeline Filters (independent) ─── */
+  const [tlTipoAtivo, setTlTipoAtivo] = useState<string>("");
+
+  /* ─── Explorer Filters ─── */
+  const [exTipoAtivo, setExTipoAtivo] = useState<string>("");
+  const [exStatus, setExStatus] = useState<string>("");
+  const [exModalidade, setExModalidade] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [orderBy, setOrderBy] = useState<string>("data_protocolo");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState<number>(0);
 
+  /* ─── Detail drawer ─── */
+  const [selectedOferta, setSelectedOferta] = useState<OfertaPublica | null>(null);
+
   /* ─── Data ─── */
   const { data: stats, isLoading: statsLoading } = useOfertasStats();
   const { data: filtersOpts } = useOfertasFilters();
-  const { data: timelineData } = useOfertasTimeline(
+  const { data: timelineData, isLoading: timelineLoading } = useOfertasTimeline(
     12,
-    filterTipoAtivo || undefined,
-    filterStatus || undefined
+    tlTipoAtivo || undefined,
+    undefined
   );
   const { data: listData, isLoading: listLoading } = useOfertasList({
-    tipo_ativo: filterTipoAtivo || undefined,
-    status: filterStatus || undefined,
-    modalidade: filterModalidade || undefined,
+    tipo_ativo: exTipoAtivo || undefined,
+    status: exStatus || undefined,
+    modalidade: exModalidade || undefined,
     search: searchQuery || undefined,
     order_by: orderBy,
     order,
@@ -209,8 +220,14 @@ export default function OfertasRadar() {
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
-          <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-            <Radar className="w-6 h-6 text-[#0B6C3E]" />
+          <HubSEO
+            title="Ofertas Públicas"
+            description="Radar de ofertas públicas CVM — pipeline, timeline e explorer de debêntures, CRI, CRA, FIDC, FII e ações."
+            path="/ofertas"
+          />
+          <Breadcrumbs items={[{ label: "Ofertas Públicas" }]} className="mb-3" />
+          <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+            <Radar className="w-5 h-5 text-[#0B6C3E]" />
             Ofertas Públicas Radar
           </h1>
           <p className="text-[9px] text-zinc-500 mt-2 font-mono">
@@ -238,8 +255,8 @@ export default function OfertasRadar() {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <LayoutGrid className="w-5 h-5 text-[#0B6C3E]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Visão Geral</h2>
+                  <LayoutGrid className="w-4 h-4 text-[#0B6C3E]" />
+                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Visão Geral</h2>
                 </div>
 
                 {stats && !statsLoading ? (
@@ -271,12 +288,12 @@ export default function OfertasRadar() {
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-24 bg-[#111111] rounded-lg animate-pulse" />
+                      <SkeletonKPI key={i} />
                     ))}
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Pie: Tipo Ativo por valor */}
                   {pieDataByAtivo.length > 0 && (
                     <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-6">
@@ -359,17 +376,17 @@ export default function OfertasRadar() {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Calendar className="w-5 h-5 text-[#0B6C3E]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Timeline Mensal</h2>
+                  <Calendar className="w-4 h-4 text-[#0B6C3E]" />
+                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Timeline Mensal</h2>
                 </div>
 
                 {/* Quick filter chips */}
                 <div className="flex gap-2 flex-wrap items-center">
                   <Filter className="w-3 h-3 text-zinc-600" />
                   <button
-                    onClick={() => setFilterTipoAtivo("")}
+                    onClick={() => setTlTipoAtivo("")}
                     className={`px-3 py-1.5 text-[9px] font-mono rounded border transition-all ${
-                      !filterTipoAtivo
+                      !tlTipoAtivo
                         ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
                         : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
                     }`}
@@ -379,9 +396,9 @@ export default function OfertasRadar() {
                   {filtersOpts?.tipos_ativo.map((t) => (
                     <button
                       key={t}
-                      onClick={() => setFilterTipoAtivo(t)}
+                      onClick={() => setTlTipoAtivo(t)}
                       className={`px-3 py-1.5 text-[9px] font-mono rounded border transition-all ${
-                        filterTipoAtivo === t
+                        tlTipoAtivo === t
                           ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
                           : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
                       }`}
@@ -391,6 +408,10 @@ export default function OfertasRadar() {
                   ))}
                 </div>
 
+                {timelineLoading && <SkeletonChart />}
+                {!timelineLoading && timelineChartData.length === 0 && (
+                  <EmptyState variant="no-data" />
+                )}
                 {timelineChartData.length > 0 && (
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
                     <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">
@@ -489,18 +510,18 @@ export default function OfertasRadar() {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <TrendingUp className="w-5 h-5 text-[#0B6C3E]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Pipeline por Classe</h2>
+                  <TrendingUp className="w-4 h-4 text-[#0B6C3E]" />
+                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Pipeline por Classe</h2>
                 </div>
 
                 {sectionVisible("pipeline") && stats && (
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {stats.by_tipo_ativo.map((t, i) => (
                       <div
                         key={t.tipo}
                         className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-colors cursor-pointer"
                         onClick={() => {
-                          setFilterTipoAtivo(t.tipo);
+                          setExTipoAtivo(t.tipo);
                           setActiveSection("explorer");
                           sectionRefs.current["explorer"]?.scrollIntoView({
                             behavior: "smooth",
@@ -581,8 +602,8 @@ export default function OfertasRadar() {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Search className="w-5 h-5 text-[#0B6C3E]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Explorer</h2>
+                  <Search className="w-4 h-4 text-[#0B6C3E]" />
+                  <h2 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Explorer</h2>
                 </div>
 
                 {/* Filters bar */}
@@ -599,9 +620,9 @@ export default function OfertasRadar() {
                       className="flex-1 min-w-[240px] px-3 py-2 text-[10px] font-mono bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-[#0B6C3E]"
                     />
                     <select
-                      value={filterTipoAtivo}
+                      value={exTipoAtivo}
                       onChange={(e) => {
-                        setFilterTipoAtivo(e.target.value);
+                        setExTipoAtivo(e.target.value);
                         setPage(0);
                       }}
                       className="px-3 py-2 text-[10px] font-mono bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 focus:outline-none focus:border-[#0B6C3E]"
@@ -614,9 +635,9 @@ export default function OfertasRadar() {
                       ))}
                     </select>
                     <select
-                      value={filterStatus}
+                      value={exStatus}
                       onChange={(e) => {
-                        setFilterStatus(e.target.value);
+                        setExStatus(e.target.value);
                         setPage(0);
                       }}
                       className="px-3 py-2 text-[10px] font-mono bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 focus:outline-none focus:border-[#0B6C3E]"
@@ -629,9 +650,9 @@ export default function OfertasRadar() {
                       ))}
                     </select>
                     <select
-                      value={filterModalidade}
+                      value={exModalidade}
                       onChange={(e) => {
-                        setFilterModalidade(e.target.value);
+                        setExModalidade(e.target.value);
                         setPage(0);
                       }}
                       className="px-3 py-2 text-[10px] font-mono bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 focus:outline-none focus:border-[#0B6C3E]"
@@ -671,8 +692,8 @@ export default function OfertasRadar() {
                 </div>
 
                 {/* Results table */}
-                <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
-                  <table className="w-full">
+                <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-x-auto">
+                  <table className="w-full min-w-[800px]">
                     <thead>
                       <tr className="bg-[#0a0a0a] border-b border-[#1a1a1a]">
                         <th className="px-4 py-2 text-left text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
@@ -696,26 +717,26 @@ export default function OfertasRadar() {
                         <th className="px-4 py-2 text-left text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
                           Rating
                         </th>
+                        <th className="px-2 py-2 w-8" />
                       </tr>
                     </thead>
                     <tbody>
                       {listLoading ? (
-                        <tr>
-                          <td colSpan={7} className="py-8 text-center text-[10px] font-mono text-zinc-600">
-                            Carregando ofertas...
-                          </td>
-                        </tr>
+                        Array.from({ length: 8 }).map((_, i) => (
+                          <SkeletonTableRow key={i} cols={8} />
+                        ))
                       ) : listData?.ofertas.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="py-8 text-center text-[10px] font-mono text-zinc-600">
-                            Nenhuma oferta encontrada com os filtros selecionados.
+                          <td colSpan={8} className="py-12">
+                            <EmptyState variant="no-results" />
                           </td>
                         </tr>
                       ) : (
                         listData?.ofertas.map((o) => (
                           <tr
                             key={o.id}
-                            className="border-b border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors"
+                            className="border-b border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors cursor-pointer"
+                            onClick={() => setSelectedOferta(o)}
                           >
                             <td className="px-4 py-2.5 text-[10px] font-mono text-zinc-300">
                               <div className="flex items-center gap-2">
@@ -760,6 +781,9 @@ export default function OfertasRadar() {
                                 <span className="text-zinc-700">—</span>
                               )}
                             </td>
+                            <td className="px-2 py-2.5">
+                              <Eye className="w-3 h-3 text-zinc-700 group-hover:text-zinc-400 transition-colors" />
+                            </td>
                           </tr>
                         ))
                       )}
@@ -792,13 +816,162 @@ export default function OfertasRadar() {
 
                 <div className="text-[9px] text-zinc-600 font-mono flex items-center gap-1">
                   <ExternalLink className="w-3 h-3" />
-                  Fonte: CVM (SRE — Ofertas Públicas). Dados atualizados via ingest semanal.
+                  Fonte: CVM (SRE — Ofertas Públicas) · Atualização semanal via pipeline automatizado
+                  {stats && (
+                    <span className="ml-2 text-zinc-700">
+                      · {stats.total_ofertas.toLocaleString("pt-BR")} registros
+                    </span>
+                  )}
                 </div>
               </motion.div>
             </SectionErrorBoundary>
           </MacroSection>
         </div>
       </div>
+
+      {/* ─── Oferta Detail Drawer ─── */}
+      {selectedOferta && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end"
+          onClick={() => setSelectedOferta(null)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="relative w-full max-w-lg bg-[#0a0a0a] border-l border-[#1a1a1a] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-zinc-200 font-mono">Detalhe da Oferta</h2>
+              <button
+                onClick={() => setSelectedOferta(null)}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors text-lg"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Emissor + Status */}
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Building2 className="w-5 h-5 text-[#0B6C3E]" />
+                  <h3 className="text-base font-semibold text-zinc-100">{selectedOferta.emissor_nome}</h3>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <StatusBadge status={selectedOferta.status} />
+                  <span className="text-[10px] font-mono text-zinc-500">{selectedOferta.tipo_oferta}</span>
+                  {selectedOferta.modalidade && (
+                    <span className="text-[10px] font-mono text-zinc-600">· {selectedOferta.modalidade}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* KPIs */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Classe</div>
+                  <div className="text-sm font-mono text-zinc-200">{selectedOferta.tipo_ativo}</div>
+                </div>
+                <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                  <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Valor Protocolado</div>
+                  <div className="text-sm font-mono text-[#0B6C3E]">{formatMoney(selectedOferta.valor_total)}</div>
+                </div>
+                {selectedOferta.volume_final && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Volume Final</div>
+                    <div className="text-sm font-mono text-emerald-400">{formatMoney(selectedOferta.volume_final)}</div>
+                  </div>
+                )}
+                {selectedOferta.rating && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Rating</div>
+                    <div className="text-sm font-mono text-cyan-400">{selectedOferta.rating}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Datas */}
+              <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-2">
+                <h4 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">Cronologia</h4>
+                {[
+                  { label: "Protocolo", date: selectedOferta.data_protocolo },
+                  { label: "Registro", date: selectedOferta.data_registro },
+                  { label: "Início distribuição", date: selectedOferta.data_inicio },
+                  { label: "Encerramento", date: selectedOferta.data_encerramento },
+                ].map(
+                  (item) =>
+                    item.date && (
+                      <div key={item.label} className="flex justify-between text-[10px] font-mono">
+                        <span className="text-zinc-500">{item.label}</span>
+                        <span className="text-zinc-300">{formatDate(item.date)}</span>
+                      </div>
+                    )
+                )}
+              </div>
+
+              {/* Info adicional */}
+              <div className="space-y-3">
+                {selectedOferta.coordenador_lider && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Coordenador Líder</div>
+                    <div className="text-[11px] font-mono text-zinc-300">{selectedOferta.coordenador_lider}</div>
+                  </div>
+                )}
+                {selectedOferta.serie && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Série</div>
+                    <div className="text-[11px] font-mono text-zinc-300">{selectedOferta.serie}</div>
+                  </div>
+                )}
+                {selectedOferta.segmento && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Segmento</div>
+                    <div className="text-[11px] font-mono text-zinc-300">{selectedOferta.segmento}</div>
+                  </div>
+                )}
+                {selectedOferta.observacoes && (
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Observações</div>
+                    <div className="text-[10px] font-mono text-zinc-400 leading-relaxed">{selectedOferta.observacoes}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* CNPJ + protocolo */}
+              <div className="pt-2 border-t border-[#1a1a1a] space-y-1">
+                <div className="flex justify-between text-[9px] font-mono text-zinc-600">
+                  <span>CNPJ Emissor</span>
+                  <span className="text-zinc-500">{selectedOferta.emissor_cnpj}</span>
+                </div>
+                <div className="flex justify-between text-[9px] font-mono text-zinc-600">
+                  <span>Protocolo</span>
+                  <span className="text-zinc-500">{selectedOferta.protocolo}</span>
+                </div>
+                {selectedOferta.numero_oferta && (
+                  <div className="flex justify-between text-[9px] font-mono text-zinc-600">
+                    <span>Nº Oferta</span>
+                    <span className="text-zinc-500">{selectedOferta.numero_oferta}</span>
+                  </div>
+                )}
+                {selectedOferta.source_url && (
+                  <a
+                    href={selectedOferta.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[9px] font-mono text-[#0B6C3E] hover:text-emerald-400 transition-colors mt-2"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Ver no site da CVM
+                  </a>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

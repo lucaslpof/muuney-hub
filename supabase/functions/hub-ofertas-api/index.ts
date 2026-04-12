@@ -5,7 +5,7 @@
 // Data source: hub_ofertas_publicas (seeded sample; will be enriched via CVM OFERTA/DISTRIB ETL)
 // Domain: public offerings (CVM 160/476/400) — Debêntures, CRI, CRA, FIDC, FII, Ações, Notas Promissórias
 //
-// deploy: supabase functions deploy hub-ofertas-api --no-verify-jwt
+// deploy: supabase functions deploy hub-ofertas-api
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -27,6 +27,35 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/** Sanitize search input — strip PostgREST-special characters */
+function sanitizeSearch(raw: string): string {
+  return raw.replace(/[%_(),.\\]/g, "").trim().slice(0, 100);
+}
+
+/** Fetch all rows bypassing PostgREST 1000-row default cap */
+async function fetchAll<T>(
+  supabase: SupabaseClient,
+  table: string,
+  selectCols: string,
+  filters: (q: ReturnType<SupabaseClient["from"]>) => ReturnType<SupabaseClient["from"]>,
+): Promise<T[]> {
+  const PAGE = 1000;
+  let offset = 0;
+  const all: T[] = [];
+  while (true) {
+    let q = supabase.from(table).select(selectCols);
+    q = filters(q);
+    q = q.range(offset, offset + PAGE - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...(data as T[]));
+    if (data.length < PAGE) break;
+    offset += PAGE;
+  }
+  return all;
 }
 
 Deno.serve(async (req: Request) => {
@@ -68,8 +97,10 @@ Deno.serve(async (req: Request) => {
         if (fromDate) q = q.gte("data_protocolo", fromDate);
         if (toDate) q = q.lte("data_protocolo", toDate);
         if (search) {
-          // Match against emissor_nome or coordenador_lider
-          q = q.or(`emissor_nome.ilike.%${search}%,coordenador_lider.ilike.%${search}%`);
+          const safe = sanitizeSearch(search);
+          if (safe.length >= 2) {
+            q = q.or(`emissor_nome.ilike.%${safe}%,coordenador_lider.ilike.%${safe}%`);
+          }
         }
 
         q = q
@@ -125,24 +156,25 @@ Deno.serve(async (req: Request) => {
         fromDate.setMonth(fromDate.getMonth() - months);
         const fromISO = fromDate.toISOString().split("T")[0];
 
-        let q = supabase
-          .from("hub_ofertas_publicas")
-          .select("id, protocolo, emissor_nome, tipo_ativo, tipo_oferta, status, valor_total, volume_final, data_protocolo, data_inicio, data_encerramento, segmento, rating")
-          .gte("data_protocolo", fromISO)
-          .order("data_protocolo", { ascending: false });
+        const cols = "id, protocolo, emissor_nome, tipo_ativo, tipo_oferta, status, valor_total, volume_final, data_protocolo, data_inicio, data_encerramento, segmento, rating";
 
-        if (tipoAtivo) q = q.eq("tipo_ativo", tipoAtivo);
-        if (status) q = q.eq("status", status);
-
-        const { data, error } = await q;
-        if (error) throw error;
+        // Use fetchAll to bypass PostgREST 1000-row default cap
+        const data = await fetchAll(supabase, "hub_ofertas_publicas", cols, (q) => {
+          let fq = q
+            .gte("data_protocolo", fromISO)
+            .order("data_protocolo", { ascending: false });
+          if (tipoAtivo) fq = fq.eq("tipo_ativo", tipoAtivo);
+          if (status) fq = fq.eq("status", status);
+          return fq;
+        });
 
         // Group by month
+        type Row = (typeof data)[number];
         const byMonth: Record<
           string,
-          { month: string; count: number; valor_total: number; volume_final: number; ofertas: typeof data }
+          { month: string; count: number; valor_total: number; volume_final: number; ofertas: Row[] }
         > = {};
-        (data ?? []).forEach((r) => {
+        data.forEach((r: Row) => {
           const month = (r.data_protocolo as string)?.slice(0, 7) ?? "unknown";
           if (!byMonth[month]) {
             byMonth[month] = { month, count: 0, valor_total: 0, volume_final: 0, ofertas: [] };
@@ -157,7 +189,7 @@ Deno.serve(async (req: Request) => {
 
         return jsonResponse({
           months,
-          total: data?.length ?? 0,
+          total: data.length,
           timeline,
         });
       }
@@ -167,17 +199,13 @@ Deno.serve(async (req: Request) => {
         const fromDate = url.searchParams.get("from_date");
         const toDate = url.searchParams.get("to_date");
 
-        let q = supabase
-          .from("hub_ofertas_publicas")
-          .select("tipo_ativo, tipo_oferta, status, modalidade, valor_total, volume_final, segmento, data_protocolo");
-
-        if (fromDate) q = q.gte("data_protocolo", fromDate);
-        if (toDate) q = q.lte("data_protocolo", toDate);
-
-        const { data, error } = await q;
-        if (error) throw error;
-
-        const rows = data ?? [];
+        const statsCols = "tipo_ativo, tipo_oferta, status, modalidade, valor_total, volume_final, segmento, data_protocolo";
+        const rows = await fetchAll(supabase, "hub_ofertas_publicas", statsCols, (q) => {
+          let fq = q;
+          if (fromDate) fq = fq.gte("data_protocolo", fromDate);
+          if (toDate) fq = fq.lte("data_protocolo", toDate);
+          return fq;
+        });
         const totalOfertas = rows.length;
         const totalValor = rows.reduce((s, r) => s + (Number(r.valor_total) || 0), 0);
         const totalVolume = rows.reduce((s, r) => s + (Number(r.volume_final) || 0), 0);
@@ -240,10 +268,12 @@ Deno.serve(async (req: Request) => {
 
       /* ── ofertas_filters ── distinct values for filter dropdowns ── */
       case "ofertas_filters": {
-        const { data, error } = await supabase
-          .from("hub_ofertas_publicas")
-          .select("tipo_ativo, tipo_oferta, status, modalidade, segmento");
-        if (error) throw error;
+        const filterRows = await fetchAll(
+          supabase,
+          "hub_ofertas_publicas",
+          "tipo_ativo, tipo_oferta, status, modalidade, segmento",
+          (q) => q,
+        );
 
         const tiposAtivo = new Set<string>();
         const tiposOferta = new Set<string>();
@@ -251,7 +281,7 @@ Deno.serve(async (req: Request) => {
         const modalidades = new Set<string>();
         const segmentos = new Set<string>();
 
-        (data ?? []).forEach((r) => {
+        filterRows.forEach((r: Record<string, unknown>) => {
           if (r.tipo_ativo) tiposAtivo.add(r.tipo_ativo as string);
           if (r.tipo_oferta) tiposOferta.add(r.tipo_oferta as string);
           if (r.status) statuses.add(r.status as string);
