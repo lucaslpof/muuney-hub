@@ -322,7 +322,14 @@ export default function OfertasRadar() {
     const ticketAvg = tl.length > 0
       ? tl.reduce((s, b) => s + (b.count > 0 ? b.valor_total / b.count : 0), 0) / tl.length
       : 0;
-    return { peakMonth, recent, total: tl.length, momDelta, qoqDelta, ticketRecent, ticketAvg };
+    // YoY comparison (month 0 vs month 12 if available)
+    let yoyVolumeDelta: number | null = null;
+    let yoyCountDelta: number | null = null;
+    if (tl.length >= 13 && tl[12].valor_total > 0 && tl[12].count > 0) {
+      yoyVolumeDelta = ((tl[0].valor_total - tl[12].valor_total) / tl[12].valor_total) * 100;
+      yoyCountDelta = ((tl[0].count - tl[12].count) / tl[12].count) * 100;
+    }
+    return { peakMonth, recent, total: tl.length, momDelta, qoqDelta, ticketRecent, ticketAvg, yoyVolumeDelta, yoyCountDelta };
   }, [timelineData]);
 
   /* ─── Pipeline analytics ─── */
@@ -586,7 +593,7 @@ export default function OfertasRadar() {
                         <> Tendência trimestral: <span className={narrativeTimeline.qoqDelta >= 0 ? "text-emerald-400" : "text-red-400"}>{narrativeTimeline.qoqDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.qoqDelta, 1)}%</span>.</>
                       )}
                     </p>
-                    {/* Momentum cards */}
+                    {/* Momentum + YoY cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {narrativeTimeline.momDelta != null && (
                         <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
@@ -601,6 +608,22 @@ export default function OfertasRadar() {
                           <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Tendência 3M</div>
                           <div className={`text-sm font-mono font-semibold ${narrativeTimeline.qoqDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                             {narrativeTimeline.qoqDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.qoqDelta, 1)}%
+                          </div>
+                        </div>
+                      )}
+                      {narrativeTimeline.yoyVolumeDelta != null && (
+                        <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                          <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">YoY Volume</div>
+                          <div className={`text-sm font-mono font-semibold ${narrativeTimeline.yoyVolumeDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {narrativeTimeline.yoyVolumeDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.yoyVolumeDelta, 1)}%
+                          </div>
+                        </div>
+                      )}
+                      {narrativeTimeline.yoyCountDelta != null && (
+                        <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
+                          <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">YoY Ofertas</div>
+                          <div className={`text-sm font-mono font-semibold ${narrativeTimeline.yoyCountDelta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            {narrativeTimeline.yoyCountDelta >= 0 ? "+" : ""}{fmtNum(narrativeTimeline.yoyCountDelta, 1)}%
                           </div>
                         </div>
                       )}

@@ -712,6 +712,95 @@ const HubCredito = () => {
                 ]}
               />
 
+              {/* Alertas Automáticos — Crédito */}
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+                <h3 className="text-sm font-bold text-zinc-100 mb-3">Alertas Automáticos</h3>
+                <div className="space-y-2">
+                  {useMemo(() => {
+                    const alerts: Array<{ id: string; severity: "red" | "amber" | "emerald"; icon: string; title: string; desc: string }> = [];
+                    const inadTotalVal = kpiVal("21082") || 0;
+                    const spreadPFVal = kpiVal("20783") || 0;
+                    const creditoPibVal = kpiVal("20539") || 0;
+
+                    // Get last concessões MoM value (from computed series)
+                    const concessoesMoMLast = concessoesMoM.length ? concessoesMoM[concessoesMoM.length - 1]?.value : 0;
+
+                    // 1. Inadimplência SFN elevada (> 4%)
+                    if (inadTotalVal > 4.0) {
+                      alerts.push({
+                        id: "inad_high",
+                        severity: "red",
+                        icon: "🔴",
+                        title: "Inadimplência SFN elevada",
+                        desc: `Taxa total em ${inadTotalVal.toFixed(2)}%, acima do patamar seguro de 4%.`,
+                      });
+                    }
+
+                    // 2. Spread stress (> 20pp = arbitrary threshold, adjust to historical avg)
+                    if (spreadPFVal > 20.0) {
+                      alerts.push({
+                        id: "spread_stress",
+                        severity: "amber",
+                        icon: "⚠",
+                        title: "Spread sob pressão",
+                        desc: `Spread PF em ${spreadPFVal.toFixed(1)}pp — acima da média histórica.`,
+                      });
+                    }
+
+                    // 3. Concessões em queda (MoM < -5%)
+                    if (concessoesMoMLast < -5.0) {
+                      alerts.push({
+                        id: "concessoes_drop",
+                        severity: "amber",
+                        icon: "📉",
+                        title: "Concessões em queda",
+                        desc: `Variação MoM de ${concessoesMoMLast.toFixed(1)}% — sinal de contração da oferta.`,
+                      });
+                    }
+
+                    // 4. Crédito/PIB elevado (> 55%)
+                    if (creditoPibVal > 55.0) {
+                      alerts.push({
+                        id: "credito_pib_high",
+                        severity: "amber",
+                        icon: "📊",
+                        title: "Alavancagem acima da média histórica",
+                        desc: `Crédito/PIB em ${creditoPibVal.toFixed(1)}% — nível de expansão elevado.`,
+                      });
+                    }
+
+                    if (alerts.length === 0) {
+                      alerts.push({
+                        id: "all_clear",
+                        severity: "emerald",
+                        icon: "✓",
+                        title: "Indicadores saudáveis",
+                        desc: "Nenhum alerta ativo no momento. Mercado de crédito equilibrado.",
+                      });
+                    }
+
+                    return alerts;
+                  }, [kpiVal, concessoesMoM]).map((a) => {
+                    const colorMap = {
+                      red: "bg-red-500/5 border-red-500/20 text-red-400",
+                      amber: "bg-amber-500/5 border-amber-500/20 text-amber-400",
+                      emerald: "bg-emerald-500/5 border-emerald-500/20 text-emerald-400",
+                    };
+                    return (
+                      <div key={a.id} className={`border rounded-md p-2.5 ${colorMap[a.severity]}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm flex-shrink-0">{a.icon}</span>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-medium leading-tight">{a.title}</h4>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">{a.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Benchmarks vs Targets */}
               <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
                 <h3 className="text-sm font-bold text-zinc-100 mb-3">Benchmarks vs Metas</h3>

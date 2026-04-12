@@ -5,6 +5,8 @@ import { LayoutGrid, Zap, Search, TrendingUp, BarChart3 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
+import { exportCsv, csvFilename } from "@/lib/csvExport";
+import { ExportButton } from "@/components/hub/ExportButton";
 
 import {
   useFidcV4Overview, useFidcV4Rankings, useFidcSegments, useFidcSearch,
@@ -118,6 +120,50 @@ export default function FidcHub() {
 
   const COLORS = ["#0B6C3E", "#F59E0B", "#8B5CF6", "#3B82F6", "#EC4899", "#F97316", "#06B6D4", "#10B981"];
 
+  /* ─── CSV Export Handler ─── */
+  const handleExportRankings = useCallback(() => {
+    const csvData = rankingsFunds.map((fund) => ({
+      nome: fund.denom_social || `FIDC ${fund.cnpj_fundo_classe}`,
+      cnpj: fund.cnpj_fundo_classe || "—",
+      lastro: fund.tp_lastro_principal || "—",
+      pl: fund.vl_pl_total || 0,
+      subordinacao: fund.indice_subordinacao != null ? fund.indice_subordinacao : 0,
+      inadimplencia: fund.taxa_inadimplencia != null ? fund.taxa_inadimplencia : 0,
+      rentab_senior: fund.rentab_senior != null && Math.abs(fund.rentab_senior) <= 95 ? fund.rentab_senior : 0,
+    }));
+
+    exportCsv(
+      csvData,
+      [
+        { header: "Nome", accessor: (r) => r.nome },
+        { header: "CNPJ", accessor: (r) => r.cnpj },
+        { header: "Lastro", accessor: (r) => r.lastro },
+        { header: "PL (R$ Milhões)", accessor: (r) => (r.pl / 1_000_000).toFixed(2) },
+        { header: "Subordinação %", accessor: (r) => r.subordinacao.toFixed(2) },
+        { header: "Inadimplência %", accessor: (r) => r.inadimplencia.toFixed(2) },
+        { header: "Rentab. Senior %", accessor: (r) => r.rentab_senior.toFixed(2) },
+      ],
+      csvFilename("fidc", "rankings")
+    );
+  }, [rankingsFunds]);
+
+  /* ─── Benchmark vs CDI Narrative ─── */
+  const benchmarkNarrative = useMemo(() => {
+    if (!overviewData?.avg_rentab_senior) return null;
+
+    const avgRentab = overviewData.avg_rentab_senior; // monthly %
+    const cdiMonthly = 1.1; // approximate CDI for current Selic 14.15%
+    const spreadNum = avgRentab - cdiMonthly;
+
+    return {
+      avgRentab: avgRentab.toFixed(2),
+      cdiMonthly: cdiMonthly.toFixed(2),
+      spread: spreadNum.toFixed(2),
+      color: spreadNum > 0 ? "text-emerald-400" : "text-red-400",
+      sentiment: spreadNum > 0.5 ? "acima" : spreadNum > 0 ? "alinhada" : "abaixo",
+    };
+  }, [overviewData]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
       {/* Sidebar Navigation */}
@@ -199,6 +245,15 @@ export default function FidcHub() {
                   </div>
                 )}
 
+                {/* Benchmark vs CDI Narrative */}
+                {benchmarkNarrative && (
+                  <div className="bg-[#0a0a0a] border-l-2 border-[#0B6C3E]/40 pl-4 py-3 text-[9px] text-zinc-400 leading-relaxed">
+                    <p>
+                      Rentabilidade média (senior) dos FIDCs no mês: <span className="font-semibold text-zinc-300">{benchmarkNarrative.avgRentab}%</span>. CDI acumulado no período: <span className="font-semibold text-zinc-300">~{benchmarkNarrative.cdiMonthly}%</span>. Spread médio vs CDI: <span className={`font-semibold ${benchmarkNarrative.color}`}>{parseFloat(benchmarkNarrative.spread) > 0 ? '+' : ''}{benchmarkNarrative.spread}pp</span> — rentabilidade {benchmarkNarrative.sentiment} do benchmark.
+                    </p>
+                  </div>
+                )}
+
                 {/* Pie Chart: Distribuição por Lastro — external legend */}
                 {pieData.length > 0 && (
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-6">
@@ -248,10 +303,13 @@ export default function FidcHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("rankings"))}
                 className="space-y-6"
               >
-                {/* Title */}
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <TrendingUp className="w-5 h-5 text-[#0B6C3E]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Rankings</h2>
+                {/* Title + Export */}
+                <div className="flex items-center justify-between gap-3 border-b border-[#1a1a1a] pb-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-5 h-5 text-[#0B6C3E]" />
+                    <h2 className="text-lg font-semibold text-zinc-300">Rankings</h2>
+                  </div>
+                  <ExportButton onClick={handleExportRankings} label="CSV" disabled={rankingsFunds.length === 0} />
                 </div>
 
                 {/* Segment Filter */}

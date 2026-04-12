@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
+import { exportCsv, csvFilename } from "@/lib/csvExport";
+import { ExportButton } from "@/components/hub/ExportButton";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
 import { FundCategoryRankings } from "@/components/hub/FundCategoryRankings";
 import { FundScreener } from "@/components/hub/FundScreener";
@@ -630,15 +632,27 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
 const GestoraRankingsTable = () => {
   const { data, isLoading } = useGestoraRankings({ limit: 30 });
 
+  const handleExportGestoras = useCallback(() => {
+    if (!data?.gestoras) return;
+    const columns = [
+      { header: "Gestora", accessor: (row: typeof data.gestoras[0]) => row.gestor_nome },
+      { header: "Fundos", accessor: (row: typeof data.gestoras[0]) => String(row.fund_count) },
+      { header: "PL Total (R$ M)", accessor: (row: typeof data.gestoras[0]) => (row.total_pl ? (row.total_pl / 1e6).toFixed(1) : "0") },
+      { header: "Taxa Adm Média (%)", accessor: (row: typeof data.gestoras[0]) => row.avg_taxa_adm != null ? row.avg_taxa_adm.toFixed(2) : "—" },
+    ];
+    exportCsv(data.gestoras, columns, csvFilename("fundos", "gestoras"));
+  }, [data?.gestoras]);
+
   if (isLoading) return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">{Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} cols={4} />)}</div>;
   if (!data?.gestoras?.length) return <InlineEmpty text="Dados de gestoras indisponíveis." />;
 
   return (
     <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-[#1a1a1a]">
+      <div className="px-3 py-2 border-b border-[#1a1a1a] flex items-center justify-between">
         <h4 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
           Top Gestoras <span className="text-zinc-700">({data.total} total)</span>
         </h4>
+        <ExportButton onClick={handleExportGestoras} disabled={!data?.gestoras?.length} />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] font-mono">

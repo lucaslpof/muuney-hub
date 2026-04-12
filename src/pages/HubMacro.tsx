@@ -502,6 +502,95 @@ const HubMacro = () => {
                 currentPrimary={kpiVal("5364") || 1.57}
               />
 
+              {/* Alertas Automáticos — Macro */}
+              <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">
+                  Alertas Automáticos
+                </h3>
+                <div className="space-y-2">
+                  {useMemo(() => {
+                    const alerts: Array<{ id: string; severity: "red" | "amber" | "emerald"; icon: string; title: string; desc: string }> = [];
+                    const selicVal = kpiVal("432") || 0;
+                    const ipcaVal = kpiVal("13522") || 0;
+                    const focusSelicVal = kpiVal("990002") || 0;
+                    const desocupacaoVal = kpiVal("24369") || 0;
+
+                    // 1. Selic em máxima (>= 14.0)
+                    if (selicVal >= 14.0) {
+                      alerts.push({
+                        id: "selic_high",
+                        severity: "amber",
+                        icon: "⚠",
+                        title: "Selic em patamar restritivo",
+                        desc: `Taxa meta em ${selicVal.toFixed(2)}% a.a. — pressiona custo do crédito.`,
+                      });
+                    }
+
+                    // 2. IPCA acelerando (> 5.0%)
+                    if (ipcaVal > 5.0) {
+                      alerts.push({
+                        id: "ipca_above",
+                        severity: "red",
+                        icon: "🔴",
+                        title: "IPCA acima da banda",
+                        desc: `Inflação 12m em ${ipcaVal.toFixed(2)}%, acima do teto de 4,5%.`,
+                      });
+                    }
+
+                    // 3. Focus divergência (>1pp diff)
+                    if (focusSelicVal && Math.abs(focusSelicVal - selicVal) > 1.0) {
+                      alerts.push({
+                        id: "focus_divergence",
+                        severity: "amber",
+                        icon: "👁",
+                        title: "Mercado precifica movimento",
+                        desc: `Focus Selic ${focusSelicVal.toFixed(2)}% vs atual ${selicVal.toFixed(2)}% — diff de ${Math.abs(focusSelicVal - selicVal).toFixed(2)}pp.`,
+                      });
+                    }
+
+                    // 4. Desemprego aquecido (< 7%)
+                    if (desocupacaoVal > 0 && desocupacaoVal < 7.0) {
+                      alerts.push({
+                        id: "labor_hot",
+                        severity: "emerald",
+                        icon: "✓",
+                        title: "Mercado de trabalho aquecido",
+                        desc: `Desocupação em ${desocupacaoVal.toFixed(1)}% — nível saudável.`,
+                      });
+                    }
+
+                    if (alerts.length === 0) {
+                      alerts.push({
+                        id: "all_clear",
+                        severity: "emerald",
+                        icon: "✓",
+                        title: "Indicadores estáveis",
+                        desc: "Nenhum alerta ativo no momento. Cenário macro equilibrado.",
+                      });
+                    }
+
+                    return alerts;
+                  }, [kpiVal]).map((a) => {
+                    const colorMap = {
+                      red: "bg-red-500/5 border-red-500/20 text-red-400",
+                      amber: "bg-amber-500/5 border-amber-500/20 text-amber-400",
+                      emerald: "bg-emerald-500/5 border-emerald-500/20 text-emerald-400",
+                    };
+                    return (
+                      <div key={a.id} className={`border rounded-md p-2.5 ${colorMap[a.severity]}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm flex-shrink-0">{a.icon}</span>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-medium leading-tight">{a.title}</h4>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">{a.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Benchmarks vs Metas */}
               <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
                 <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">

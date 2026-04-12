@@ -259,6 +259,67 @@ const HubRendaFixa = () => {
     { code: "990303", label: "Emissões Deb.", data: emissoesSeries, unit: "R$ bi" },
   ], [spreadAASeries, spreadASeries, emissoesSeries]);
 
+  /* ─── IMA-B Proxy (computed from NTN-B yields) ─── */
+  const imaBProxy = useMemo(() => {
+    // Use 3 most recent NTN-B data points to estimate returns
+    const ntnb2029_prev = ntnb2029.length >= 2 ? ntnb2029[ntnb2029.length - 2]?.value ?? 7.25 : 7.25;
+    const ntnb2029_curr = ntnb2029.length > 0 ? ntnb2029[ntnb2029.length - 1]?.value ?? 7.25 : 7.25;
+    const ntnb2035_prev = ntnb2035.length >= 2 ? ntnb2035[ntnb2035.length - 2]?.value ?? 7.10 : 7.10;
+    const ntnb2035_curr = ntnb2035.length > 0 ? ntnb2035[ntnb2035.length - 1]?.value ?? 7.10 : 7.10;
+    const ntnb2045_prev = ntnb2045.length >= 2 ? ntnb2045[ntnb2045.length - 2]?.value ?? 6.85 : 6.85;
+    const ntnb2045_curr = ntnb2045.length > 0 ? ntnb2045[ntnb2045.length - 1]?.value ?? 6.85 : 6.85;
+
+    // Approximate duration: short=3y, mid=7y, long=15y
+    const shortReturn = 3 * (ntnb2029_prev - ntnb2029_curr);
+    const midReturn = 7 * (ntnb2035_prev - ntnb2035_curr);
+    const longReturn = 15 * (ntnb2045_prev - ntnb2045_curr);
+
+    return { shortReturn, midReturn, longReturn };
+  }, [ntnb2029, ntnb2035, ntnb2045]);
+
+  /* ─── Alert Signals (Fixed Income) ─── */
+  const fixedIncomeAlerts = useMemo(() => {
+    const alerts: Array<{ type: string; title: string; description: string; severity: 'critical' | 'warning' | 'info' }> = [];
+
+    // 1. Inversão de Curva: Compare DI 30d vs DI 1800d
+    const di30_curr = di30.length > 0 ? di30[di30.length - 1]?.value ?? 14.18 : 14.18;
+    const di1800_curr = di1800.length > 0 ? di1800[di1800.length - 1]?.value ?? 13.65 : 13.65;
+    if (di30_curr > di1800_curr) {
+      alerts.push({
+        type: 'curva_invertida',
+        title: 'Curva Invertida',
+        description: `DI 30d (${di30_curr.toFixed(2)}%) > DI 1800d (${di1800_curr.toFixed(2)}%) — sinalizando stress econômico potencial`,
+        severity: 'warning'
+      });
+    }
+
+    // 2. Breakeven Desancoragem: If breakeven 3a > 5% (target 3.0% + 1.5pp tolerance)
+    const bei3_curr = bei3.length > 0 ? bei3[bei3.length - 1]?.value ?? 5.35 : 5.35;
+    if (bei3_curr > 5.0) {
+      alerts.push({
+        type: 'breakeven_desancora',
+        title: 'Breakeven Desancorado',
+        description: `Inflação implícita 3a em ${bei3_curr.toFixed(2)}% — acima do intervalo de tolerância (3.0% ± 1.5pp)`,
+        severity: 'warning'
+      });
+    }
+
+    // 3. Juro Real Elevado: If Selic - IPCA12m > 7%
+    const selic_curr = selic.length > 0 ? selic[selic.length - 1]?.value ?? 14.25 : 14.25;
+    const ipca12m = RENDA_FIXA_SAMPLE.find((k) => k.serie_code === "13522")?.last_value ?? 5.06;
+    const realRate = selic_curr - ipca12m;
+    if (realRate > 7.0) {
+      alerts.push({
+        type: 'juro_real_elevado',
+        title: 'Juro Real Restritivo',
+        description: `Taxa real (${realRate.toFixed(2)}%) elevada — acima de 7% a.a., indicando postura muito restritiva`,
+        severity: 'info'
+      });
+    }
+
+    return alerts;
+  }, [di30, di1800, bei3, selic]);
+
   /* ─── Sidebar click handler ─── */
   const scrollToSection = useCallback((id: string) => {
     const el = sectionRefs.current[id];
@@ -608,6 +669,63 @@ const HubRendaFixa = () => {
                   ntnb2029={kpis.find((k) => k.serie_code === "12460")?.last_value}
                   vendasTD={kpis.find((k) => k.serie_code === "990202")?.last_value}
                 />
+
+                {/* ─── IMA-B Proxy Insight ─── */}
+                <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
+                    <div className="flex-1">
+                      <h3 className="text-xs font-bold text-zinc-100 mb-2">IMA-B Proxy — Retorno Estimado NTN-B</h3>
+                      <p className="text-[11px] text-zinc-400 mb-3 leading-relaxed">
+                        Proxy calculado a partir de yields NTN-B usando aproximação de duration. Retornos estimados baseados em mudança de yield nos últimos dados disponíveis.
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
+                          <div className="text-[9px] text-zinc-500 mb-1">Curto (2029)</div>
+                          <div className={`text-sm font-mono font-bold ${imaBProxy.shortReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {imaBProxy.shortReturn >= 0 ? '+' : ''}{imaBProxy.shortReturn.toFixed(2)}%
+                          </div>
+                        </div>
+                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
+                          <div className="text-[9px] text-zinc-500 mb-1">Médio (2035)</div>
+                          <div className={`text-sm font-mono font-bold ${imaBProxy.midReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {imaBProxy.midReturn >= 0 ? '+' : ''}{imaBProxy.midReturn.toFixed(2)}%
+                          </div>
+                        </div>
+                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
+                          <div className="text-[9px] text-zinc-500 mb-1">Longo (2045)</div>
+                          <div className={`text-sm font-mono font-bold ${imaBProxy.longReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {imaBProxy.longReturn >= 0 ? '+' : ''}{imaBProxy.longReturn.toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── Alert Signals ─── */}
+                {fixedIncomeAlerts.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-zinc-100">Alertas & Sinais Críticos</h3>
+                    {fixedIncomeAlerts.map((alert, idx) => {
+                      const severityColors = {
+                        critical: { border: 'border-red-500/40', dot: 'bg-red-500', bg: 'bg-red-500/5' },
+                        warning: { border: 'border-amber-500/40', dot: 'bg-amber-500', bg: 'bg-amber-500/5' },
+                        info: { border: 'border-blue-500/40', dot: 'bg-blue-500', bg: 'bg-blue-500/5' },
+                      };
+                      const colors = severityColors[alert.severity];
+                      return (
+                        <div key={idx} className={`${colors.bg} border ${colors.border} rounded-lg p-3 flex items-start gap-2`}>
+                          <div className={`flex-shrink-0 w-2 h-2 rounded-full ${colors.dot} mt-1.5`} />
+                          <div className="flex-1">
+                            <div className="text-xs font-bold text-zinc-100">{alert.title}</div>
+                            <div className="text-[11px] text-zinc-400 mt-1">{alert.description}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Yield Curve Simulator v2 */}
                 <YieldCurveSimulator

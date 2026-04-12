@@ -4,12 +4,14 @@
  * Displays paginated results as sortable table with links to lâminas
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { SkeletonTableRow } from "./SkeletonLoader";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, Sliders, X } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
+import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
+import { ExportButton } from "./ExportButton";
 
 import { useFundCatalog, formatPL, fundDisplayName, primaryCnpj } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
@@ -125,6 +127,19 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
     if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 text-zinc-700" />;
     return sortAsc ? <ArrowUp className="w-3 h-3 text-[#0B6C3E]" /> : <ArrowDown className="w-3 h-3 text-[#0B6C3E]" />;
   };
+
+  const handleExportResults = useCallback(() => {
+    if (!filtered.length) return;
+    const columns: CsvColumn<typeof filtered[0]>[] = [
+      { header: "Fundo", accessor: (row) => fundDisplayName(row) },
+      { header: "Classe RCVM 175", accessor: (row) => row.classe_rcvm175 || row.classe || "—" },
+      { header: "CNPJ", accessor: (row) => primaryCnpj(row) },
+      { header: "PL (R$ M)", accessor: (row) => (row.vl_patrim_liq ? (row.vl_patrim_liq / 1e6).toFixed(1) : "0") },
+      { header: "Taxa Adm (%)", accessor: (row) => row.taxa_adm != null ? row.taxa_adm.toFixed(2) : "—" },
+      { header: "Cotistas", accessor: (row) => row.nr_cotistas ? String(row.nr_cotistas) : "—" },
+    ];
+    exportCsv(filtered, columns, csvFilename("fundos", "screener"));
+  }, [filtered]);
 
   return (
     <motion.div
@@ -307,6 +322,10 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
           animate={{ opacity: 1, y: 0 }}
           className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
         >
+          <div className="px-3 py-2 border-b border-[#1a1a1a] flex items-center justify-between bg-[#0a0a0a]">
+            <span className="text-[10px] text-zinc-600 font-mono">{filtered.length} fundos encontrados</span>
+            <ExportButton onClick={handleExportResults} disabled={!filtered.length} />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[10px] font-mono">
               <thead>
