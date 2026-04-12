@@ -180,7 +180,7 @@
 
 ---
 
-## Score Consolidado
+## Score Consolidado (PRÉ catch-up — 12/04/2026 manhã)
 
 | Módulo | Muuney | fidcs.com.br | Mais Retorno | Quantum | Anbima |
 |--------|--------|-------------|-------------|---------|--------|
@@ -191,6 +191,77 @@
 | Renda Fixa | **3.6** | 0.0 | 0.2 | 1.3 | 2.1 |
 | Fundos | **3.4** | 0.0 | 1.2 | 1.9 | 0.9 |
 | **MÉDIA GERAL** | **3.7** | **0.6** | **0.3** | **1.1** | **0.9** |
+
+---
+
+## Score Revisado (PÓS catch-up — 12/04/2026)
+
+Features implementadas nesta sessão (sem fontes pagas/externas):
+
+### Ofertas Públicas: 3.1 → 4.2 (+1.1)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Exportação CSV/PDF | 1 | 4 | CSV export Explorer + Top Emissores |
+| Alertas novas ofertas | 0 | 3 | OfertasNarrativePanel com 7 signals automáticos |
+| Coordenador analytics | 0 | 4 | Ranking coordenadores (volume, count, emissores distintos) |
+| YoY comparison | — | 4 | Volume + count YoY no Timeline (quando ≥12 meses) |
+| Narrativa contextual | 4 | 5 | Narrativa por seção (Overview, Timeline, Pipeline, Explorer) |
+
+### FIDC: 3.5 → 4.2 (+0.7)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Exportação dados | 1 | 4 | CSV rankings export |
+| Benchmark vs CDI | 0 | 4 | Narrativa comparativa (rentab senior vs CDI ~1.1%) |
+| Fluxo de cotistas | 0 | 4 | Net flow proxy em FundLamina (ΔPL - rentab×PL) |
+| Rentabilidade indexada | 3 | 4 | CDI benchmark line + vs CDI KPI em FundLamina |
+
+### FII: 3.5 → 4.2 (+0.7)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Exportação dados | 1 | 4 | CSV rankings export |
+| Benchmark vs CDI | 0 | 4 | Narrativa comparativa (rentab vs CDI ~1.1%) |
+
+### Macro: 4.4 → 4.7 (+0.3)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Alertas macro | 0 | 4 | 4 alertas automáticos (Selic, IPCA, Focus, desemprego) |
+| Health Index | 4 | 5 | Alertas complementam com severity-based assessment |
+
+### Crédito: 4.3 → 4.7 (+0.4)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Alertas crédito | 0 | 4 | 4 alertas automáticos (inadim, spread, concessões, PIB) |
+
+### Renda Fixa: 3.6 → 4.2 (+0.6)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| IMA indices | 0 | 3 | IMA-B proxy computado de NTN-B yields (sem Anbima API) |
+| Alertas RF | 0 | 4 | 3 alertas (inversão curva, breakeven, juro real) |
+
+### Fundos: 3.4 → 4.1 (+0.7)
+| Feature | Antes | Depois | O que mudou |
+|---------|-------|--------|-------------|
+| Fluxo captação/resgate | 0 | 4 | Net flow proxy em FundLamina |
+| Benchmark vs índice | 0 | 4 | CDI line + vs CDI KPI em FundLamina |
+| Exportação dados | 1 | 4 | CSV export gestoras + screener |
+
+### Score Consolidado Revisado
+
+| Módulo | Antes | Depois | Delta | Status |
+|--------|-------|--------|-------|--------|
+| Ofertas Públicas | 3.1 | **4.2** | +1.1 | ✅ ≥4.0 |
+| FIDC | 3.5 | **4.2** | +0.7 | ✅ ≥4.0 |
+| Macro | 4.4 | **4.7** | +0.3 | ✅ ≥4.5 |
+| Crédito | 4.3 | **4.7** | +0.4 | ✅ ≥4.5 |
+| Renda Fixa | 3.6 | **4.2** | +0.6 | ✅ ≥4.0 |
+| Fundos | 3.4 | **4.1** | +0.7 | ✅ ≥4.0 |
+| **MÉDIA GERAL** | **3.7** | **4.35** | **+0.65** | ⚠️ abaixo de 4.5 |
+
+### Para atingir média 4.5 (faltam +0.15):
+- Ofertas 4.2→4.5: precisa alertas push reais (email/webhook) — requer Resend ativo
+- FIDC 4.2→4.5: rentabilidade indexada base 100 na FidcLamina dedicada
+- RF 4.2→4.5: IMA proxy 3→4 (adicionar retorno acumulado da proxy, não só estimativa pontual)
+- Fundos 4.1→4.5: FIP deep polish (3→4), composição CDA enriquecida (3→4)
 
 ---
 
