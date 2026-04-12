@@ -259,22 +259,60 @@ const HubRendaFixa = () => {
     { code: "990303", label: "Emissões Deb.", data: emissoesSeries, unit: "R$ bi" },
   ], [spreadAASeries, spreadASeries, emissoesSeries]);
 
-  /* ─── IMA-B Proxy (computed from NTN-B yields) ─── */
+  /* ─── IMA-B Proxy (accumulated returns from NTN-B yields) ─── */
   const imaBProxy = useMemo(() => {
-    // Use 3 most recent NTN-B data points to estimate returns
-    const ntnb2029_prev = ntnb2029.length >= 2 ? ntnb2029[ntnb2029.length - 2]?.value ?? 7.25 : 7.25;
-    const ntnb2029_curr = ntnb2029.length > 0 ? ntnb2029[ntnb2029.length - 1]?.value ?? 7.25 : 7.25;
-    const ntnb2035_prev = ntnb2035.length >= 2 ? ntnb2035[ntnb2035.length - 2]?.value ?? 7.10 : 7.10;
-    const ntnb2035_curr = ntnb2035.length > 0 ? ntnb2035[ntnb2035.length - 1]?.value ?? 7.10 : 7.10;
-    const ntnb2045_prev = ntnb2045.length >= 2 ? ntnb2045[ntnb2045.length - 2]?.value ?? 6.85 : 6.85;
-    const ntnb2045_curr = ntnb2045.length > 0 ? ntnb2045[ntnb2045.length - 1]?.value ?? 6.85 : 6.85;
+    // Duration approximations (years)
+    const durations = { short: 3, mid: 7, long: 15 };
+    // Monthly coupon accrual (~6% annual / 12 months)
+    const monthlyCoeff = 0.005; // 0.5% per month
 
-    // Approximate duration: short=3y, mid=7y, long=15y
-    const shortReturn = 3 * (ntnb2029_prev - ntnb2029_curr);
-    const midReturn = 7 * (ntnb2035_prev - ntnb2035_curr);
-    const longReturn = 15 * (ntnb2045_prev - ntnb2045_curr);
+    const computeAccumulatedReturns = (yields: Array<{ date: string; value: number }>, duration: number) => {
+      if (yields.length === 0) return { series: [], finalReturn: 0 };
 
-    return { shortReturn, midReturn, longReturn };
+      const accum: Array<{ date: string; value: number }> = [];
+      let cumulative = 100; // Base 100
+      let prevYield = yields[0].value;
+
+      for (let i = 0; i < yields.length; i++) {
+        const curr = yields[i];
+        // Price change approximation: ΔP ≈ -duration × Δyield + coupon_accrual
+        const yieldChange = curr.value - prevYield;
+        const priceChange = -duration * yieldChange + monthlyCoeff;
+        const returnPercent = priceChange / 100; // Convert to decimal
+        cumulative = cumulative * (1 + returnPercent);
+        accum.push({ date: curr.date, value: cumulative });
+        prevYield = curr.value;
+      }
+
+      const finalReturn = ((cumulative - 100) / 100) * 100; // as percentage
+      return { series: accum, finalReturn };
+    };
+
+    const short = computeAccumulatedReturns(ntnb2029, durations.short);
+    const mid = computeAccumulatedReturns(ntnb2035, durations.mid);
+    const long = computeAccumulatedReturns(ntnb2045, durations.long);
+
+    // Weighted average: short 30%, mid 50%, long 20%
+    const avgSeries: Array<{ date: string; value: number }> = [];
+    const maxLen = Math.max(short.series.length, mid.series.length, long.series.length);
+    for (let i = 0; i < maxLen; i++) {
+      const shortVal = short.series[i]?.value ?? 100;
+      const midVal = mid.series[i]?.value ?? 100;
+      const longVal = long.series[i]?.value ?? 100;
+      const weighted = shortVal * 0.3 + midVal * 0.5 + longVal * 0.2;
+      const date = short.series[i]?.date ?? mid.series[i]?.date ?? long.series[i]?.date ?? "";
+      if (date) avgSeries.push({ date, value: weighted });
+    }
+
+    return {
+      shortReturn: short.finalReturn,
+      midReturn: mid.finalReturn,
+      longReturn: long.finalReturn,
+      shortSeries: short.series,
+      midSeries: mid.series,
+      longSeries: long.series,
+      avgSeries,
+    };
   }, [ntnb2029, ntnb2035, ntnb2045]);
 
   /* ─── Alert Signals (Fixed Income) ─── */
@@ -670,34 +708,48 @@ const HubRendaFixa = () => {
                   vendasTD={kpis.find((k) => k.serie_code === "990202")?.last_value}
                 />
 
-                {/* ─── IMA-B Proxy Insight ─── */}
-                <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+                {/* ─── IMA-B Proxy — Accumulated Returns Chart ─── */}
+                <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4 space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-1 bg-gradient-to-b from-emerald-500 to-emerald-600 rounded-full" />
                     <div className="flex-1">
-                      <h3 className="text-xs font-bold text-zinc-100 mb-2">IMA-B Proxy — Retorno Estimado NTN-B</h3>
-                      <p className="text-[11px] text-zinc-400 mb-3 leading-relaxed">
-                        Proxy calculado a partir de yields NTN-B usando aproximação de duration. Retornos estimados baseados em mudança de yield nos últimos dados disponíveis.
+                      <h3 className="text-xs font-bold text-zinc-100">IMA-B Proxy — Retorno Acumulado NTN-B</h3>
+                      <p className="text-[11px] text-zinc-400 mt-1">
+                        Índice acumulado baseado em yields NTN-B (duração 3y/7y/15y) + coupon accrual. Média ponderada: 30% curto + 50% médio + 20% longo.
                       </p>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
-                          <div className="text-[9px] text-zinc-500 mb-1">Curto (2029)</div>
-                          <div className={`text-sm font-mono font-bold ${imaBProxy.shortReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {imaBProxy.shortReturn >= 0 ? '+' : ''}{imaBProxy.shortReturn.toFixed(2)}%
-                          </div>
-                        </div>
-                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
-                          <div className="text-[9px] text-zinc-500 mb-1">Médio (2035)</div>
-                          <div className={`text-sm font-mono font-bold ${imaBProxy.midReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {imaBProxy.midReturn >= 0 ? '+' : ''}{imaBProxy.midReturn.toFixed(2)}%
-                          </div>
-                        </div>
-                        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
-                          <div className="text-[9px] text-zinc-500 mb-1">Longo (2045)</div>
-                          <div className={`text-sm font-mono font-bold ${imaBProxy.longReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {imaBProxy.longReturn >= 0 ? '+' : ''}{imaBProxy.longReturn.toFixed(2)}%
-                          </div>
-                        </div>
+                    </div>
+                  </div>
+
+                  {/* Mini chart — IMA-B proxy index */}
+                  {imaBProxy.avgSeries && imaBProxy.avgSeries.length > 0 && (
+                    <MacroChart
+                      data={imaBProxy.avgSeries}
+                      title="IMA-B Proxy Index (Base 100)"
+                      type="area"
+                      color={ACCENT}
+                      unit=""
+                      loading={false}
+                    />
+                  )}
+
+                  {/* Return KPI cards */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+                      <div className="text-[9px] text-zinc-500 mb-1.5 font-mono">Curto (2029, D=3y)</div>
+                      <div className={`text-sm font-mono font-bold ${imaBProxy.shortReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {imaBProxy.shortReturn >= 0 ? '+' : ''}{imaBProxy.shortReturn.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+                      <div className="text-[9px] text-zinc-500 mb-1.5 font-mono">Médio (2035, D=7y)</div>
+                      <div className={`text-sm font-mono font-bold ${imaBProxy.midReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {imaBProxy.midReturn >= 0 ? '+' : ''}{imaBProxy.midReturn.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+                      <div className="text-[9px] text-zinc-500 mb-1.5 font-mono">Longo (2045, D=15y)</div>
+                      <div className={`text-sm font-mono font-bold ${imaBProxy.longReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {imaBProxy.longReturn >= 0 ? '+' : ''}{imaBProxy.longReturn.toFixed(2)}%
                       </div>
                     </div>
                   </div>

@@ -506,6 +506,60 @@ export default function FundLamina() {
                 {compositionSummary.summary && compositionSummary.summary.length > 0 && (
                   <div className="space-y-3">
                     <CompositionSummary cnpj={cnpj} />
+                    {/* Composição Analytics Card */}
+                    {(() => {
+                      const summary = compositionSummary.summary || [];
+                      if (summary.length === 0) return null;
+
+                      // Sort by percentage and get top 3
+                      const sorted = [...summary].sort((a, b) => b.pct_pl - a.pct_pl);
+                      const top3 = sorted.slice(0, 3);
+                      const top3Pct = top3.reduce((sum, b) => sum + b.pct_pl, 0);
+
+                      // Calculate HHI: sum of squared percentages
+                      const hhi = summary.reduce((sum, b) => sum + Math.pow(b.pct_pl, 2), 0);
+                      const hhiLabel = hhi > 2500 ? "concentrada" : hhi > 1500 ? "moderadamente concentrada" : "diversificada";
+
+                      // Asset block labels mapping
+                      const blocoLabels: Record<string, string> = {
+                        titulo_publico: "Títulos Públicos",
+                        cota_fi: "Cotas de FI",
+                        swap: "Swaps",
+                        ativo_codificado: "Ativos Codificados",
+                        deposito_titfi: "Depósitos/TIT-FI",
+                        agro_credpriv: "Agro/Crédito Privado",
+                        investimento_exterior: "Investimento Exterior",
+                        ativo_nao_codificado: "Ativos Não Codificados",
+                      };
+
+                      return (
+                        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+                          <h4 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Composição Analytics</h4>
+                          <div className="space-y-2 text-[9px] font-mono">
+                            <div>
+                              <div className="text-zinc-600 mb-1">Top 3 Blocos:</div>
+                              <div className="space-y-1 text-zinc-300">
+                                {top3.map((b) => (
+                                  <div key={b.bloco} className="flex justify-between pl-2">
+                                    <span className="text-zinc-500">{blocoLabels[b.bloco] || b.bloco}</span>
+                                    <span className="text-[#0B6C3E] font-semibold">{b.pct_pl.toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="pt-2 border-t border-[#1a1a1a]">
+                              <div className="flex justify-between">
+                                <span className="text-zinc-600">HHI:</span>
+                                <span className="text-zinc-300">{hhi.toFixed(0)}</span>
+                              </div>
+                              <p className="text-[8px] text-zinc-500 mt-1 leading-relaxed">
+                                Carteira <span className="text-zinc-400 font-semibold">{hhiLabel}</span> — top 3 blocos representam <span className="text-zinc-400 font-semibold">{top3Pct.toFixed(1)}%</span> do total.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {compositionFull && compositionFull.assets && (

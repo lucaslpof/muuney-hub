@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, Info } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { motion } from "framer-motion";
@@ -45,6 +45,48 @@ function cleanRentab(v: any): number | null {
   if (!isFinite(n)) return null;
   if (Math.abs(n) > CORRUPT_RENTAB_THRESHOLD) return null;
   return n;
+}
+
+/** Compute base-100 indexed series from FIDC monthly rentabilidade */
+function computeIndexedSeries(monthly: any[]) {
+  if (!monthly || monthly.length === 0) return [];
+
+  let cumulativeReturn = 1.0;
+  const result: any[] = [];
+
+  for (const m of monthly) {
+    const rentab = cleanRentab(m.rentab_fundo);
+    if (rentab != null) {
+      cumulativeReturn *= (1 + rentab / 100);
+      result.push({
+        date: m.dt_comptc,
+        index: cumulativeReturn * 100,
+      });
+    }
+  }
+
+  return result;
+}
+
+/** Compute accumulated CDI index from monthly FIDC data (monthly CDI ~1.1%) */
+function computeCDIIndexMonthly(monthly: any[]) {
+  if (!monthly || monthly.length === 0) return [];
+
+  // Approximate monthly CDI from annual 14.15% Selic: ~1.1% monthly
+  // More accurate would be daily CDI, but using monthly proxy
+  const MONTHLY_CDI_RATE = 0.011; // ~1.1% per month
+  let cumulativeReturn = 1.0;
+  const result: any[] = [];
+
+  for (const m of monthly) {
+    cumulativeReturn *= (1 + MONTHLY_CDI_RATE);
+    result.push({
+      date: m.dt_comptc,
+      cdi: cumulativeReturn * 100,
+    });
+  }
+
+  return result;
 }
 
 function computeRentabilidadeSeries(monthly: any[]) {
@@ -94,6 +136,38 @@ export default function FidcLamina() {
   const rentabilidadeSeries = useMemo(() => computeRentabilidadeSeries(monthly), [monthly]);
   const capitalSeries = useMemo(() => computeCapitalSeries(monthly), [monthly]);
   const subordinacaoSeries = useMemo(() => computeSubordinacaoSeries(monthly), [monthly]);
+
+  // Indexed chart series (fund + CDI benchmark)
+  const indexedSeries = useMemo(() => {
+    const fundIndex = computeIndexedSeries(monthly);
+    const cdiIndex = computeCDIIndexMonthly(monthly);
+
+    // Merge CDI data into fund data by date
+    const merged = fundIndex.map((f) => {
+      const cdiPoint = cdiIndex.find((c) => c.date === f.date);
+      return {
+        date: f.date,
+        index: f.index,
+        cdi: cdiPoint?.cdi ?? null,
+      };
+    });
+
+    return merged;
+  }, [monthly]);
+
+  // Compute vs CDI metric
+  const vsCDIMetric = useMemo(() => {
+    if (indexedSeries.length < 2) return null;
+    const lastEntry = indexedSeries[indexedSeries.length - 1];
+
+    if (!lastEntry.index || !lastEntry.cdi) return null;
+
+    const fundReturn = lastEntry.index - 100;
+    const cdiReturn = lastEntry.cdi - 100;
+    const excess = fundReturn - cdiReturn;
+
+    return { fundReturn, cdiReturn, excess };
+  }, [indexedSeries]);
 
   const totalSubord = latest?.indice_subordinacao != null ? latest.indice_subordinacao : null;
   const totalInadim = latest?.taxa_inadimplencia != null ? latest.taxa_inadimplencia : null;
@@ -341,8 +415,81 @@ export default function FidcLamina() {
                 <h2 className="text-sm font-semibold text-zinc-300">Rentabilidade</h2>
               </div>
 
+              {/* Indexed Chart (Base 100 + CDI) */}
+              {indexedSeries.length > 1 && (
+                <div className="space-y-3">
+                  {vsCDIMetric && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <KPICard
+                        label="Retorno Acumulado"
+                        value={vsCDIMetric.fundReturn.toFixed(2)}
+                        unit="%"
+                        color="text-[#0B6C3E]"
+                      />
+                      <KPICard
+                        label="CDI Acumulado"
+                        value={vsCDIMetric.cdiReturn.toFixed(2)}
+                        unit="%"
+                        color="text-zinc-400"
+                      />
+                      <KPICard
+                        label="vs CDI"
+                        value={vsCDIMetric.excess.toFixed(2)}
+                        unit="%"
+                        color={vsCDIMetric.excess >= 0 ? "text-emerald-400" : "text-red-400"}
+                      />
+                    </div>
+                  )}
+                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Rentabilidade Indexada (Base 100)</h3>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={indexedSeries} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 10, fill: "#71717a" }}
+                          tickLine={false}
+                          axisLine={{ stroke: "#1a1a1a" }}
+                        />
+                        <YAxis tick={{ fontSize: 10, fill: "#71717a" }} axisLine={{ stroke: "#1a1a1a" }} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
+                          labelStyle={{ color: "#d4d4d8" }}
+                          formatter={(v: any) => v?.toFixed(2)}
+                        />
+                        <Legend
+                          wrapperStyle={{ paddingTop: 12 }}
+                          iconType="line"
+                          height={24}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="index"
+                          name="Fundo"
+                          stroke="#0B6C3E"
+                          dot={false}
+                          strokeWidth={2}
+                          isAnimationActive={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="cdi"
+                          name="CDI"
+                          stroke="#a1a1aa"
+                          strokeDasharray="5 5"
+                          dot={false}
+                          strokeWidth={2}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Rentabilities (Senior, Subordinada, Fundo) */}
               <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
-                <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Rentabilidade (Senior, Subordinada, Fundo)</h3>
+                <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Rentabilidade Mensal (Senior, Subordinada, Fundo)</h3>
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={rentabilidadeSeries} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />

@@ -37,6 +37,7 @@ import {
 import {
   FIPOverviewKPIs, FIPRankingTable, FIPCapitalPipeline, FIPTypeDistribution,
 } from "@/components/hub/FIPPanel";
+import { FIPNarrativePanel } from "@/components/hub/FIPNarrativePanel";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { InsightsFeed } from "@/components/hub/InsightsFeed";
@@ -1013,6 +1014,7 @@ const HubFundos = () => {
                       <Landmark className="w-3 h-3 text-[#0B6C3E]" /> FIP — Fundos de Participações
                     </h3>
                     <FIPOverviewKPIs />
+                    <FIPNarrativePanel />
                     <FIPRankingTable onSelectFund={(cnpj) => setSelectedFund(cnpj)} />
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       <FIPCapitalPipeline />
