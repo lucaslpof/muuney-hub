@@ -11,6 +11,19 @@ import "./index.css";
 // Initialize global error tracking
 initErrorTracking();
 
+// Auto-reload on stale chunk errors (Vite content-hashed chunks after deploy)
+// When a new deploy changes chunk hashes, users with a cached index.html will
+// request old filenames that no longer exist → 404 → this listener reloads once.
+window.addEventListener("vite:preloadError", (event) => {
+  const reloadedKey = "muuney_chunk_reload";
+  if (!sessionStorage.getItem(reloadedKey)) {
+    sessionStorage.setItem(reloadedKey, "1");
+    window.location.reload();
+  }
+  // If we already reloaded once and still failing, let ErrorBoundary handle it
+  event.preventDefault();
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
