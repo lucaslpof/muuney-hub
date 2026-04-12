@@ -11,24 +11,7 @@ import {
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
-
-/** KPI Card */
-const KPICard = ({
-  label, value, unit = "", color = "text-zinc-400",
-}: {
-  label: string; value: string | number; unit?: string; color?: string;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
-  >
-    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
-    <div className={`text-lg font-semibold font-mono ${color}`}>
-      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
-    </div>
-  </motion.div>
-);
+import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 
 /** Compute monthly performance series (rentabilidade + DY) */
 function computePerformanceSeries(monthly: any[]) {
@@ -411,6 +394,11 @@ export default function FiiLamina() {
         </SectionErrorBoundary>
 
         {/* === Section 4: Fundos Similares === */}
+        {(!fiiData?.similar || fiiData.similar.length === 0) && !fiiLoading && (
+          <div className="text-center py-6 text-zinc-600 text-xs font-mono">
+            Nenhum FII similar encontrado para o mesmo segmento.
+          </div>
+        )}
         {fiiData?.similar && fiiData.similar.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">

@@ -11,24 +11,7 @@ import {
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
-
-/** KPI Card */
-const KPICard = ({
-  label, value, unit = "", color = "text-zinc-400",
-}: {
-  label: string; value: string | number; unit?: string; color?: string;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
-  >
-    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
-    <div className={`text-lg font-semibold font-mono ${color}`}>
-      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
-    </div>
-  </motion.div>
-);
+import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -68,18 +51,18 @@ function computeIndexedSeries(monthly: any[]) {
   return result;
 }
 
-/** Compute accumulated CDI index from monthly FIDC data (monthly CDI ~1.1%) */
-function computeCDIIndexMonthly(monthly: any[]) {
+/** Compute accumulated CDI index from monthly data using Selic-derived compound rate
+ *  Formula: monthly rate = (1 + Selic_annual/100)^(1/12) - 1
+ *  Default 14.15% Selic annual ≈ 1.106% monthly (vs naive 1.1%) */
+function computeCDIIndexMonthly(monthly: any[], selicAnnual = 14.15) {
   if (!monthly || monthly.length === 0) return [];
 
-  // Approximate monthly CDI from annual 14.15% Selic: ~1.1% monthly
-  // More accurate would be daily CDI, but using monthly proxy
-  const MONTHLY_CDI_RATE = 0.011; // ~1.1% per month
+  const monthlyRate = Math.pow(1 + selicAnnual / 100, 1 / 12) - 1;
   let cumulativeReturn = 1.0;
-  const result: any[] = [];
+  const result: { date: string; cdi: number }[] = [];
 
   for (const m of monthly) {
-    cumulativeReturn *= (1 + MONTHLY_CDI_RATE);
+    cumulativeReturn *= (1 + monthlyRate);
     result.push({
       date: m.dt_comptc,
       cdi: cumulativeReturn * 100,
@@ -142,15 +125,13 @@ export default function FidcLamina() {
     const fundIndex = computeIndexedSeries(monthly);
     const cdiIndex = computeCDIIndexMonthly(monthly);
 
-    // Merge CDI data into fund data by date
-    const merged = fundIndex.map((f) => {
-      const cdiPoint = cdiIndex.find((c) => c.date === f.date);
-      return {
-        date: f.date,
-        index: f.index,
-        cdi: cdiPoint?.cdi ?? null,
-      };
-    });
+    // Merge CDI data into fund data by date (O(n) via Map lookup)
+    const cdiMap = new Map(cdiIndex.map((c) => [c.date, c.cdi]));
+    const merged = fundIndex.map((f) => ({
+      date: f.date,
+      index: f.index,
+      cdi: cdiMap.get(f.date) ?? null,
+    }));
 
     return merged;
   }, [monthly]);
@@ -565,6 +546,11 @@ export default function FidcLamina() {
         </SectionErrorBoundary>
 
         {/* === Section 6: Fundos Similares === */}
+        {(!fidcData?.similar || fidcData.similar.length === 0) && !fidcLoading && (
+          <div className="text-center py-6 text-zinc-600 text-xs font-mono">
+            Nenhum FIDC similar encontrado para o mesmo tipo de lastro.
+          </div>
+        )}
         {fidcData?.similar && fidcData.similar.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">

@@ -16,24 +16,7 @@ import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SkeletonKPI, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
-
-/** Local KPI Card */
-const KPICard = ({
-  label, value, unit = "", color = "text-zinc-400",
-}: {
-  label: string; value: string | number; unit?: string; color?: string;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
-  >
-    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
-    <div className={`text-lg font-semibold font-mono ${color}`}>
-      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
-    </div>
-  </motion.div>
-);
+import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
@@ -154,7 +137,9 @@ export default function FiiHub() {
     if (overviewData?.avg_rentabilidade == null) return null;
 
     const avgRentab = overviewData.avg_rentabilidade; // monthly %
-    const cdiMonthly = 1.1; // approximate CDI for current Selic 14.15%
+    // Compound monthly CDI from annual Selic (accurate vs naive 1.1%)
+    const SELIC_ANNUAL = 14.15;
+    const cdiMonthly = (Math.pow(1 + SELIC_ANNUAL / 100, 1 / 12) - 1) * 100;
     const spreadNum = avgRentab - cdiMonthly;
 
     return {
@@ -400,7 +385,7 @@ export default function FiiHub() {
                 {/* Rankings Table */}
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-[8px] font-mono">
+                    <table className="w-full text-[9px] font-mono">
                       <thead className="border-b border-[#1a1a1a] bg-[#0a0a0a]">
                         <tr>
                           <th className="px-4 py-2 text-left text-zinc-600">#</th>

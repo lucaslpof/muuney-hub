@@ -41,9 +41,11 @@ function percentileScore(value: number | null, values: (number | null)[], higher
   if (value == null) return 50; // neutral if no data
   const valid = values.filter((v): v is number => v != null);
   if (valid.length < 2) return 50;
-  const sorted = [...valid].sort((a, b) => a - b);
-  const idx = sorted.findIndex((v) => v >= value);
-  const pct = idx < 0 ? 100 : (idx / sorted.length) * 100;
+  // Count how many peers this value exceeds (standard percentile rank)
+  const countBelow = valid.filter((v) => v < value).length;
+  const countEqual = valid.filter((v) => v === value).length;
+  // Midpoint percentile: (countBelow + 0.5 * countEqual) / total — avoids 0% for worst and 100% for best
+  const pct = ((countBelow + 0.5 * countEqual) / valid.length) * 100;
   return higherIsBetter ? pct : 100 - pct;
 }
 
@@ -76,8 +78,11 @@ export function computeFundScore(
     cotistas: (number | null)[];
   }
 ): FundScoreResult {
-  // Compute fund-level metrics
-  const metrics = daily.length > 5 ? computeFundMetrics(daily) : null;
+  // Compute fund-level metrics (with error handling)
+  let metrics: FundMetricsResult | null = null;
+  if (daily.length > 5) {
+    try { metrics = computeFundMetrics(daily); } catch { /* graceful degrade */ }
+  }
 
   // Default peer data (use neutral percentiles if no peers)
   const peers = peerMetrics || {

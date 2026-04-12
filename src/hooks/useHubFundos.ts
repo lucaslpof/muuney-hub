@@ -207,7 +207,7 @@ export function useFundOverview() {
 /** Compare multiple funds (up to 4) */
 export function useFundCompare(cnpjs: string[], period: string = "3m") {
   return useQuery<FundCompareItem[]>({
-    queryKey: ["fundos", "compare", cnpjs.sort().join(","), period],
+    queryKey: ["fundos", "compare", [...cnpjs].sort().join(","), period],
     queryFn: () => fetchCvm("compare", { cnpjs: cnpjs.join(","), period }) as Promise<FundCompareItem[]>,
     enabled: cnpjs.length >= 2,
     staleTime: 10 * 60 * 1000,

@@ -66,6 +66,39 @@ const KPICardSkeleton = () => (
   </div>
 );
 
+/* ─── Simple KPI Card — compact variant for deep modules (FIDC, FII, FIP) ─── */
+export interface SimpleKPICardProps {
+  label: string;
+  value: string | number;
+  unit?: string;
+  color?: string;
+  sublabel?: string;
+}
+
+export const SimpleKPICard = ({
+  label,
+  value,
+  unit = "",
+  color = "text-zinc-400",
+  sublabel,
+}: SimpleKPICardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
+    role="status"
+    aria-label={`${label}: ${value}${unit}`}
+  >
+    <div className="text-[10px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
+    <div className={`text-lg font-semibold font-mono ${color}`}>
+      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
+    </div>
+    {sublabel && (
+      <div className="text-[9px] text-zinc-600 mt-0.5 font-mono">{sublabel}</div>
+    )}
+  </motion.div>
+);
+
 export const KPICard = ({
   title,
   value,

@@ -25,19 +25,19 @@ import { InlinePaywall } from "@/components/hub/RequireTier";
 const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
 
 /** Compute base-100 index from quota data */
-function computeIndexSeries(daily: any[]) {
+function computeIndexSeries(daily: Array<{ dt_comptc: string; vl_quota?: number | null }>) {
   if (!daily || daily.length === 0) return [];
-  const firstQuota = daily[0].vl_quota;
+  const firstQuota = daily[0]?.vl_quota;
   if (!firstQuota) return [];
 
   return daily.map((d) => ({
     date: d.dt_comptc,
     index: d.vl_quota ? (d.vl_quota / firstQuota) * 100 : null,
-  })).filter((d) => d.index != null);
+  })).filter((d): d is { date: string; index: number } => d.index != null);
 }
 
 /** Compute accumulated CDI index from daily CDI rates, normalized to base 100 */
-function computeCDIIndex(cdiDaily: any[]) {
+function computeCDIIndex(cdiDaily: Array<{ date?: string; value?: number | null }>) {
   if (!cdiDaily || cdiDaily.length === 0) return [];
 
   let cumulativeReturn = 1.0;
@@ -107,24 +107,28 @@ export default function FundLamina() {
   const meta = fundData?.meta;
   const daily = fundData?.daily || [];
 
-  // Compute metrics and score
-  const metrics = daily.length > 5 ? computeFundMetrics(daily) : null;
-  const score = meta && daily.length > 5 ? computeFundScore(meta, daily) : null;
+  // Compute metrics and score (with error safety)
+  const metrics = useMemo(() => {
+    if (!daily || daily.length <= 5) return null;
+    try { return computeFundMetrics(daily); } catch { return null; }
+  }, [daily]);
+  const score = useMemo(() => {
+    if (!meta || !daily || daily.length <= 5) return null;
+    try { return computeFundScore(meta, daily); } catch { return null; }
+  }, [meta, daily]);
 
   // Index series for chart (fund + CDI benchmark)
   const indexSeries = useMemo(() => {
     const fundIndex = computeIndexSeries(daily);
     const cdiIndex = computeCDIIndex(cdiDaily);
 
-    // Merge CDI data into fund data by date
-    const merged = fundIndex.map((f) => {
-      const cdiPoint = cdiIndex.find((c) => c.date === f.date);
-      return {
-        date: f.date,
-        index: f.index,
-        cdi: cdiPoint?.cdi ?? null,
-      };
-    });
+    // Merge CDI data into fund data by date (O(n) via Map lookup)
+    const cdiMap = new Map(cdiIndex.map((c) => [c.date, c.cdi]));
+    const merged = fundIndex.map((f) => ({
+      date: f.date,
+      index: f.index,
+      cdi: cdiMap.get(f.date) ?? null,
+    }));
 
     return merged;
   }, [daily, cdiDaily]);
@@ -165,17 +169,26 @@ export default function FundLamina() {
       if (flow > 0) totalInflow += flow;
       else totalOutflow += Math.abs(flow);
     }
-    // Aggregate weekly for smoother display
+    // Aggregate by ISO week for smoother display (handles holidays correctly)
     const weekly: { week: string; flow: number }[] = [];
     let weekBucket = 0;
-    let weekLabel = flows[0]?.date ?? "";
+    let currentWeekStart = flows[0]?.date ?? "";
+    let prevWeekNum = -1;
     for (let i = 0; i < flows.length; i++) {
-      weekBucket += flows[i].flow;
-      if ((i + 1) % 5 === 0 || i === flows.length - 1) {
-        weekly.push({ week: weekLabel, flow: weekBucket });
+      const d = new Date(flows[i].date + "T00:00:00");
+      // ISO week number: week changes on Monday
+      const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / 86400000);
+      const weekNum = Math.floor((dayOfYear + new Date(d.getFullYear(), 0, 1).getDay()) / 7);
+      if (prevWeekNum >= 0 && weekNum !== prevWeekNum) {
+        weekly.push({ week: currentWeekStart, flow: weekBucket });
         weekBucket = 0;
-        weekLabel = flows[i + 1]?.date ?? "";
+        currentWeekStart = flows[i].date;
       }
+      weekBucket += flows[i].flow;
+      prevWeekNum = weekNum;
+    }
+    if (weekBucket !== 0 || weekly.length === 0) {
+      weekly.push({ week: currentWeekStart, flow: weekBucket });
     }
     const netTotal = totalInflow - totalOutflow;
     return { weekly, netTotal, totalInflow, totalOutflow };
@@ -635,6 +648,11 @@ export default function FundLamina() {
         </SectionErrorBoundary>
 
         {/* === Section 5: Fundos Similares === */}
+        {similarFunds.length === 0 && !fundLoading && (
+          <div className="text-center py-6 text-zinc-600 text-xs font-mono">
+            Nenhum fundo similar encontrado para a classe {similarClasse || "—"}.
+          </div>
+        )}
         {similarFunds.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
