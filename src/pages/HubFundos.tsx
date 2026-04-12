@@ -43,7 +43,7 @@ import { InlineEmpty } from "@/components/hub/EmptyState";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
-  Building2, Landmark, Users, Radar, ArrowRight,
+  Building2, Landmark, Users, ArrowRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -939,7 +939,7 @@ const HubFundos = () => {
               {sectionVisible("estruturados") ? (
                 <div className="space-y-6">
                   {/* Deep Module Launcher */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Link
                       to="/fundos/fidc"
                       className="group bg-[#0B6C3E]/5 border border-[#0B6C3E]/30 rounded-lg p-4 hover:bg-[#0B6C3E]/10 hover:border-[#0B6C3E]/60 transition-all"
@@ -964,19 +964,6 @@ const HubFundos = () => {
                       <div className="text-[11px] font-semibold text-zinc-200 mb-1">FII Deep</div>
                       <div className="text-[9px] text-zinc-500 font-mono">
                         Segmentos · DY · VP · Top performers · Lâminas
-                      </div>
-                    </Link>
-                    <Link
-                      to="/fundos/ofertas"
-                      className="group bg-amber-500/5 border border-amber-500/30 rounded-lg p-4 hover:bg-amber-500/10 hover:border-amber-500/60 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <Radar className="w-5 h-5 text-amber-400" />
-                        <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-amber-400 transition-colors" />
-                      </div>
-                      <div className="text-[11px] font-semibold text-zinc-200 mb-1">Ofertas Radar</div>
-                      <div className="text-[9px] text-zinc-500 font-mono">
-                        CVM 160/476/400 · Pipeline · Timeline · Filters
                       </div>
                     </Link>
                   </div>

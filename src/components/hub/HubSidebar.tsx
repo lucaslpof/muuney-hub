@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   BarChart3, TrendingUp, Landmark, Building2, GraduationCap,
-  LayoutDashboard, ChevronLeft, ChevronRight, X, Menu, Banknote, Briefcase,
+  LayoutDashboard, ChevronLeft, ChevronRight, X, Menu, Banknote, Briefcase, ScrollText,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react";
 import { getMainSiteUrl } from "@/lib/domain";
@@ -95,6 +95,7 @@ const MODULES = [
   { path: "/credito", label: "Overview Crédito", icon: BarChart3 },
   { path: "/renda-fixa", label: "Renda Fixa", icon: Banknote },
   { path: "/fundos", label: "Fundos", icon: Landmark },
+  { path: "/ofertas", label: "Ofertas Públicas", icon: ScrollText, badge: "PRO" },
   { path: "/portfolio", label: "Portfolio", icon: Briefcase, badge: "NEW" },
   { path: "#", label: "Empresas", icon: Building2, disabled: true, badge: "Q3" },
   { path: "#", label: "Educacional", icon: GraduationCap, disabled: true, badge: "Q3" },

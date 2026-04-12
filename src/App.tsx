@@ -80,10 +80,10 @@ const App = () => (
             path="/fundos/fii"
             element={<ProRoute feature="o módulo FII completo"><FiiHub /></ProRoute>}
           />
-          {/* Ofertas Públicas Radar — Pro only */}
+          {/* Ofertas Públicas — standalone module, Pro only */}
           <Route
-            path="/fundos/ofertas"
-            element={<ProRoute feature="o Ofertas Públicas Radar"><OfertasRadar /></ProRoute>}
+            path="/ofertas"
+            element={<ProRoute feature="o módulo Ofertas Públicas"><OfertasRadar /></ProRoute>}
           />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />
@@ -98,6 +98,7 @@ const App = () => (
         <Route path="/hub/credito" element={<Navigate to="/credito" replace />} />
         <Route path="/hub/renda-fixa" element={<Navigate to="/renda-fixa" replace />} />
         <Route path="/hub/fundos" element={<Navigate to="/fundos" replace />} />
+        <Route path="/fundos/ofertas" element={<Navigate to="/ofertas" replace />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
