@@ -2,6 +2,8 @@ import { Outlet, useNavigate, Link } from "react-router-dom";
 import { SidebarProvider, MobileMenuButton, useSidebar } from "./HubSidebar";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
+import { FeedbackWidget } from "./FeedbackWidget";
+import { OnboardingTour } from "./OnboardingTour";
 
 const HubMain = () => {
   const { collapsed } = useSidebar();
@@ -71,6 +73,12 @@ const HubMain = () => {
       <div className="p-4 md:p-6">
         <Outlet />
       </div>
+
+      {/* Beta feedback widget */}
+      <FeedbackWidget />
+
+      {/* First-visit onboarding tour */}
+      <OnboardingTour />
     </main>
   );
 };

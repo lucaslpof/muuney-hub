@@ -421,11 +421,29 @@ export function useFidcRankings(opts: { orderBy?: string; order?: string; limit?
   });
 }
 
-/** FIDC market overview (aggregates) */
+/** FIDC market overview (aggregates) — bridges to hub-fidc-api v2. */
 export function useFidcOverview() {
   return useQuery<FidcOverviewItem>({
     queryKey: ["fundos", "fidc_overview"],
-    queryFn: () => fetchCvm("fidc_overview") as Promise<FidcOverviewItem>,
+    queryFn: async () => {
+      const raw = (await fetchFidc("fidc_overview")) as {
+        date: string;
+        total_fidcs: number;
+        total_pl: number;
+        total_carteira: number;
+        avg_subordinacao: number | null;
+        avg_inadimplencia: number | null;
+        avg_rentab_senior: number | null;
+      };
+      return {
+        total_fidcs: raw.total_fidcs,
+        total_pl: raw.total_pl,
+        avg_inadimplencia: raw.avg_inadimplencia,
+        avg_subordinacao: raw.avg_subordinacao,
+        avg_rentab: raw.avg_rentab_senior,
+        avg_pdd_cobertura: null,
+      };
+    },
     staleTime: 30 * 60 * 1000,
     retry: 2,
   });
@@ -486,11 +504,37 @@ export function useFiiRankings(opts: { orderBy?: string; order?: string; limit?:
   });
 }
 
-/** FII market overview (aggregates) */
+/** FII market overview (aggregates) — bridges to hub-fii-api v2 and maps
+    the enhanced response to the legacy FiiOverviewResponse shape. */
 export function useFiiOverview() {
   return useQuery<FiiOverviewResponse>({
     queryKey: ["fundos", "fii_overview"],
-    queryFn: () => fetchCvm("fii_overview") as Promise<FiiOverviewResponse>,
+    queryFn: async () => {
+      const raw = (await fetchFii("fii_overview")) as {
+        date: string;
+        total_fiis: number;
+        total_pl: number;
+        total_cotistas: number;
+        avg_dividend_yield: number | null;
+        avg_rentabilidade: number | null;
+        by_segmento: { segmento: string; count: number; pl: number; pct_pl: number; avg_dy: number | null }[];
+      };
+      return {
+        date: raw.date,
+        total_fiis: raw.total_fiis,
+        total_pl: raw.total_pl,
+        total_cotistas: raw.total_cotistas,
+        avg_dividend_yield: raw.avg_dividend_yield,
+        avg_rentabilidade: raw.avg_rentabilidade,
+        by_segmento: (raw.by_segmento ?? []).map((s) => ({
+          segmento: s.segmento,
+          count: s.count,
+          pl: s.pl,
+          avg_dy: s.avg_dy,
+          pct_pl: s.pct_pl,
+        })),
+      };
+    },
     staleTime: 30 * 60 * 1000,
     retry: 2,
   });
@@ -525,37 +569,103 @@ export interface FipOverviewResponse {
   by_tipo: { tp_fundo_classe: string; count: number; pl: number; pct_pl: number }[];
 }
 
+/* ─── hub-fip-api v2 bridge ───
+   The legacy useFip* hooks used to hit hub-cvm-api v20 which had broken
+   column names (cnpj/data_competencia) on the fip_* endpoints. V4 routed
+   these endpoints to a dedicated hub-fip-api Edge Function (verify_jwt=true).
+   We keep the legacy hook names + response shapes for backwards compat. */
+
+const FIP_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-fip-api";
+
+async function fetchFip(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+  const url = new URL(FIP_API);
+  url.searchParams.set("endpoint", endpoint);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+  const headers: Record<string, string> = {};
+  if (anonKey) {
+    headers["Authorization"] = `Bearer ${anonKey}`;
+    headers["apikey"] = anonKey;
+  }
+  const res = await fetch(url.toString(), { headers });
+  if (!res.ok) throw new Error(`FIP API error: ${res.status}`);
+  return res.json();
+}
+
 /** FIP quarterly time series for a single fund */
 export function useFipQuarterly(cnpj: string | null) {
   return useQuery<{ cnpj: string; data: FipQuarterlyItem[]; count: number }>({
     queryKey: ["fundos", "fip_quarterly", cnpj],
-    queryFn: () => fetchCvm("fip_quarterly", { cnpj: cnpj! }) as Promise<{ cnpj: string; data: FipQuarterlyItem[]; count: number }>,
+    queryFn: async () => {
+      const raw = (await fetchFip("fip_quarterly", { cnpj: cnpj! })) as {
+        cnpj: string;
+        data: FipQuarterlyItem[];
+        count: number;
+      };
+      return raw;
+    },
     enabled: !!cnpj,
     staleTime: 30 * 60 * 1000,
     retry: 2,
   });
 }
 
-/** FIP rankings (sorted by metric) */
+/** FIP rankings (sorted by metric) — bridges to hub-fip-api fip_rankings. */
 export function useFipRankings(opts: { orderBy?: string; order?: string; limit?: number; tp_fundo_classe?: string } = {}) {
   const { orderBy = "patrimonio_liquido", order = "desc", limit = 50, tp_fundo_classe } = opts;
   return useQuery<{ date: string; funds: FipQuarterlyItem[]; count: number }>({
     queryKey: ["fundos", "fip_rankings", orderBy, order, limit, tp_fundo_classe],
-    queryFn: () => {
+    queryFn: async () => {
       const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit) };
-      if (tp_fundo_classe) params.tp_fundo_classe = tp_fundo_classe;
-      return fetchCvm("fip_rankings", params) as Promise<{ date: string; funds: FipQuarterlyItem[]; count: number }>;
+      if (tp_fundo_classe) params.tipo = tp_fundo_classe;
+      const raw = (await fetchFip("fip_rankings", params)) as {
+        date: string;
+        order_by: string;
+        funds: FipQuarterlyItem[];
+        count: number;
+      };
+      return { date: raw.date, funds: raw.funds ?? [], count: raw.count ?? 0 };
     },
     staleTime: 30 * 60 * 1000,
     retry: 2,
   });
 }
 
-/** FIP market overview (aggregates) */
+/** FIP market overview — bridges to hub-fip-api fip_overview and maps the
+    response to the legacy FipOverviewResponse shape. */
 export function useFipOverview() {
   return useQuery<FipOverviewResponse>({
     queryKey: ["fundos", "fip_overview"],
-    queryFn: () => fetchCvm("fip_overview") as Promise<FipOverviewResponse>,
+    queryFn: async () => {
+      const raw = (await fetchFip("fip_overview")) as {
+        date: string;
+        total_fips: number;
+        total_pl: number;
+        total_cap_comprom: number;
+        total_cap_subscr: number;
+        total_cap_integr: number;
+        pct_integralizado: number | null;
+        capital_a_chamar: number;
+        total_cotistas: number;
+        by_tipo: { tipo: string; count: number; pl: number; pct_pl: number }[];
+      };
+      return {
+        date: raw.date,
+        total_fips: raw.total_fips,
+        total_pl: raw.total_pl,
+        total_cotistas: raw.total_cotistas,
+        total_capital_comprometido: raw.total_cap_comprom,
+        total_capital_subscrito: raw.total_cap_subscr,
+        total_capital_integralizado: raw.total_cap_integr,
+        pct_integralizacao: raw.pct_integralizado,
+        by_tipo: (raw.by_tipo ?? []).map((t) => ({
+          tp_fundo_classe: t.tipo,
+          count: t.count,
+          pl: t.pl,
+          pct_pl: t.pct_pl,
+        })),
+      };
+    },
     staleTime: 30 * 60 * 1000,
     retry: 2,
   });

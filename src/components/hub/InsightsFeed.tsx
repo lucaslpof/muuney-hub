@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, TrendingDown, Users, ArrowRight, Filter, Bell } from "lucide-react";
+import { InlineEmpty } from "./EmptyState";
 import {
   useInsightsFeed,
   INSIGHT_TYPE_LABELS,
@@ -279,9 +280,7 @@ export function InsightsFeed({
       {/* Insights list */}
       <div className={compact ? "px-1 py-1" : "px-3 py-2 space-y-2"}>
         {insights.length === 0 ? (
-          <div className="text-center py-6 text-[10px] text-zinc-700 font-mono">
-            Nenhuma movimentação recente
-          </div>
+          <InlineEmpty icon={<Bell size={14} className="text-zinc-700" />} text="Nenhuma movimentação recente detectada. Insights são gerados automaticamente ao detectar variações relevantes." />
         ) : (
           insights.map((insight) => (
             <InsightCard key={insight.id} insight={insight} compact={compact} />

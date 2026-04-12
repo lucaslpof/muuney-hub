@@ -6,7 +6,9 @@
 
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { SkeletonTableRow } from "./SkeletonLoader";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search, Sliders, X } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useFundCatalog, formatPL, fundDisplayName, primaryCnpj } from "@/hooks/useHubFundos";
@@ -293,10 +295,10 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
 
       {/* Results Table */}
       {isLoading ? (
-        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
-          <div className="h-4 bg-[#1a1a1a] rounded w-1/3 mb-4" />
+        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+          <div className="h-4 bg-zinc-800/50 rounded w-1/3 mb-4 animate-pulse" />
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-8 bg-[#1a1a1a] rounded mb-2" />
+            <SkeletonTableRow key={i} cols={6} />
           ))}
         </div>
       ) : (
@@ -376,8 +378,8 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-zinc-700">
-                      Nenhum fundo encontrado
+                    <td colSpan={6}>
+                      <EmptyState variant="no-funds" />
                     </td>
                   </tr>
                 )}

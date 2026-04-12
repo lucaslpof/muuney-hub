@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import {
   Briefcase,
   Plus,
@@ -129,11 +130,7 @@ export default function HubPortfolio() {
 
   /* ─── Not authenticated ─── */
   if (authLoading || loadingPortfolios) {
-    return (
-      <div className="w-full min-h-[60vh] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#0B6C3E] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   if (!user) {

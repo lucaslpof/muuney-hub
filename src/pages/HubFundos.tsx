@@ -38,6 +38,8 @@ import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { InsightsFeed } from "@/components/hub/InsightsFeed";
 import { RequireTier, BlurredPreview } from "@/components/hub/RequireTier";
+import { SkeletonTableRow, SkeletonSection } from "@/components/hub/SkeletonLoader";
+import { InlineEmpty } from "@/components/hub/EmptyState";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
@@ -598,7 +600,7 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
             <div className="px-3 py-2 text-[10px] text-zinc-600 font-mono">Buscando...</div>
           )}
           {results && results.results.length === 0 && (
-            <div className="px-3 py-2 text-[10px] text-zinc-600 font-mono">Nenhum fundo encontrado</div>
+            <InlineEmpty text="Nenhum fundo encontrado para esta busca." />
           )}
           {results?.results.map((f) => (
             <button
@@ -627,8 +629,8 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
 const GestoraRankingsTable = () => {
   const { data, isLoading } = useGestoraRankings({ limit: 30 });
 
-  if (isLoading) return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse"><div className="h-40 bg-[#1a1a1a] rounded" /></div>;
-  if (!data?.gestoras?.length) return null;
+  if (isLoading) return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">{Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} cols={4} />)}</div>;
+  if (!data?.gestoras?.length) return <InlineEmpty text="Dados de gestoras indisponíveis." />;
 
   return (
     <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
@@ -669,8 +671,8 @@ const GestoraRankingsTable = () => {
 const AdminRankingsTable = () => {
   const { data, isLoading } = useAdminRankings({ limit: 30 });
 
-  if (isLoading) return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse"><div className="h-40 bg-[#1a1a1a] rounded" /></div>;
-  if (!data?.admins?.length) return null;
+  if (isLoading) return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">{Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} cols={4} />)}</div>;
+  if (!data?.admins?.length) return <InlineEmpty text="Dados de administradoras indisponíveis." />;
 
   return (
     <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
@@ -1016,7 +1018,7 @@ const HubFundos = () => {
                   </div>
                 </div>
               ) : (
-                <div className="h-96 bg-[#111111] border border-[#1a1a1a] rounded-lg animate-pulse" />
+                <SkeletonSection />
               )}
             </MacroSection>
           </SectionErrorBoundary>
@@ -1038,7 +1040,7 @@ const HubFundos = () => {
                   <AdminRankingsTable />
                 </div>
               ) : (
-                <div className="h-64 bg-[#111111] border border-[#1a1a1a] rounded-lg animate-pulse" />
+                <SkeletonSection />
               )}
             </MacroSection>
           </SectionErrorBoundary>
@@ -1089,7 +1091,7 @@ const HubFundos = () => {
                   )}
                 </div>
               ) : (
-                <div className="h-64 bg-[#111111] border border-[#1a1a1a] rounded-lg animate-pulse" />
+                <SkeletonSection />
               )}
             </MacroSection>
           </SectionErrorBoundary>
@@ -1139,7 +1141,7 @@ const HubFundos = () => {
                   </div>
                 </div>
               ) : (
-                <div className="h-64 bg-[#111111] border border-[#1a1a1a] rounded-lg animate-pulse" />
+                <SkeletonSection />
               )}
             </MacroSection>
           </SectionErrorBoundary>
@@ -1232,7 +1234,7 @@ const HubFundos = () => {
                   </div>
                 </div>
               ) : (
-                <div className="h-64 bg-[#111111] border border-[#1a1a1a] rounded-lg animate-pulse" />
+                <SkeletonSection />
               )}
             </MacroSection>
           </SectionErrorBoundary>

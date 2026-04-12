@@ -141,7 +141,7 @@ export default function FiiLamina() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
                 label="Patrimônio Líquido"
                 value={formatPL(latest?.patrimonio_liquido || meta.vl_patrim_liq)}
@@ -167,7 +167,7 @@ export default function FiiLamina() {
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-3 gap-3 text-[9px] font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] font-mono">
               <div className="bg-[#111111] border border-[#1a1a1a] rounded p-3">
                 <div className="text-zinc-600 uppercase tracking-wider mb-1">Valor Patrimonial/Cota</div>
                 <div className="text-zinc-300">

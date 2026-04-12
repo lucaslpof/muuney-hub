@@ -152,7 +152,7 @@ export default function FidcLamina() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
                 label="PL Total"
                 value={formatPL(latest?.vl_pl_total || meta.vl_patrim_liq)}
@@ -178,7 +178,7 @@ export default function FidcLamina() {
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-3 gap-3 text-[9px] font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] font-mono">
               <div className="bg-[#111111] border border-[#1a1a1a] rounded p-3">
                 <div className="text-zinc-600 uppercase tracking-wider mb-1">Carteira Total</div>
                 <div className="text-zinc-300">{formatPL(latest?.vl_carteira_direitos)}</div>
@@ -272,7 +272,7 @@ export default function FidcLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Carteira</h2>
             </div>
 
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
                 label="Carteira Total"
                 value={formatPL(latest?.vl_carteira_direitos)}

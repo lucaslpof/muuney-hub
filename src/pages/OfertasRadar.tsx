@@ -207,7 +207,7 @@ export default function OfertasRadar() {
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-8 py-6">
+        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
           <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
             <Radar className="w-6 h-6 text-[#0B6C3E]" />
             Ofertas Públicas Radar
@@ -217,7 +217,7 @@ export default function OfertasRadar() {
           </p>
         </div>
 
-        <div className="flex-1 px-8 py-8 space-y-8">
+        <div className="flex-1 px-4 md:px-8 py-8 space-y-8">
           {/* === SECTION 1: Visão Geral === */}
           <MacroSection
             ref={(el) => {
@@ -242,7 +242,7 @@ export default function OfertasRadar() {
                 </div>
 
                 {stats && !statsLoading ? (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <KPICard
                       label="Total de Ofertas"
                       value={String(stats.total_ofertas)}
@@ -268,7 +268,7 @@ export default function OfertasRadar() {
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="h-24 bg-[#111111] rounded-lg animate-pulse" />
                     ))}

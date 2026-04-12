@@ -157,7 +157,7 @@ export default function FundLamina() {
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Metadata Row */}
-        <div className="grid grid-cols-4 gap-3 text-[9px] font-mono">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[9px] font-mono">
           <div className="bg-[#111111] border border-[#1a1a1a] rounded p-3">
             <div className="text-zinc-600 uppercase tracking-wider mb-1">PL</div>
             <div className="text-zinc-300">{formatPL(meta.vl_patrim_liq)}</div>
@@ -202,7 +202,7 @@ export default function FundLamina() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
                 label="Retorno"
                 value={metrics?.return_annualized != null ? fmtMetricSigned(metrics.return_annualized) : "—"}
@@ -356,7 +356,7 @@ export default function FundLamina() {
 
             {meta && (
               <>
-                <div className="grid grid-cols-3 gap-3 text-[9px] font-mono">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] font-mono">
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded p-3">
                     <div className="text-zinc-600 uppercase tracking-wider mb-2">RCVM 175</div>
                     <HierarquiaBadges

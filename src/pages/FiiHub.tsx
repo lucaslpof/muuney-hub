@@ -10,6 +10,8 @@ import {
 } from "@/hooks/useHubFundos";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+import { SkeletonKPI, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 
 /** Local KPI Card */
 const KPICard = ({
@@ -129,7 +131,7 @@ export default function FiiHub() {
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-8 py-6">
+        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-6">
           <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-[#EC4899]" />
             Módulo FII
@@ -138,7 +140,7 @@ export default function FiiHub() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 px-8 py-8 space-y-8">
+        <div className="flex-1 px-4 md:px-8 py-8 space-y-8">
           {/* === SECTION 1: Visão Geral === */}
           <MacroSection ref={(el) => { sectionRefs.current["overview"] = el; }} id="overview" title="Visão Geral" icon={LayoutGrid}>
             <SectionErrorBoundary sectionName="Visão Geral FII">
@@ -156,7 +158,7 @@ export default function FiiHub() {
 
                 {/* KPI Cards */}
                 {overviewData && !overviewLoading ? (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <KPICard
                       label="Total FIIs"
                       value={String(overviewData.total_fiis)}
@@ -181,9 +183,9 @@ export default function FiiHub() {
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-24 bg-[#111111] rounded-lg animate-pulse" />
+                      <SkeletonKPI key={i} />
                     ))}
                   </div>
                 )}
@@ -336,15 +338,15 @@ export default function FiiHub() {
                       </thead>
                       <tbody>
                         {rankingsLoading ? (
-                          <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-zinc-600">
-                              Carregando...
-                            </td>
-                          </tr>
+                          <>
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <tr key={i}><td colSpan={7}><SkeletonTableRow cols={7} /></td></tr>
+                            ))}
+                          </>
                         ) : rankingsFunds.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-zinc-600">
-                              Nenhum FII encontrado
+                            <td colSpan={7}>
+                              <EmptyState variant="no-funds" description="Nenhum FII encontrado com os filtros selecionados." />
                             </td>
                           </tr>
                         ) : (
@@ -431,7 +433,7 @@ export default function FiiHub() {
                 </div>
 
                 {/* Filters */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Search */}
                   <div className="col-span-2">
                     <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
@@ -549,7 +551,7 @@ export default function FiiHub() {
                 </div>
 
                 {/* Segment Cards */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {segments.length > 0 ? (
                     segments.map((seg, idx) => (
                       <motion.div
