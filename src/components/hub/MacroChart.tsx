@@ -339,6 +339,36 @@ export const MacroChart = ({
     setIsSelecting(false);
   }, [zoomLeft, zoomRight, formattedData]);
 
+  /* Event overlay — COPOM / FOMC decisions mapped to nearest data point
+     IMPORTANT: must be declared BEFORE any early return to preserve hook order. */
+  const eventMarkers = useMemo(() => {
+    if (!showEvents || !events?.length || !visibleData.length) return [];
+    const dataPoints = visibleData
+      .map((d) => ({ t: new Date(d.date).getTime(), label: d.dateLabel, raw: d.date }))
+      .filter((p) => !Number.isNaN(p.t))
+      .sort((a, b) => a.t - b.t);
+    if (dataPoints.length === 0) return [];
+    const minT = dataPoints[0].t;
+    const maxT = dataPoints[dataPoints.length - 1].t;
+
+    return events
+      .map((e) => {
+        const et = new Date(e.date).getTime();
+        if (Number.isNaN(et) || et < minT || et > maxT) return null;
+        let nearest = dataPoints[0];
+        let bestDiff = Math.abs(et - nearest.t);
+        for (let i = 1; i < dataPoints.length; i++) {
+          const diff = Math.abs(et - dataPoints[i].t);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            nearest = dataPoints[i];
+          }
+        }
+        return { ...e, mappedLabel: nearest.label };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [showEvents, events, visibleData]);
+
   const resetZoom = () => setZoomDomain(null);
 
   if (loading) {
@@ -459,37 +489,6 @@ export const MacroChart = ({
       )}
     </>
   );
-
-  /* Event overlay — COPOM / FOMC decisions mapped to nearest data point */
-  const eventMarkers = useMemo(() => {
-    if (!showEvents || !events?.length || !visibleData.length) return [];
-    // Build a sorted array of data timestamps for binary-search mapping
-    const dataPoints = visibleData
-      .map((d) => ({ t: new Date(d.date).getTime(), label: d.dateLabel, raw: d.date }))
-      .filter((p) => !Number.isNaN(p.t))
-      .sort((a, b) => a.t - b.t);
-    if (dataPoints.length === 0) return [];
-    const minT = dataPoints[0].t;
-    const maxT = dataPoints[dataPoints.length - 1].t;
-
-    return events
-      .map((e) => {
-        const et = new Date(e.date).getTime();
-        if (Number.isNaN(et) || et < minT || et > maxT) return null;
-        // Find nearest data point
-        let nearest = dataPoints[0];
-        let bestDiff = Math.abs(et - nearest.t);
-        for (let i = 1; i < dataPoints.length; i++) {
-          const diff = Math.abs(et - dataPoints[i].t);
-          if (diff < bestDiff) {
-            bestDiff = diff;
-            nearest = dataPoints[i];
-          }
-        }
-        return { ...e, mappedLabel: nearest.label };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [showEvents, events, visibleData]);
 
   const renderEventMarkers = () => {
     if (!showEvents || eventMarkers.length === 0) return null;

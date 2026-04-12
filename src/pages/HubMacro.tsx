@@ -289,6 +289,7 @@ const HubMacro = () => {
           {/* ═══════════════════════════════════════════
               VISÃO GERAL — Hero KPIs + Alerts
               ═══════════════════════════════════════════ */}
+          <SectionErrorBoundary sectionName="Visão Geral">
           <section id="overview" className="scroll-mt-32">
             {/* Alerts */}
             <AlertCard kpis={kpis} module="macro" />
@@ -348,6 +349,7 @@ const HubMacro = () => {
               <MacroChart data={desocupacao} title="Taxa de Desocupação" type="area" color="#8B5CF6" label="Desocupação" unit="%" />
             </div>
           </section>
+          </SectionErrorBoundary>
 
           {/* ═══════════════════════════════════════════
               INFLAÇÃO & JUROS
