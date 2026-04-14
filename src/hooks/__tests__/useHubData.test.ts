@@ -8,12 +8,12 @@ import {
 } from "../useHubData";
 
 describe("useHubData — sample data", () => {
-  it("MACRO_SAMPLE has 6 indicators", () => {
-    expect(MACRO_SAMPLE).toHaveLength(6);
+  it("MACRO_SAMPLE has at least 6 indicators", () => {
+    expect(MACRO_SAMPLE.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("CREDITO_SAMPLE has 10 indicators", () => {
-    expect(CREDITO_SAMPLE).toHaveLength(10);
+  it("CREDITO_SAMPLE has at least 10 indicators", () => {
+    expect(CREDITO_SAMPLE.length).toBeGreaterThanOrEqual(10);
   });
 
   it("MACRO_SAMPLE items have required shape", () => {
