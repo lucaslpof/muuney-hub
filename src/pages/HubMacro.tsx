@@ -267,7 +267,13 @@ const HubMacro = () => {
 
   return (
     <div className="w-full">
-      <HubSEO title="Panorama Macro" description="Indicadores macroeconômicos em tempo real — Selic, IPCA, câmbio, PIB, mercado de trabalho e expectativas Focus com dados BACEN SGS." path="/macro" />
+      <HubSEO
+        title="Panorama Macroeconômico"
+        description="Análise macroeconômica completa com dados BACEN: Selic, IPCA, PIB, emprego, setor externo, expectativas Focus e curva de juros DI."
+        path="/macro"
+        keywords="panorama macroeconômico, Selic BACEN, IPCA mensal, PIB Brasil, Focus expectativas, curva de juros, câmbio PTAX, taxa de desemprego"
+        isProtected={true}
+      />
       <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />
 
       {/* ═══ Sticky header ═══ */}

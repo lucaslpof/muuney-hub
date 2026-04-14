@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, Info, Building2 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { HubSEO } from "@/lib/seo";
 import { motion } from "framer-motion";
 
 import {
@@ -93,6 +94,15 @@ export default function FiiLamina() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
+      {/* Dynamic SEO for FII Lâmina */}
+      <HubSEO
+        title={fundName || "FII"}
+        description={`Análise FII: ${fundName || "fundo imobiliário"} — PL R$ ${formatPL(meta?.vl_patrim_liq)}, segmento ${segmento}, dividend yield ${latest?.dividend_yield_mes}%. Rentabilidade, distribuição mensal e composição de ativos.`}
+        path={`/fundos/fii/${slug}`}
+        keywords={`${fundName}, FII, fundo imobiliário, lâmina FII, análise FII, dividend yield, fundos imobiliários Brasil`}
+        isProtected={true}
+      />
+
       {/* Header Navigation */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a]">
         <div className="w-full px-4 md:px-6 py-3">

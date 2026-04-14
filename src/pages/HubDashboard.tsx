@@ -106,8 +106,10 @@ const HubDashboard = () => {
     <div className="space-y-6 w-full">
       <HubSEO
         title="Dashboard"
-        description="Terminal de inteligência de mercado — indicadores macro, crédito, renda fixa e 29.491 fundos CVM em tempo real."
+        description="Painel de inteligência financeira com indicadores em tempo real: Selic, IPCA, câmbio, inadimplência e 29.491 fundos CVM monitorados."
         path="/dashboard"
+        keywords="dashboard financeiro, indicadores econômicos, Selic hoje, IPCA acumulado, câmbio dólar, spreads bancários, inadimplência PF"
+        isProtected={true}
       />
       <Breadcrumbs items={[{ label: "Dashboard" }]} className="mb-4" />
 

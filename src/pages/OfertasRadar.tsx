@@ -456,7 +456,7 @@ export default function OfertasRadar() {
                       )}
                     </p>
                     {/* Mini-analytics cards */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
                         <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Diversificação (HHI)</div>
                         <div className={`text-sm font-mono font-semibold ${narrativeOverview.hhi > 5000 ? "text-red-400" : narrativeOverview.hhi > 2500 ? "text-amber-400" : "text-emerald-400"}`}>
@@ -812,7 +812,7 @@ export default function OfertasRadar() {
                         <> {pipelineAnalytics.topAtivos.length} classes com ofertas ativas — lideradas por {pipelineAnalytics.topAtivos[0].tipo}.</>
                       )}
                     </p>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="bg-[#111111] border border-[#1a1a1a] rounded p-2.5">
                         <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Health Score</div>
                         <div className={`text-lg font-mono font-bold ${pipelineAnalytics.healthScore >= 70 ? "text-emerald-400" : pipelineAnalytics.healthScore >= 40 ? "text-amber-400" : "text-red-400"}`}>

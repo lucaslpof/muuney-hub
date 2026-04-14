@@ -124,8 +124,8 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[10px] font-mono">
+      <div className="overflow-x-auto scrollbar-none">
+        <table className="w-full text-[10px] font-mono min-w-[800px]">
           <thead>
             <tr className="border-b border-zinc-800/30 text-zinc-500">
               <th className="text-left py-2 px-3 min-w-[180px] sticky left-0 bg-zinc-900/50 z-10">

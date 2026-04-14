@@ -2,7 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 import { initErrorTracking } from "@/lib/errorTracking";
 import { AuthProvider } from "@/hooks/useAuth";
 import App from "./App";
@@ -25,6 +26,19 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error: Error, query) => {
+      // Only show toast if query has been cached before (avoid flooding on first load)
+      if (query.state.data !== undefined) {
+        const message = error.message || "Não foi possível atualizar os dados. Usando cache.";
+        toast({
+          title: "Atualização falhou",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30 * 60 * 1000,    // 30 min — market data refreshes infrequently
@@ -32,6 +46,16 @@ const queryClient = new QueryClient({
       retry: 2,
       refetchOnWindowFocus: false,
       refetchOnReconnect: 'always',   // refetch after network recovery
+    },
+    mutations: {
+      onError: (error: Error) => {
+        const message = error.message || "Algo deu errado. Tente novamente.";
+        toast({
+          title: "Erro",
+          description: message,
+          variant: "destructive",
+        });
+      },
     },
   },
 });

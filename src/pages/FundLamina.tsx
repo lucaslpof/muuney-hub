@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, PieChart, Info } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { HubSEO } from "@/lib/seo";
 import { motion } from "framer-motion";
 
 import {
@@ -252,6 +253,15 @@ export default function FundLamina() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
+      {/* Dynamic SEO for Fund Lâmina */}
+      <HubSEO
+        title={fundDisplayName(meta) || "Lâmina do Fundo"}
+        description={`Análise completa: ${fundDisplayName(meta) || "fundo"} — ${meta?.classe_rcvm175 || meta?.classe || ""}, PL R$ ${formatPL(meta?.vl_patrim_liq)}, ${meta?.gestor_nome || "gestor"}. Performance, composição, drawdown e Fund Score™.`}
+        path={`/fundos/${slug}`}
+        keywords={`${fundDisplayName(meta)}, ${meta?.classe_rcvm175 || meta?.classe}, lâmina fundo, análise fundo, Fund Score`}
+        isProtected={true}
+      />
+
       {/* Header Navigation */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a]">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
@@ -299,12 +309,12 @@ export default function FundLamina() {
         </div>
 
         {/* Period Selector */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
           {PERIODS.map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 text-[9px] font-mono rounded transition-all border ${
+              className={`px-3 py-1.5 text-[9px] font-mono rounded transition-all border whitespace-nowrap flex-shrink-0 ${
                 period === p
                   ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
                   : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
@@ -480,7 +490,7 @@ export default function FundLamina() {
                   : <> Resgate líquido estimado de <span className="text-red-400">{formatPL(Math.abs(netFlowData.netTotal))}</span> no período.</>
                 }
               </p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3">
                   <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">Fluxo Líquido</div>
                   <div className={`text-sm font-mono font-semibold ${netFlowData.netTotal >= 0 ? "text-emerald-400" : "text-red-400"}`}>

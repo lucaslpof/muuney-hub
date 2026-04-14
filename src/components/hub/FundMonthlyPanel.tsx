@@ -161,8 +161,8 @@ export const MonthlyRankingsTable = ({
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[10px] font-mono">
+        <div className="overflow-x-auto scrollbar-none">
+          <table className="w-full text-[10px] font-mono min-w-[600px]">
             <thead>
               <tr className="border-b border-zinc-800/50 text-zinc-600">
                 <th className="text-left px-3 py-2 w-8">#</th>

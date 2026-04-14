@@ -327,8 +327,8 @@ function ComparisonTable({ mods, seriesMap }: {
         <span className="text-[11px] font-bold text-zinc-100 font-mono">Comparativo de Modalidades</span>
         <span className="text-[9px] text-zinc-600 font-mono">{rows.length} modalidades</span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto scrollbar-none">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="border-b border-zinc-800/30">
               {([

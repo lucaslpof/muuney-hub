@@ -4,6 +4,8 @@ import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { OnboardingTour } from "./OnboardingTour";
+import { Toaster } from "@/components/ui/Toaster";
+import { NetworkStatus } from "./NetworkStatus";
 
 const HubMain = () => {
   const { collapsed } = useSidebar();
@@ -70,7 +72,7 @@ const HubMain = () => {
       </header>
 
       {/* Page content */}
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 overflow-x-hidden">
         <Outlet />
       </div>
 
@@ -94,9 +96,11 @@ export const HubLayout = () => {
         />
       </Helmet>
       <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
+        <NetworkStatus />
         <SidebarProvider>
           <HubMain />
         </SidebarProvider>
+        <Toaster />
       </div>
     </>
   );

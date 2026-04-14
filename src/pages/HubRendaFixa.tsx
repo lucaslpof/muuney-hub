@@ -389,7 +389,13 @@ const HubRendaFixa = () => {
 
   return (
     <div className="flex gap-4 w-full">
-      <HubSEO title="Renda Fixa" description="Curva DI, NTN-B, Tesouro Direto e crédito privado — simuladores de yield curve, calculadora de bonds e breakeven inflation." path="/renda-fixa" />
+      <HubSEO
+        title="Renda Fixa"
+        description="Terminal de renda fixa: curva DI, NTN-B, Tesouro Direto, spreads de crédito privado, simulador de yield curve e calculadora de bonds."
+        path="/renda-fixa"
+        keywords="renda fixa, curva DI, NTN-B, Tesouro Direto, spread debêntures, calculadora renda fixa, juros Brasil, yield curve, breakeven inflation"
+        isProtected={true}
+      />
       {/* ─── Sidebar ─── */}
       <MacroSidebar
         items={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))}
@@ -757,7 +763,7 @@ const HubRendaFixa = () => {
                   )}
 
                   {/* Return KPI cards */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
                       <div className="text-[9px] text-zinc-500 mb-1.5 font-mono">Curto (2029, D=3y)</div>
                       <div className={`text-sm font-mono font-bold ${imaBProxy.shortReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

@@ -525,7 +525,7 @@ export const MacroChart = ({
   );
 
   return (
-    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 group" ref={chartRef}>
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 group min-h-[220px] md:min-h-[280px]" ref={chartRef}>
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <h3 className="text-xs font-medium text-zinc-400 font-mono">{title}</h3>

@@ -260,7 +260,13 @@ const HubCredito = () => {
 
   return (
     <div className="w-full">
-      <HubSEO title="Overview Crédito" description="Spreads, inadimplência, concessões e análise de risco do SFN com 73 séries BACEN — visão completa do mercado de crédito brasileiro." path="/credito" />
+      <HubSEO
+        title="Overview de Crédito"
+        description="Visão completa do mercado de crédito brasileiro: spreads bancários, inadimplência PF e PJ, concessões, taxas médias e 73 séries BACEN SGS."
+        path="/credito"
+        keywords="mercado de crédito, inadimplência Brasil, spread bancário, taxa de juros crédito, concessões BACEN, risco de crédito, crédito PF, crédito PJ"
+        isProtected={true}
+      />
       <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4" />
       {/* ─── Sticky header bar ─── */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">

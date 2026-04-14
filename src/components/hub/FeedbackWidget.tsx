@@ -191,6 +191,7 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
       {/* Floating trigger button */}
       <button
         onClick={() => setOpen(!open)}
+        data-tour="feedback"
         className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
           open
             ? "bg-zinc-800 text-zinc-400 scale-90"

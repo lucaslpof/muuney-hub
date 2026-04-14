@@ -181,8 +181,8 @@ export const CompositionDetailTable = ({ cnpj }: { cnpj: string }) => {
         </span>
       </div>
 
-      <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-        <table className="w-full text-[10px]">
+      <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-none">
+        <table className="w-full text-[10px] min-w-[700px]">
           <thead className="sticky top-0 bg-zinc-900/50 z-10">
             <tr className="text-zinc-600 uppercase border-b border-zinc-800/50">
               <th className="text-left px-3 py-2 font-medium">Ativo</th>
