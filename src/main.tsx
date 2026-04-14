@@ -27,9 +27,11 @@ window.addEventListener("vite:preloadError", (event) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 60 * 1000, // 30 min
+      staleTime: 30 * 60 * 1000,    // 30 min — market data refreshes infrequently
+      gcTime: 60 * 60 * 1000,        // 1 hour — keep cached data longer for navigation
       retry: 2,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: 'always',   // refetch after network recovery
     },
   },
 });

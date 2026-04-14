@@ -32,7 +32,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-[#111111] border border-red-900/30 rounded-lg p-6 flex flex-col items-center justify-center gap-3 min-h-[120px]">
+        <div className="bg-zinc-900/50 border border-red-900/30 rounded-lg p-6 flex flex-col items-center justify-center gap-3 min-h-[120px]">
           <AlertTriangle className="w-5 h-5 text-red-400" />
           <p className="text-xs text-zinc-400 font-mono text-center">
             Erro ao carregar{" "}

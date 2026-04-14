@@ -14,11 +14,11 @@ export const IngestionStatus = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3 animate-pulse">
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3 animate-pulse">
         <div className="h-3 bg-[#1a1a1a] rounded w-1/3 mb-3" />
         <div className="flex gap-3">
-          <div className="h-12 bg-[#0f0f0f] rounded flex-1" />
-          <div className="h-12 bg-[#0f0f0f] rounded flex-1" />
+          <div className="h-12 bg-zinc-900/50 rounded flex-1" />
+          <div className="h-12 bg-zinc-900/50 rounded flex-1" />
         </div>
       </div>
     );
@@ -45,7 +45,7 @@ export const IngestionStatus = () => {
   };
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export const IngestionStatus = () => {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#1a1a1a]">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
         <span className="text-[8px] text-zinc-700 font-mono">
           {totalSeries} séries monitoradas &middot; pg_cron ativo
         </span>

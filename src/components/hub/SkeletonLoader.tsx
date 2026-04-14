@@ -20,7 +20,7 @@ export function Skeleton({ className = "" }: SkeletonProps) {
 /** KPI card skeleton (matches KPICard layout) */
 export function SkeletonKPI() {
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4 space-y-3">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4 space-y-3">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-8 w-28" />
       <Skeleton className="h-2.5 w-16" />
@@ -31,7 +31,7 @@ export function SkeletonKPI() {
 /** Chart skeleton (matches MacroChart layout) */
 export function SkeletonChart({ height = "h-64" }: { height?: string }) {
   return (
-    <div className={`bg-[#111] border border-[#1a1a1a] rounded-xl p-4 space-y-3`}>
+    <div className={`bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4 space-y-3`}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-6 w-20 rounded-md" />
@@ -44,7 +44,7 @@ export function SkeletonChart({ height = "h-64" }: { height?: string }) {
 /** Table row skeleton */
 export function SkeletonTableRow({ cols = 5 }: { cols?: number }) {
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-[#1a1a1a]">
+    <div className="flex items-center gap-4 py-3 border-b border-zinc-800/50">
       {Array.from({ length: cols }).map((_, i) => (
         <Skeleton key={i} className={`h-4 ${i === 0 ? "w-40" : "w-20"}`} />
       ))}
@@ -76,7 +76,7 @@ export function SkeletonPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4">
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4">
         <Skeleton className="h-5 w-32 mb-4" />
         {Array.from({ length: 5 }).map((_, i) => (
           <SkeletonTableRow key={i} />
@@ -104,7 +104,7 @@ export function SkeletonSection() {
 /** Fund card skeleton (for lâminas/rankings) */
 export function SkeletonFundCard() {
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4 space-y-3">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Skeleton className="h-5 w-14 rounded-full" />
         <Skeleton className="h-4 w-48" />

@@ -73,7 +73,7 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
   if (open && submitted) {
     return (
       <div ref={panelRef} className="fixed bottom-6 right-6 z-50">
-        <div className="bg-[#111] border border-[#0B6C3E]/40 rounded-xl p-5 shadow-2xl shadow-[#0B6C3E]/10 w-72 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="bg-zinc-900/50 border border-[#0B6C3E]/40 rounded-xl p-5 shadow-2xl shadow-[#0B6C3E]/10 w-72 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex flex-col items-center gap-2 py-2">
             <div className="w-10 h-10 rounded-full bg-[#0B6C3E]/20 flex items-center justify-center">
               <Check size={20} className="text-[#0B6C3E]" />
@@ -90,9 +90,9 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
     <div ref={panelRef} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       {/* Expanded panel */}
       {open && (
-        <div className="mb-3 bg-[#111] border border-[#1a1a1a] rounded-xl shadow-2xl shadow-black/40 w-[calc(100vw-2rem)] sm:w-80 max-w-80 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="mb-3 bg-zinc-900/50 border border-zinc-800/50 rounded-xl shadow-2xl shadow-black/40 w-[calc(100vw-2rem)] sm:w-80 max-w-80 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1a1a]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
             <div>
               <h3 className="text-sm font-medium text-zinc-200">Feedback</h3>
               <p className="text-[10px] text-zinc-600 font-mono mt-0.5">

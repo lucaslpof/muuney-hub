@@ -105,7 +105,7 @@ export const FiscalCalculator = ({
   }
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Landmark className="w-4 h-4 text-[#0B6C3E]" />
@@ -118,7 +118,7 @@ export const FiscalCalculator = ({
           className={`text-[9px] font-mono px-2 py-0.5 rounded border transition-colors ${
             showScenarios
               ? "text-[#0B6C3E] border-[#0B6C3E]/30 bg-[#0B6C3E]/10"
-              : "text-zinc-600 border-[#1a1a1a] hover:text-zinc-400"
+              : "text-zinc-600 border-zinc-800/50 hover:text-zinc-400"
           }`}
         >
           {showScenarios ? "Cenários ✓" : "Comparar cenários"}
@@ -133,7 +133,7 @@ export const FiscalCalculator = ({
             step={0.5}
             value={gdpGrowth}
             onChange={(e) => setGdpGrowth(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           />
         </div>
         <div>
@@ -143,7 +143,7 @@ export const FiscalCalculator = ({
             step={0.5}
             value={realRate}
             onChange={(e) => setRealRate(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           />
         </div>
         <div>
@@ -153,7 +153,7 @@ export const FiscalCalculator = ({
             step={0.25}
             value={primaryTarget}
             onChange={(e) => setPrimaryTarget(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           />
         </div>
         <div>
@@ -164,7 +164,7 @@ export const FiscalCalculator = ({
             max={30}
             value={years}
             onChange={(e) => setYears(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           />
         </div>
       </div>
@@ -173,7 +173,7 @@ export const FiscalCalculator = ({
       {showScenarios && scenarioData ? (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={scenarioData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
             <XAxis
               dataKey="year"
               tick={{ fill: "#52525b", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}
@@ -200,7 +200,7 @@ export const FiscalCalculator = ({
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
             <XAxis
               dataKey="year"
               tick={{ fill: "#52525b", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}

@@ -227,7 +227,7 @@ export const MacroNarrativePanel = (props: MacroNarrativePanelProps) => {
   const RegimeIcon = regime.icon;
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 space-y-4">
       {/* ─── Header ─── */}
       <div className="flex items-center gap-2">
         <Zap className="w-4 h-4 text-[#0B6C3E]" />

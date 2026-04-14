@@ -88,7 +88,7 @@ export const CreditCorrelationPanel = ({ series }: CreditCorrelationPanelProps) 
   if (series.length < 2) return null;
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
         <GitCompare className="w-4 h-4 text-[#10B981]" />
         <h3 className="text-sm font-bold text-zinc-100">Correlação Crédito × Macro</h3>

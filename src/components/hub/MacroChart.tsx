@@ -40,17 +40,12 @@ interface MacroChartProps {
   unit?: string;
   height?: number;
   loading?: boolean;
-  /** Reference value to draw as horizontal dashed line (e.g. target/meta) */
   refValue?: number;
   refLabel?: string;
-  /** Optional monetary policy event overlay (COPOM/FOMC) */
   events?: MacroChartEvent[];
 }
 
-/* ───── Overlay state ───── */
-type Overlay = "sma" | "ema" | "trend";
-
-/* ───── Smart Y-axis domain & tick computation ───── */
+/* Smart Y-axis domain & tick computation */
 function computeYDomain(values: number[]): { domain: [number, number]; ticks: number[] } {
   if (values.length === 0) return { domain: [0, 1], ticks: [0, 0.5, 1] };
 
@@ -58,26 +53,21 @@ function computeYDomain(values: number[]): { domain: [number, number]; ticks: nu
   const max = Math.max(...values);
   const range = max - min;
 
-  // Add padding: 10% above and below, but never go below 0 if all values are positive
   const pad = range === 0 ? Math.abs(max * 0.1) || 1 : range * 0.1;
   let lo = min - pad;
   let hi = max + pad;
 
-  // If all values are positive and lo would go negative, clamp to 0
   if (min >= 0 && lo < 0) lo = 0;
 
-  // Compute nice tick step
   const rawStep = (hi - lo) / 5;
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
   const niceSteps = [1, 2, 2.5, 5, 10];
   const normalized = rawStep / magnitude;
   const niceStep = magnitude * (niceSteps.find(s => s >= normalized) || 10);
 
-  // Align domain to nice boundaries
   lo = Math.floor(lo / niceStep) * niceStep;
   hi = Math.ceil(hi / niceStep) * niceStep;
 
-  // Generate ticks
   const ticks: number[] = [];
   for (let v = lo; v <= hi + niceStep * 0.001; v += niceStep) {
     ticks.push(Math.round(v * 1e6) / 1e6);
@@ -86,16 +76,12 @@ function computeYDomain(values: number[]): { domain: [number, number]; ticks: nu
   return { domain: [lo, hi], ticks };
 }
 
-/* ───── Smart Y-axis formatter (pt-BR — delegated to @/lib/format) ───── */
 const smartFormat = smartFormatAxis;
 
-/* ───── Smart X-axis date label formatter ───── */
 function formatDateLabel(date: string, totalPoints: number): string {
   const d = new Date(date);
-  // If date string is not a valid date (e.g. tenor labels "30d", "2029"), return as-is
   if (isNaN(d.getTime())) return date;
   if (totalPoints > 365) {
-    // Years only for very long series
     return d.toLocaleDateString("pt-BR", { year: "numeric" });
   }
   if (totalPoints > 60) {
@@ -104,7 +90,6 @@ function formatDateLabel(date: string, totalPoints: number): string {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
-/* ───── Rich Tooltip ───── */
 interface TooltipPayloadEntry {
   value: number | string;
   name: string;
@@ -122,22 +107,21 @@ interface RichTooltipProps {
 const RichTooltip = ({ active, payload, label, unit }: RichTooltipProps) => {
   if (!active || !payload?.length) return null;
 
-  // Sort: main value first, overlays last
   const sorted = [...payload].sort((a, b) => {
     const order = { value: 0, value2: 1, sma: 2, ema: 3, trend: 4 };
     return (order[a.dataKey as keyof typeof order] ?? 5) - (order[b.dataKey as keyof typeof order] ?? 5);
   });
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-md px-3 py-2 shadow-xl shadow-black/40 min-w-[160px]">
-      <p className="text-[10px] text-zinc-500 font-mono mb-1.5 border-b border-[#1a1a1a] pb-1">{label}</p>
+    <div className="bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 shadow-xl shadow-black/40 min-w-[160px]">
+      <p className="text-[10px] text-zinc-400 font-mono mb-1.5 border-b border-zinc-800 pb-1">{label}</p>
       {sorted.map((entry, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-[10px] text-zinc-500 font-mono">{entry.name}</span>
+            <span className="text-[10px] text-zinc-400 font-mono">{entry.name}</span>
           </div>
-          <span className="text-sm font-bold font-mono text-zinc-200">
+          <span className="text-sm font-bold font-mono text-zinc-100">
             {typeof entry.value === "number"
               ? entry.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
               : entry.value}
@@ -149,7 +133,6 @@ const RichTooltip = ({ active, payload, label, unit }: RichTooltipProps) => {
   );
 };
 
-/* ───── Export helpers ───── */
 function exportCSV(data: MacroChartDataPoint[], title: string, label: string, label2?: string) {
   const header = label2 ? `Data,${label},${label2}` : `Data,${label}`;
   const rows = data.map((d) =>
@@ -181,7 +164,7 @@ function exportPNG(chartRef: React.RefObject<HTMLDivElement | null>, title: stri
     canvas.width = img.width * 2;
     canvas.height = img.height * 2;
     ctx.scale(2, 2);
-    ctx.fillStyle = "#111111";
+    ctx.fillStyle = "#0a0a0a";
     ctx.fillRect(0, 0, img.width, img.height);
     ctx.drawImage(img, 0, 0);
     canvas.toBlob((blob) => {
@@ -197,12 +180,11 @@ function exportPNG(chartRef: React.RefObject<HTMLDivElement | null>, title: stri
   img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
 }
 
-/* ───── Recharts mouse event shape ───── */
 interface ChartMouseEvent {
   activeLabel?: string;
 }
 
-/* ───── Main Chart Component ───── */
+/* Main Chart Component */
 export const MacroChart = ({
   data, title, type = "line", color = "#0B6C3E", color2 = "#10B981",
   label = "Valor", label2, unit, height = 260, loading,
@@ -213,10 +195,10 @@ export const MacroChart = ({
   const [zoomRight, setZoomRight] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
-  const [overlays, setOverlays] = useState<Set<Overlay>>(new Set());
+  const [overlays, setOverlays] = useState<Set<string>>(new Set());
   const [showEvents, setShowEvents] = useState(false);
 
-  const toggleOverlay = useCallback((o: Overlay) => {
+  const toggleOverlay = useCallback((o: string) => {
     setOverlays(prev => {
       const next = new Set(prev);
       if (next.has(o)) next.delete(o);
@@ -225,7 +207,6 @@ export const MacroChart = ({
     });
   }, []);
 
-  /* ─── Compute overlay data ─── */
   const smaData = useMemo(() => {
     if (!overlays.has("sma") || data.length < 5) return null;
     const window = data.length >= 20 ? Math.round(data.length * 0.15) : 3;
@@ -243,7 +224,6 @@ export const MacroChart = ({
     return linearRegression(data as DataPoint[], 0);
   }, [data, overlays]);
 
-  /* ─── Merge overlay data into formatted points ─── */
   const formattedData: FormattedDataPoint[] = useMemo(() => {
     const smaMap = new Map(smaData?.map(d => [d.date, d.value]));
     const emaMap = new Map(emaData?.map(d => [d.date, d.value]));
@@ -265,7 +245,6 @@ export const MacroChart = ({
     return formattedData.slice(zoomDomain[0], zoomDomain[1] + 1);
   }, [formattedData, zoomDomain]);
 
-  /* ─── Y-axis auto-scale ─── */
   const { yDomain, yTicks, valueRange } = useMemo(() => {
     const allValues: number[] = [];
     for (const d of visibleData) {
@@ -284,7 +263,6 @@ export const MacroChart = ({
     };
   }, [visibleData, refValue]);
 
-  /* ─── Summary stats for header ─── */
   const summaryStats = useMemo(() => {
     if (data.length < 2) return null;
     const last = data[data.length - 1].value;
@@ -329,8 +307,6 @@ export const MacroChart = ({
     setIsSelecting(false);
   }, [zoomLeft, zoomRight, formattedData]);
 
-  /* Event overlay — COPOM / FOMC decisions mapped to nearest data point
-     IMPORTANT: must be declared BEFORE any early return to preserve hook order. */
   const eventMarkers = useMemo(() => {
     if (!showEvents || !events?.length || !visibleData.length) return [];
     const dataPoints = visibleData
@@ -363,10 +339,10 @@ export const MacroChart = ({
 
   if (loading) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
-        <div className="h-3 bg-[#1a1a1a] rounded w-1/3 mb-4" />
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
+        <div className="h-3 bg-zinc-800 rounded w-1/3 mb-4" />
         <div className="animate-pulse" style={{ height }}>
-          <div className="h-full bg-[#0f0f0f] rounded" />
+          <div className="h-full bg-zinc-800/30 rounded" />
         </div>
       </div>
     );
@@ -374,19 +350,18 @@ export const MacroChart = ({
 
   if (!data.length) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
-        <h3 className="text-xs font-medium text-zinc-500 font-mono mb-3">{title}</h3>
-        <div className="flex items-center justify-center text-zinc-700 font-mono text-[10px]" style={{ height }}>
-          Sem dados disponíveis
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">{title}</h3>
+        <div className="flex items-center justify-center text-zinc-600 font-mono text-[10px]" style={{ height }}>
+          Sem dados disponveis
         </div>
       </div>
     );
   }
 
-  /* ─── X-axis interval: adaptive to data density ─── */
   const xInterval = (() => {
     const n = visibleData.length;
-    if (n <= 8) return 0; // show all
+    if (n <= 8) return 0;
     if (n <= 20) return Math.floor(n / 6);
     if (n <= 60) return Math.floor(n / 8);
     return Math.floor(n / 10);
@@ -404,7 +379,7 @@ export const MacroChart = ({
     xAxis: {
       dataKey: "dateLabel" as const,
       tick: { fill: "#52525b", fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
-      axisLine: { stroke: "#1a1a1a" },
+      axisLine: { stroke: "#27272a" },
       tickLine: false,
       interval: xInterval,
     },
@@ -421,7 +396,6 @@ export const MacroChart = ({
 
   const crosshairStyle = { stroke: "#3f3f46", strokeDasharray: "3 3" };
 
-  /* Zoom reference area for drag-to-select */
   const renderZoomArea = () => {
     if (!isSelecting || !zoomLeft || !zoomRight) return null;
     return (
@@ -435,7 +409,6 @@ export const MacroChart = ({
     );
   };
 
-  /* Overlay lines (shared across chart types) */
   const renderOverlays = () => (
     <>
       {overlays.has("sma") && smaData && (
@@ -468,7 +441,7 @@ export const MacroChart = ({
         <Line
           type="monotone"
           dataKey="trend"
-          name={`Tendência (R²=${trendData.r2.toFixed(2)})`}
+          name={`Tendencia (R2=${trendData.r2.toFixed(2)})`}
           stroke="#EF4444"
           strokeWidth={1.5}
           strokeDasharray="8 4"
@@ -488,7 +461,7 @@ export const MacroChart = ({
         e.kind === "cut" ? "#22C55E" :
         e.kind === "start" ? "#8B5CF6" :
         "#71717A";
-      const showLabel = eventMarkers.length <= 20; // avoid clutter when too many
+      const showLabel = eventMarkers.length <= 20;
       return (
         <ReferenceLine
           key={`ev-${idx}-${e.date}`}
@@ -512,7 +485,6 @@ export const MacroChart = ({
     });
   };
 
-  /* Reference line (e.g. meta/target) */
   const renderRefLine = () => {
     if (refValue == null) return null;
     return (
@@ -531,13 +503,12 @@ export const MacroChart = ({
     );
   };
 
-  /* Generic chart wrapper */
   const chartContent = (
     ChartComponent: typeof AreaChart | typeof BarChart | typeof LineChart,
     children: ReactNode
   ) => (
     <ChartComponent {...chartProps}>
-      <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
       <XAxis {...axisProps.xAxis} />
       <YAxis {...axisProps.yAxis} />
       <Tooltip
@@ -554,11 +525,10 @@ export const MacroChart = ({
   );
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 group" ref={chartRef}>
-      {/* Header with title + summary stats + actions */}
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 group" ref={chartRef}>
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
-          <h3 className="text-xs font-medium text-zinc-500 font-mono">{title}</h3>
+          <h3 className="text-xs font-medium text-zinc-400 font-mono">{title}</h3>
           {summaryStats && (
             <span
               className={`text-[10px] font-mono font-semibold ${
@@ -575,33 +545,32 @@ export const MacroChart = ({
           )}
         </div>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Overlay toggles */}
           {type !== "bar" && data.length >= 5 && (
             <>
               <button
                 onClick={() => toggleOverlay("sma")}
                 className={`p-1 rounded transition-colors text-[9px] font-mono ${
-                  overlays.has("sma") ? "bg-amber-500/20 text-amber-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-[#1a1a1a]"
+                  overlays.has("sma") ? "bg-amber-500/20 text-amber-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
                 }`}
-                title="Média Móvel Simples"
+                title="Media Movel Simples"
               >
                 SMA
               </button>
               <button
                 onClick={() => toggleOverlay("ema")}
                 className={`p-1 rounded transition-colors text-[9px] font-mono ${
-                  overlays.has("ema") ? "bg-violet-500/20 text-violet-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-[#1a1a1a]"
+                  overlays.has("ema") ? "bg-violet-500/20 text-violet-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
                 }`}
-                title="Média Móvel Exponencial"
+                title="Media Movel Exponencial"
               >
                 EMA
               </button>
               <button
                 onClick={() => toggleOverlay("trend")}
                 className={`p-1 rounded transition-colors ${
-                  overlays.has("trend") ? "bg-red-500/20 text-red-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-[#1a1a1a]"
+                  overlays.has("trend") ? "bg-red-500/20 text-red-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
                 }`}
-                title="Linha de Tendência (Regressão Linear)"
+                title="Linha de Tendencia (Regressao Linear)"
               >
                 <TrendingUp className="w-3 h-3" />
               </button>
@@ -609,20 +578,20 @@ export const MacroChart = ({
                 <button
                   onClick={() => setShowEvents((v) => !v)}
                   className={`p-1 rounded transition-colors text-[9px] font-mono ${
-                    showEvents ? "bg-cyan-500/20 text-cyan-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-[#1a1a1a]"
+                    showEvents ? "bg-cyan-500/20 text-cyan-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
                   }`}
                   title="COPOM / FOMC decisions overlay"
                 >
                   EV
                 </button>
               )}
-              <div className="w-px h-3 bg-[#1a1a1a] mx-0.5" />
+              <div className="w-px h-3 bg-zinc-800 mx-0.5" />
             </>
           )}
           {zoomDomain && (
             <button
               onClick={resetZoom}
-              className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-600 hover:text-zinc-400 transition-colors"
+              className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors"
               title="Resetar zoom"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -630,14 +599,14 @@ export const MacroChart = ({
           )}
           <button
             onClick={() => exportCSV(data, title, label, label2)}
-            className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors"
             title="Exportar CSV"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => exportPNG(chartRef, title)}
-            className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors"
             title="Exportar PNG"
           >
             <Camera className="w-3.5 h-3.5" />
@@ -645,28 +614,25 @@ export const MacroChart = ({
         </div>
       </div>
 
-      {/* Range stats bar */}
       {summaryStats && (
         <div className="flex items-center gap-3 text-[9px] text-zinc-700 font-mono mb-2">
-          <span>Últ: <span className="text-zinc-400">{summaryStats.last.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}{unit || ""}</span></span>
-          <span>Mín: <span className="text-zinc-500">{summaryStats.min.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span></span>
-          <span>Máx: <span className="text-zinc-500">{summaryStats.max.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span></span>
+          <span>Ult: <span className="text-zinc-400">{summaryStats.last.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}{unit || ""}</span></span>
+          <span>Min: <span className="text-zinc-500">{summaryStats.min.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span></span>
+          <span>Max: <span className="text-zinc-500">{summaryStats.max.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span></span>
           {zoomDomain && (
             <span className="text-[#0B6C3E]">
-              Zoom: {visibleData.length} pts &middot; ↺ resetar
+              Zoom: {visibleData.length} pts &middot; Resetar
             </span>
           )}
         </div>
       )}
 
-      {/* Zoom hint */}
       {!zoomDomain && !summaryStats && (
         <p className="text-[9px] text-zinc-700 font-mono mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
           Arraste para zoom &middot; Hover para detalhes
         </p>
       )}
 
-      {/* Active overlay legend */}
       {overlays.size > 0 && (
         <div className="flex items-center gap-3 text-[9px] font-mono mb-1">
           {overlays.has("sma") && <span className="text-amber-400 flex items-center gap-1"><Activity className="w-2.5 h-2.5" />SMA</span>}
@@ -674,7 +640,7 @@ export const MacroChart = ({
           {overlays.has("trend") && trendData && (
             <span className={`flex items-center gap-1 ${trendData.slope > 0 ? "text-emerald-400" : trendData.slope < 0 ? "text-red-400" : "text-zinc-500"}`}>
               <TrendingUp className="w-2.5 h-2.5" />
-              {trendData.slope > 0 ? "↑" : trendData.slope < 0 ? "↓" : "→"} R²={trendData.r2.toFixed(2)}
+              {trendData.slope > 0 ? "Up" : trendData.slope < 0 ? "Down" : "Flat"} R2={trendData.r2.toFixed(2)}
             </span>
           )}
         </div>

@@ -79,7 +79,7 @@ function assessRisk(spreadAA: number, spreadA: number): { level: string; color: 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
       {payload.map((p, i) => (
         <div key={i} className="text-[10px] font-mono">
@@ -149,9 +149,9 @@ export function SpreadCreditoPrivado({
   };
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Landmark className="w-4 h-4 text-[#6366F1]" />
           <span className="text-sm font-bold text-zinc-100">Crédito Privado — Spreads & Emissões</span>
@@ -168,19 +168,19 @@ export function SpreadCreditoPrivado({
       <div className="p-4 space-y-4">
         {/* KPI Cards + Regime */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+          <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Spread AA</div>
             <div className="text-[14px] font-bold font-mono text-emerald-400">{fmtNum(spreadAA, 2)} p.p.</div>
           </div>
-          <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+          <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Spread A</div>
             <div className="text-[14px] font-bold font-mono text-amber-400">{fmtNum(spreadA, 2)} p.p.</div>
           </div>
-          <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+          <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">Emissões Deb.</div>
             <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {fmtNum(emissoes, 1)} bi</div>
           </div>
-          <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+          <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
             <div className="text-[8px] text-zinc-600 font-mono">CRA + CRI</div>
             <div className="text-[14px] font-bold font-mono text-zinc-100">R$ {fmtNum(estoqueCRACRI, 1)} bi</div>
           </div>
@@ -242,7 +242,7 @@ export function SpreadCreditoPrivado({
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={spreadChartData}>
-                <CartesianGrid stroke="#1a1a1a" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="dateLabel" tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={{ stroke: "#1a1a1a" }} tickLine={false} />
                 <YAxis tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={false} tickLine={false} width={35} />
                 <Tooltip content={<ChartTooltip />} />
@@ -259,7 +259,7 @@ export function SpreadCreditoPrivado({
             <span className="text-[10px] font-bold text-zinc-300 font-mono mb-2 block">Volume de Emissões — Debêntures</span>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={emissaoChartData}>
-                <CartesianGrid stroke="#1a1a1a" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="dateLabel" tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={{ stroke: "#1a1a1a" }} tickLine={false} />
                 <YAxis tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={false} tickLine={false} width={35} />
                 <Tooltip content={<ChartTooltip />} />

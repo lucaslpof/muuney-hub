@@ -53,7 +53,7 @@ export function FundCategoryRankings() {
             className={`px-3 py-1.5 text-[9px] font-mono rounded transition-all border ${
               selectedCategory === cat.id
                 ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
-                : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30 hover:text-zinc-300"
+                : "bg-zinc-900/50 text-zinc-400 border-zinc-800/50 hover:border-[#0B6C3E]/30 hover:text-zinc-300"
             }`}
           >
             {cat.label}
@@ -65,7 +65,7 @@ export function FundCategoryRankings() {
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3 animate-pulse">
+            <div key={i} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3 animate-pulse">
               <div className="h-4 bg-[#1a1a1a] rounded w-3/4 mb-2" />
               <div className="h-3 bg-[#1a1a1a] rounded w-1/2" />
             </div>
@@ -86,7 +86,7 @@ export function FundCategoryRankings() {
                 <Link
                   key={fund.cnpj_fundo}
                   to={fundPath}
-                  className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3 hover:border-[#0B6C3E]/40 transition-all group"
+                  className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3 hover:border-zinc-700 transition-all group"
                 >
                   <div className="flex items-start gap-2 mb-2">
                     <div className="min-w-0 flex-1">

@@ -25,7 +25,7 @@ export const FocusConsensusPanel = ({ entries }: FocusConsensusPanelProps) => {
   );
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-3">
         <Target className="w-4 h-4 text-[#0B6C3E]" />
         <h3 className="text-xs font-medium text-zinc-400 font-mono">
@@ -40,7 +40,7 @@ export const FocusConsensusPanel = ({ entries }: FocusConsensusPanelProps) => {
           const deltaColor = e.delta > 0.01 ? "text-red-400" : e.delta < -0.01 ? "text-emerald-400" : "text-zinc-600";
 
           return (
-            <div key={e.label} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-md p-3">
+            <div key={e.label} className="bg-[#0a0a0a] border border-zinc-800/50 rounded-md p-3">
               <div className="text-[9px] text-zinc-600 font-mono uppercase mb-2">{e.label}</div>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <div>

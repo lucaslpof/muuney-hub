@@ -6,6 +6,9 @@ import { MacroChart } from "@/components/hub/MacroChart";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { SkeletonPage } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 import {
   useHubLatest,
   useHubSeriesBundle,
@@ -242,9 +245,31 @@ const HubMacro = () => {
     { code: "focus_cambio", label: "Focus Câmbio 2026", data: focusCambio, unit: "R$" },
   ], [focusIpca, focusSelic, focusPib, focusCambio]);
 
+  /* Full-page loading state */
+  if (cardsLoading && !kpis.length) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />
+        <SkeletonPage />
+      </div>
+    );
+  }
+
+  /* No-data fallback */
+  if (!cardsLoading && (!kpis || kpis.length === 0)) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />
+        <EmptyState variant="no-data" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <HubSEO title="Panorama Macro" description="Indicadores macroeconômicos em tempo real — Selic, IPCA, câmbio, PIB, mercado de trabalho e expectativas Focus com dados BACEN SGS." path="/macro" />
+      <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />
+
       {/* ═══ Sticky header ═══ */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4">

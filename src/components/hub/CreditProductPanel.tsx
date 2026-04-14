@@ -68,7 +68,7 @@ function sortProducts(products: Product[], key: SortKey, asc: boolean): Product[
 
 /* ─── Loading skeleton ─── */
 const TableSkeleton = () => (
-  <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-6">
+  <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-6">
     <div className="flex items-center justify-center gap-2 text-zinc-500">
       <Loader2 className="w-4 h-4 animate-spin" />
       <span className="text-[10px] font-mono">Carregando produtos do BACEN...</span>
@@ -78,7 +78,7 @@ const TableSkeleton = () => (
 
 /* ─── Error state ─── */
 const ErrorState = () => (
-  <div className="bg-[#0f0f0f] border border-red-500/20 rounded-lg p-6">
+  <div className="bg-zinc-900/50 border border-red-500/20 rounded-lg p-6">
     <div className="flex items-center justify-center gap-2 text-red-400">
       <AlertTriangle className="w-4 h-4" />
       <span className="text-[10px] font-mono">Erro ao carregar dados de produtos. Tentando novamente...</span>
@@ -115,9 +115,9 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
   if (products.length === 0) return null;
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[#141414]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/30">
         <Icon className="w-4 h-4" style={{ color: accentColor }} />
         <h3 className="text-sm font-bold text-zinc-100">{title}</h3>
         <span className="text-[9px] text-zinc-600 font-mono ml-auto">{products.length} produtos</span>
@@ -127,8 +127,8 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] font-mono">
           <thead>
-            <tr className="border-b border-[#141414] text-zinc-500">
-              <th className="text-left py-2 px-3 min-w-[180px] sticky left-0 bg-[#0f0f0f] z-10">
+            <tr className="border-b border-zinc-800/30 text-zinc-500">
+              <th className="text-left py-2 px-3 min-w-[180px] sticky left-0 bg-zinc-900/50 z-10">
                 <button onClick={() => handleSort("nome")} className="flex items-center gap-1 hover:text-zinc-300 transition-colors">
                   Produto <SortIcon col="nome" />
                 </button>
@@ -155,12 +155,12 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
           <tbody>
             {sorted.map((p) => (
               <tr key={p.nome} className="border-t border-[#111] hover:bg-[#0c0c0c] transition-colors group">
-                <td className="py-2 px-3 text-zinc-300 font-medium sticky left-0 bg-[#0f0f0f] group-hover:bg-[#0c0c0c] z-10 transition-colors">
+                <td className="py-2 px-3 text-zinc-300 font-medium sticky left-0 bg-zinc-900/50 group-hover:bg-[#0c0c0c] z-10 transition-colors">
                   {p.nome}
                 </td>
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-2 justify-end">
-                    <div className="w-16 h-3 bg-[#111] rounded-full overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-3 bg-zinc-900/50 rounded-full overflow-hidden flex-shrink-0">
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.taxa_aa, maxTaxa), backgroundColor: accentColor, opacity: 0.7 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${rateColor(p.taxa_aa)}`}>
@@ -171,7 +171,7 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
                 <td className="py-1.5 px-2 text-right text-zinc-500">{fmtNum(p.taxa_am, 2)}%</td>
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-2 justify-end">
-                    <div className="w-16 h-3 bg-[#111] rounded-full overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-3 bg-zinc-900/50 rounded-full overflow-hidden flex-shrink-0">
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.spread_aa, maxSpread), backgroundColor: p.spread_aa >= 0 ? "#F59E0B" : "#10B981", opacity: 0.6 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${spreadColor(p.spread_aa)}`}>
@@ -182,7 +182,7 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
                 <td className="py-1.5 px-2 text-right text-zinc-500">{p.spread_am >= 0 ? "+" : ""}{fmtNum(p.spread_am, 2)}%</td>
                 <td className="py-1.5 px-2">
                   <div className="flex items-center gap-2 justify-end">
-                    <div className="w-16 h-3 bg-[#111] rounded-full overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-3 bg-zinc-900/50 rounded-full overflow-hidden flex-shrink-0">
                       <div className="h-full rounded-full transition-all" style={{ width: barWidth(p.inadimplencia, maxNPL), backgroundColor: "#EF4444", opacity: 0.6 }} />
                     </div>
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${nplColor(p.inadimplencia)}`}>
@@ -197,7 +197,7 @@ const ProductTable = ({ title, icon: Icon, products, accentColor }: {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-[#141414] text-[8px] text-zinc-700 font-mono space-y-0.5">
+      <div className="px-4 py-2 border-t border-zinc-800/30 text-[8px] text-zinc-700 font-mono space-y-0.5">
         <div>Taxa: último mês publicado · Spread: média sobre CDI nos últimos 12 meses</div>
         <div>Inadimplência: &gt;90 dias, último mês publicado</div>
       </div>
@@ -224,7 +224,7 @@ const RankingCards = ({ pfProducts, pjProducts }: { pfProducts: Product[]; pjPro
     unit: string;
     colorFn: (v: number) => string;
   }) => (
-    <div className="bg-[#0a0a0a] border border-[#141414] rounded-lg p-3">
+    <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded-lg p-3">
       <div className="text-[10px] font-mono font-bold text-zinc-400 mb-2">{title}</div>
       <div className="space-y-1.5">
         {items.map((item, i) => (
@@ -312,7 +312,7 @@ export const CreditProductPanel = () => {
       )}
 
       {/* Source footer */}
-      <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
+      <div className="border-t border-zinc-800/30 pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
         <span>Fonte: Banco Central do Brasil — Estatísticas de Crédito · Supabase</span>
         <span>Dados: Último mês publicado · Atualização dinâmica</span>
       </div>

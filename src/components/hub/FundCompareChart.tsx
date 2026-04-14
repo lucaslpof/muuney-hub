@@ -13,7 +13,7 @@ const COLORS = ["#0B6C3E", "#6366F1", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6"
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} className="text-[10px] font-mono">
@@ -68,7 +68,7 @@ export const QuotaCompareChart = ({ funds, title, height = 280 }: QuotaCompareCh
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Rentabilidade Comparada"}
@@ -86,7 +86,7 @@ export const QuotaCompareChart = ({ funds, title, height = 280 }: QuotaCompareCh
       </div>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
           <YAxis
             tick={{ fontSize: 9, fill: "#52525b" }}
@@ -133,14 +133,14 @@ export const PLEvolutionChart = ({ daily, title, height = 220 }: PLEvolutionChar
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Patrimônio Líquido"}
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
           <YAxis
             tick={{ fontSize: 9, fill: "#52525b" }}
@@ -153,7 +153,7 @@ export const PLEvolutionChart = ({ daily, title, height = 220 }: PLEvolutionChar
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+                <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
                   <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
                   <div className="text-[10px] font-mono text-zinc-100 font-bold">
                     R$ {(payload[0].value as number).toFixed(2)}B
@@ -190,14 +190,14 @@ export const FlowChart = ({ daily, title, height = 220 }: FlowChartProps) => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Captação vs Resgate"}
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
           <YAxis
             tick={{ fontSize: 9, fill: "#52525b" }}
@@ -210,7 +210,7 @@ export const FlowChart = ({ daily, title, height = 220 }: FlowChartProps) => {
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+                <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
                   <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
                   {payload.map((p: any, i: number) => (
                     <div key={i} className="text-[10px] font-mono">
@@ -251,7 +251,7 @@ export const ClasseDistribution = ({ byClasse, mode = "pl", title }: ClasseDistr
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Distribuição por Classe"}

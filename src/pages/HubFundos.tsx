@@ -43,8 +43,9 @@ import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { InsightsFeed } from "@/components/hub/InsightsFeed";
 import { RequireTier, BlurredPreview } from "@/components/hub/RequireTier";
-import { SkeletonTableRow, SkeletonSection } from "@/components/hub/SkeletonLoader";
-import { InlineEmpty } from "@/components/hub/EmptyState";
+import { SkeletonTableRow, SkeletonSection, SkeletonPage } from "@/components/hub/SkeletonLoader";
+import { InlineEmpty, EmptyState } from "@/components/hub/EmptyState";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
@@ -844,9 +845,30 @@ const HubFundos = () => {
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  /* Full-page loading state */
+  if (rankingsLoading && !(rankings as any)?.funds?.length) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Fundos" }]} className="mb-4" />
+        <SkeletonPage />
+      </div>
+    );
+  }
+
+  /* No-data fallback */
+  if (!rankingsLoading && !rankings) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Fundos" }]} className="mb-4" />
+        <EmptyState variant="no-funds" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <HubSEO title="Fundos" description="29.491 classes de fundos RCVM 175 — lâminas, screener multi-filtro, comparador cross-class com Fund Score™ e deep modules FIDC e FII." path="/fundos" />
+      <Breadcrumbs items={[{ label: "Fundos" }]} className="mb-4" />
       {/* ─── Sticky Header ─── */}
       <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-4 px-4 py-2 border-b border-[#141414] mb-4">
         <div className="flex items-center justify-between mb-2">

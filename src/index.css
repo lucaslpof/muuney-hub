@@ -31,20 +31,32 @@
     font-family: "Inter", system-ui, sans-serif;
   }
 
-  /* Custom scrollbar — tech-noir */
+  /* Custom scrollbar — tech-noir (subtle, thin, zinc-800) */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #0a0a0a;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1a1a1a;
-    border-radius: 3px;
+    background: #27272a;
+    border-radius: 2px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #2a2a2a;
+    background: #3f3f46;
+  }
+
+  /* Selection color — use accent green */
+  ::selection {
+    background-color: #0B6C3E;
+    color: #ffffff;
+  }
+
+  /* Focus ring — subtle green accent */
+  :focus-visible {
+    outline: 2px solid #0B6C3E;
+    outline-offset: 1px;
   }
 
   /* Hide scrollbar on tabs */

@@ -110,7 +110,7 @@ export const FIPRankingTable = ({
 
   if (isLoading) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 animate-pulse">
         <div className="h-4 bg-[#1a1a1a] rounded w-1/4 mb-3" />
         <div className="space-y-2">
           {[...Array(10)].map((_, i) => <div key={i} className="h-7 bg-[#1a1a1a] rounded" />)}
@@ -125,10 +125,10 @@ export const FIPRankingTable = ({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-3 flex-wrap">
+      <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center gap-3 flex-wrap">
         <Landmark className="w-3.5 h-3.5 text-[#0B6C3E]" />
         <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
           Ranking FIPs
@@ -139,8 +139,8 @@ export const FIPRankingTable = ({
       {/* Table */}
       <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
         <table className="w-full text-[10px]">
-          <thead className="sticky top-0 bg-[#111111] z-10">
-            <tr className="text-zinc-600 uppercase border-b border-[#1a1a1a]">
+          <thead className="sticky top-0 bg-zinc-900/50 z-10">
+            <tr className="text-zinc-600 uppercase border-b border-zinc-800/50">
               <th className="text-left px-3 py-2 font-medium">#</th>
               <th className="text-left px-3 py-2 font-medium max-w-[200px]">Fundo</th>
               <th className="text-left px-3 py-2 font-medium">Tipo</th>
@@ -228,9 +228,9 @@ export const FIPCapitalPipeline = () => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
     >
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center gap-2">
         <DollarSign className="w-3.5 h-3.5 text-[#0B6C3E]" />
         <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
           Pipeline de Capital
@@ -242,7 +242,7 @@ export const FIPCapitalPipeline = () => {
       <div className="p-4">
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ left: 10, right: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
             <XAxis dataKey="name" tick={{ fill: "#71717A", fontSize: 10 }} />
             <YAxis
               tick={{ fill: "#71717A", fontSize: 9 }}
@@ -297,9 +297,9 @@ export const FIPTypeDistribution = () => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
     >
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center gap-2">
         <Landmark className="w-3.5 h-3.5 text-[#0B6C3E]" />
         <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
           Distribuição por Tipo

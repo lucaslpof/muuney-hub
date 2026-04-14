@@ -39,7 +39,7 @@ const HubMain = () => {
       }`}
     >
       {/* Top bar */}
-      <header className="h-14 border-b border-[#1a1a1a] flex items-center justify-between px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
+      <header className="h-14 border-b border-zinc-800/50 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
         <div className="flex items-center gap-3">
           <MobileMenuButton />
           <span className="text-[10px] text-zinc-600 font-mono hidden sm:inline">

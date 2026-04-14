@@ -44,9 +44,9 @@ export const ChartTooltip = ({
   const fmt = formatValue || defaultFormat;
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-md px-3 py-2 shadow-lg max-w-[220px]">
+    <div className="bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 shadow-lg max-w-[220px]">
       {label && (
-        <p className="text-[9px] text-zinc-500 font-mono mb-1.5 uppercase tracking-wider">
+        <p className="text-[9px] text-zinc-400 font-mono mb-1.5 uppercase tracking-wider">
           {label}
         </p>
       )}
@@ -63,7 +63,7 @@ export const ChartTooltip = ({
                 style={{ backgroundColor: entry.color || "#0B6C3E" }}
               />
               <span className="text-zinc-400 truncate font-mono">{name}</span>
-              <span className="ml-auto text-zinc-200 font-mono font-medium whitespace-nowrap">
+              <span className="ml-auto text-zinc-100 font-mono font-medium whitespace-nowrap">
                 {fmt(entry.value ?? 0, entry)}
               </span>
             </div>
@@ -74,7 +74,7 @@ export const ChartTooltip = ({
   );
 };
 
-/** Percentage tooltip — shows "name: value%" */
+/** Percentage tooltip - shows "name: value%" */
 export const PercentTooltip = (props: ChartTooltipProps) => (
   <ChartTooltip
     {...props}
@@ -84,7 +84,7 @@ export const PercentTooltip = (props: ChartTooltipProps) => (
   />
 );
 
-/** Count tooltip — shows "name: value" with no currency */
+/** Count tooltip - shows "name: value" with no currency */
 export const CountTooltip = (props: ChartTooltipProps) => (
   <ChartTooltip
     {...props}

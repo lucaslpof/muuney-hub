@@ -144,7 +144,7 @@ export const InterestCalculator = ({
   };
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
         <Calculator className="w-4 h-4 text-[#10B981]" />
         <h3 className="text-sm font-bold text-zinc-100">Simulador de Custo de Empréstimo</h3>
@@ -159,7 +159,7 @@ export const InterestCalculator = ({
             type="number"
             value={principal}
             onChange={(e) => setPrincipal(Math.max(1000, Number(e.target.value)))}
-            className="w-full bg-[#111] border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
+            className="w-full bg-zinc-900/50 border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
           />
         </div>
         <div>
@@ -170,7 +170,7 @@ export const InterestCalculator = ({
             onChange={(e) => setMonths(Math.min(360, Math.max(1, Number(e.target.value))))}
             min={1}
             max={360}
-            className="w-full bg-[#111] border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
+            className="w-full bg-zinc-900/50 border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
           />
         </div>
         <div>
@@ -183,7 +183,7 @@ export const InterestCalculator = ({
                 className={`flex-1 px-2 py-1.5 text-[10px] font-mono rounded transition-colors ${
                   segment === s
                     ? "bg-[#10B981] text-white"
-                    : "bg-[#111] border border-[#222] text-zinc-500 hover:text-zinc-300"
+                    : "bg-zinc-900/50 border border-[#222] text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 {s.toUpperCase()}
@@ -201,7 +201,7 @@ export const InterestCalculator = ({
                 className={`flex-1 px-2 py-1.5 text-[10px] font-mono rounded transition-colors ${
                   system === s
                     ? "bg-[#10B981] text-white"
-                    : "bg-[#111] border border-[#222] text-zinc-500 hover:text-zinc-300"
+                    : "bg-zinc-900/50 border border-[#222] text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 {s.toUpperCase()}
@@ -216,7 +216,7 @@ export const InterestCalculator = ({
             value={annualRate}
             onChange={(e) => setCustomRate(Number(e.target.value))}
             step={0.1}
-            className="w-full bg-[#111] border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
+            className="w-full bg-zinc-900/50 border border-[#222] rounded px-2 py-1.5 text-xs text-zinc-100 font-mono"
           />
         </div>
       </div>
@@ -231,7 +231,7 @@ export const InterestCalculator = ({
           { label: "Taxa Anualizada", value: `${result.annualizedRate.toFixed(1)}%`, color: "text-amber-400" },
           { label: "Excesso vs Selic", value: fmt(result.costOverSelic), color: result.costOverSelic > 0 ? "text-red-400" : "text-emerald-400" },
         ].map((item) => (
-          <div key={item.label} className="bg-[#0a0a0a] border border-[#141414] rounded p-2">
+          <div key={item.label} className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2">
             <div className="text-[9px] text-zinc-600 font-mono">{item.label}</div>
             <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
           </div>
@@ -245,7 +245,7 @@ export const InterestCalculator = ({
         </h4>
         <div className="grid grid-cols-3 gap-2">
           {scenarios.map((s) => (
-            <div key={s.label} className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+            <div key={s.label} className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
               <div className="text-[10px] font-mono font-bold text-zinc-300 mb-1">{s.label}</div>
               <div className="space-y-0.5 text-[9px] font-mono">
                 <div className="flex justify-between">
@@ -260,7 +260,7 @@ export const InterestCalculator = ({
                   <span className="text-zinc-600">Parcela</span>
                   <span className="text-zinc-300">{fmt(s.payment)}</span>
                 </div>
-                <div className="flex justify-between pt-0.5 border-t border-[#1a1a1a]">
+                <div className="flex justify-between pt-0.5 border-t border-zinc-800/50">
                   <span className="text-zinc-600">Juros Total</span>
                   <span className="text-red-400">{fmt(s.totalInterest)}</span>
                 </div>

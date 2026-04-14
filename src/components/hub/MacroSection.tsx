@@ -30,7 +30,7 @@ export const MacroSection = forwardRef<HTMLDivElement, MacroSectionProps>(
         className="scroll-mt-32"
       >
         {/* ─── Section header ─── */}
-        <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-[#141414]">
+        <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-zinc-800/30">
           <div className="w-7 h-7 rounded-md bg-[#0B6C3E]/10 flex items-center justify-center flex-shrink-0">
             <Icon className="w-3.5 h-3.5 text-[#0B6C3E]" />
           </div>
@@ -41,7 +41,7 @@ export const MacroSection = forwardRef<HTMLDivElement, MacroSectionProps>(
             )}
           </div>
           {seriesCount !== undefined && (
-            <span className="text-[9px] font-mono text-zinc-700 bg-[#111111] border border-[#1a1a1a] px-1.5 py-0.5 rounded">
+            <span className="text-[9px] font-mono text-zinc-700 bg-zinc-900/50 border border-zinc-800/50 px-1.5 py-0.5 rounded">
               {seriesCount} séries
             </span>
           )}
@@ -88,7 +88,7 @@ export const MacroSidebar = ({
             className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left transition-all text-[11px] font-mono ${
               isActive
                 ? "bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/20"
-                : "text-zinc-600 hover:text-zinc-300 hover:bg-[#111111] border border-transparent"
+                : "text-zinc-600 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent"
             }`}
           >
             <Icon className="w-3 h-3 flex-shrink-0" />

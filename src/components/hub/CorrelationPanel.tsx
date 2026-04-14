@@ -38,7 +38,7 @@ export const CorrelationPanel = ({ series }: CorrelationPanelProps) => {
   if (series.length < 2) return null;
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <h3 className="text-xs font-medium text-zinc-400 font-mono mb-3">
         Matriz de Correlação (Pearson)
       </h3>

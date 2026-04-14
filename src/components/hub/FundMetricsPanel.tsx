@@ -15,7 +15,7 @@ import {
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} className="text-[10px] font-mono">
@@ -33,7 +33,7 @@ const MetricCard = ({
 }: {
   label: string; value: string; sublabel?: string; colorClass?: string;
 }) => (
-  <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-md px-2.5 py-2">
+  <div className="bg-[#0a0a0a] border border-zinc-800/50 rounded-md px-2.5 py-2">
     <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono mb-0.5">{label}</div>
     <div className={`text-sm font-bold font-mono ${colorClass || "text-zinc-100"}`}>{value}</div>
     {sublabel && <div className="text-[8px] text-zinc-700 font-mono mt-0.5">{sublabel}</div>}
@@ -54,7 +54,7 @@ export const FundMetricsSummary = ({ daily, title }: FundMetricsSummaryProps) =>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Métricas de Risco-Retorno"}
@@ -129,14 +129,14 @@ export const DrawdownChart = ({ daily, title, height = 200 }: DrawdownChartProps
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || "Drawdown"}
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
           <YAxis
             tick={{ fontSize: 9, fill: "#52525b" }}
@@ -184,14 +184,14 @@ export const VolatilityChart = ({ daily, window = 21, title, height = 200 }: Vol
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3"
     >
       <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
         {title || `Volatilidade Rolling (${window}d)`}
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
           <YAxis
             tick={{ fontSize: 9, fill: "#52525b" }}
@@ -256,11 +256,11 @@ export const MetricsCompareTable = ({ funds }: MetricsCompareTableProps) => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-x-auto"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-x-auto"
     >
       <table className="w-full text-[10px] font-mono">
         <thead>
-          <tr className="border-b border-[#1a1a1a] text-zinc-600">
+          <tr className="border-b border-zinc-800/50 text-zinc-600">
             <th className="text-left px-3 py-2">Métrica</th>
             {funds.map((f, i) => (
               <th key={i} className="text-right px-3 py-2 max-w-[150px] truncate">{f.name.slice(0, 22)}</th>
@@ -269,7 +269,7 @@ export const MetricsCompareTable = ({ funds }: MetricsCompareTableProps) => {
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={row.key} className="border-b border-[#141414]">
+            <tr key={row.key} className="border-b border-zinc-800/30">
               <td className="px-3 py-1.5 text-zinc-500">{row.label}</td>
               {funds.map((f, fi) => {
                 const val = f.metrics[row.key] as number | null;

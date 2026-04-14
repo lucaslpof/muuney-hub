@@ -9,6 +9,9 @@ import { SpreadCreditoPrivado } from "@/components/hub/SpreadCreditoPrivado";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { SkeletonPage } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 import { FixedIncomeNarrativePanel } from "@/components/hub/FixedIncomeNarrativePanel";
 import { YieldCurveSimulator } from "@/components/hub/YieldCurveSimulator";
 import {
@@ -364,6 +367,26 @@ const HubRendaFixa = () => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  /* Full-page loading state */
+  if (cardsLoading && !kpis.length) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
+        <SkeletonPage />
+      </div>
+    );
+  }
+
+  /* No-data fallback */
+  if (!cardsLoading && (!kpis || kpis.length === 0)) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
+        <EmptyState variant="no-data" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-4 w-full">
       <HubSEO title="Renda Fixa" description="Curva DI, NTN-B, Tesouro Direto e crédito privado — simuladores de yield curve, calculadora de bonds e breakeven inflation." path="/renda-fixa" />
@@ -376,6 +399,7 @@ const HubRendaFixa = () => {
 
       {/* ─── Main content ─── */}
       <div className="flex-1 min-w-0 space-y-4">
+        <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
         {/* ─── Sticky header ─── */}
         <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
           <div className="flex items-center justify-between gap-4 flex-wrap">

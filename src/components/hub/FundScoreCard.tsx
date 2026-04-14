@@ -41,7 +41,7 @@ export const FundScoreCard = ({ score, fundName, compact }: FundScoreCardProps) 
   }
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>

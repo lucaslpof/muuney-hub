@@ -162,7 +162,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-1.5 px-2 py-1.5 text-[9px] font-mono rounded hover:bg-[#1a1a1a] transition-colors group"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-[9px] font-mono rounded hover:bg-zinc-800 transition-colors group"
         >
           <Sliders className="w-3 h-3 text-zinc-600 group-hover:text-[#0B6C3E]" />
           <span className="text-zinc-400 group-hover:text-zinc-300">Filtros</span>
@@ -176,7 +176,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-4"
+            className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 space-y-4"
           >
             {/* Search */}
             <div>
@@ -189,7 +189,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                   setSearch(e.target.value);
                   setPage(0);
                 }}
-                className="w-full px-3 py-1.5 text-[10px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                className="w-full px-3 py-1.5 text-[10px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
               />
             </div>
 
@@ -207,7 +207,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     className={`px-2 py-1 text-[8px] font-mono rounded transition-all border ${
                       classe === c
                         ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
-                        : "bg-[#0a0a0a] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
+                        : "bg-[#0a0a0a] text-zinc-400 border-zinc-800/50 hover:border-[#0B6C3E]/30"
                     }`}
                   >
                     {c}
@@ -226,7 +226,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     setPublico(e.target.value || undefined);
                     setPage(0);
                   }}
-                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
                 >
                   <option value="">Todos</option>
                   {PUBLICO_ALVO_OPTIONS.map((p) => (
@@ -242,7 +242,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     setTributacao(e.target.value || undefined);
                     setPage(0);
                   }}
-                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
                 >
                   <option value="">Todos</option>
                   {TRIBUTACAO_OPTIONS.map((t) => (
@@ -264,7 +264,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     setPlMin(e.target.value ? Number(e.target.value) * 1e6 : undefined);
                     setPage(0);
                   }}
-                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
                 />
               </div>
               <div>
@@ -277,7 +277,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     setPlMax(e.target.value ? Number(e.target.value) * 1e6 : undefined);
                     setPage(0);
                   }}
-                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
                 />
               </div>
               <div>
@@ -291,7 +291,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     setTaxaAdmMax(e.target.value ? Number(e.target.value) : undefined);
                     setPage(0);
                   }}
-                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
+                  className="w-full px-2 py-1.5 text-[9px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none font-mono"
                 />
               </div>
             </div>
@@ -300,7 +300,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[9px] font-mono rounded bg-[#1a1a1a]/50 text-zinc-500 hover:bg-[#1a1a1a] hover:text-zinc-400 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[9px] font-mono rounded bg-[#1a1a1a]/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400 transition-colors"
               >
                 <X className="w-3 h-3" />
                 Limpar Filtros
@@ -312,7 +312,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
 
       {/* Results Table */}
       {isLoading ? (
-        <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
           <div className="h-4 bg-zinc-800/50 rounded w-1/3 mb-4 animate-pulse" />
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonTableRow key={i} cols={6} />
@@ -322,16 +322,16 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+          className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
         >
-          <div className="px-3 py-2 border-b border-[#1a1a1a] flex items-center justify-between bg-[#0a0a0a]">
+          <div className="px-3 py-2 border-b border-zinc-800/50 flex items-center justify-between bg-[#0a0a0a]">
             <span className="text-[10px] text-zinc-600 font-mono">{filtered.length} fundos encontrados</span>
             <ExportButton onClick={handleExportResults} disabled={!filtered.length} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[10px] font-mono">
               <thead>
-                <tr className="border-b border-[#1a1a1a] text-zinc-600">
+                <tr className="border-b border-zinc-800/50 text-zinc-600">
                   <th className="text-left px-3 py-2 w-8">#</th>
                   <th
                     className="text-left px-3 py-2 cursor-pointer hover:text-zinc-400 transition-colors"
@@ -367,7 +367,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                     return (
                       <tr
                         key={fund.cnpj_fundo}
-                        className="border-b border-[#141414] hover:bg-[#0B6C3E]/5 transition-colors group"
+                        className="border-b border-zinc-800/30 hover:bg-[#0B6C3E]/5 transition-colors group"
                       >
                         <td className="px-3 py-2 text-zinc-700">{page * ITEMS_PER_PAGE + idx + 1}</td>
                         <td className="px-3 py-2 max-w-[200px]">
@@ -410,7 +410,7 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
 
           {/* Pagination */}
           {pageCount > 1 && (
-            <div className="flex items-center justify-between px-3 py-3 border-t border-[#1a1a1a]">
+            <div className="flex items-center justify-between px-3 py-3 border-t border-zinc-800/50">
               <span className="text-[8px] text-zinc-600 font-mono">
                 Página {page + 1} de {pageCount} • {filtered.length} total
               </span>
@@ -418,14 +418,14 @@ export function FundScreener({ onSelectFund }: FundScreenerProps) {
                 <button
                   onClick={() => setPage(Math.max(0, page - 1))}
                   disabled={page === 0}
-                  className="px-2 py-1 text-[8px] font-mono rounded bg-[#0a0a0a] text-zinc-600 border border-[#1a1a1a] hover:border-[#0B6C3E]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-2 py-1 text-[8px] font-mono rounded bg-[#0a0a0a] text-zinc-600 border border-zinc-800/50 hover:border-[#0B6C3E]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   ← Anterior
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pageCount - 1, page + 1))}
                   disabled={page === pageCount - 1}
-                  className="px-2 py-1 text-[8px] font-mono rounded bg-[#0a0a0a] text-zinc-600 border border-[#1a1a1a] hover:border-[#0B6C3E]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-2 py-1 text-[8px] font-mono rounded bg-[#0a0a0a] text-zinc-600 border border-zinc-800/50 hover:border-[#0B6C3E]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Próxima →
                 </button>

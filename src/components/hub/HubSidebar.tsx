@@ -49,7 +49,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     <SidebarContext.Provider value={{ collapsed, mobileOpen, setMobileOpen }}>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-[#1a1a1a] z-40 transition-all duration-200 ${
+        className={`hidden md:flex flex-col fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-zinc-800/50 z-40 transition-all duration-200 ${
           collapsed ? "w-16" : "w-52"
         }`}
       >
@@ -72,7 +72,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-[#0a0a0a] border-r border-[#1a1a1a] z-50 md:hidden flex flex-col transition-transform duration-200 ease-out ${
+        className={`fixed left-0 top-0 h-screen w-64 bg-[#0a0a0a] border-r border-zinc-800/50 z-50 md:hidden flex flex-col transition-transform duration-200 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -122,7 +122,7 @@ const SidebarContent = ({
   return (
     <>
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-[#1a1a1a]">
+      <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800/50">
         <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           {!collapsed ? (
             <>
@@ -137,7 +137,7 @@ const SidebarContent = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-[#1a1a1a] text-zinc-500 hover:text-zinc-300 md:hidden"
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 md:hidden"
           >
             <X className="w-4 h-4" />
           </button>
@@ -160,7 +160,7 @@ const SidebarContent = ({
                   ? "opacity-30 cursor-not-allowed"
                   : isActive
                   ? "bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/20"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-[#111111] border border-transparent"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent"
               }`
             }
           >
@@ -184,7 +184,7 @@ const SidebarContent = ({
         <div className="px-3 mb-2">
           <a
             href={mainSiteUrl}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors rounded-md hover:bg-[#111111]"
+            className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors rounded-md hover:bg-zinc-900/50"
           >
             <ChevronLeft className="w-3 h-3" />
             <span>muuney.com.br</span>
@@ -210,7 +210,7 @@ export const MobileMenuButton = () => {
   return (
     <button
       onClick={() => setMobileOpen(true)}
-      className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-zinc-500 hover:text-zinc-300 transition-colors md:hidden"
+      className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors md:hidden"
       aria-label="Abrir menu"
     >
       <Menu className="w-5 h-5" />

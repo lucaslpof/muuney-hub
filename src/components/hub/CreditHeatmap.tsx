@@ -79,7 +79,7 @@ export const CreditHeatmap = ({
   if (rows.length === 0 || dates.length === 0) return null;
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-4">
         <Grid3X3 className="w-4 h-4 text-[#10B981]" />
         <h3 className="text-sm font-bold text-zinc-100">{title}</h3>
@@ -90,7 +90,7 @@ export const CreditHeatmap = ({
         <table className="w-full text-[9px] font-mono border-collapse">
           <thead>
             <tr>
-              <th className="text-left py-1.5 px-2 text-zinc-600 sticky left-0 bg-[#0f0f0f] z-10 min-w-[120px]">
+              <th className="text-left py-1.5 px-2 text-zinc-600 sticky left-0 bg-zinc-900/50 z-10 min-w-[120px]">
                 Modalidade
               </th>
               {dates.map((d) => (
@@ -105,7 +105,7 @@ export const CreditHeatmap = ({
               const valueMap = new Map(row.values.map((v) => [v.date, v.value]));
               return (
                 <tr key={row.label} className="border-t border-[#111]">
-                  <td className="py-1.5 px-2 text-zinc-300 whitespace-nowrap sticky left-0 bg-[#0f0f0f] z-10">
+                  <td className="py-1.5 px-2 text-zinc-300 whitespace-nowrap sticky left-0 bg-zinc-900/50 z-10">
                     {row.label}
                   </td>
                   {dates.map((d) => {

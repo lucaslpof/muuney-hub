@@ -15,7 +15,7 @@ import {
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} className="text-[10px] font-mono">
@@ -46,7 +46,7 @@ export const MonthlyOverviewChart = ({ months = 12 }: { months?: number }) => {
   );
 
   if (isLoading) {
-    return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse"><div className="h-48 bg-[#1a1a1a] rounded" /></div>;
+    return <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 animate-pulse"><div className="h-48 bg-[#1a1a1a] rounded" /></div>;
   }
 
   if (chartData.length === 0) return null;
@@ -54,13 +54,13 @@ export const MonthlyOverviewChart = ({ months = 12 }: { months?: number }) => {
   return (
     <div className="space-y-3">
       {/* Return distribution */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
         <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
           Rentabilidade Média vs Mediana (mensal)
         </h3>
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
             <XAxis dataKey="month" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v.toFixed(1)}%`} width={40} />
             <Tooltip content={<ChartTooltip />} />
@@ -72,13 +72,13 @@ export const MonthlyOverviewChart = ({ months = 12 }: { months?: number }) => {
       </motion.div>
 
       {/* PL + captação líquida */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
         <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
           Captação Líquida Mensal
         </h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
             <XAxis dataKey="month" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatPL(v)} width={55} />
             <Tooltip content={<ChartTooltip />} />
@@ -124,9 +124,9 @@ export const MonthlyRankingsTable = ({
   }, []);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1a1a1a]">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-800/50">
         <div className="flex items-center gap-2">
           {sortOrder === "desc" ? <Trophy className="w-3.5 h-3.5 text-[#0B6C3E]" /> : <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
           <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
@@ -136,7 +136,7 @@ export const MonthlyRankingsTable = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-            className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 border border-[#1a1a1a] rounded hover:border-[#0B6C3E]/30 transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 border border-zinc-800/50 rounded hover:border-[#0B6C3E]/30 transition-colors"
           >
             <ArrowUpDown className="w-2.5 h-2.5" />
             {sortOrder === "desc" ? "Top" : "Bottom"}
@@ -144,7 +144,7 @@ export const MonthlyRankingsTable = ({
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-[10px] font-mono bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-0.5 text-zinc-400 focus:border-[#0B6C3E]/40 focus:outline-none"
+            className="text-[10px] font-mono bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-0.5 text-zinc-400 focus:border-[#0B6C3E]/40 focus:outline-none"
           >
             {monthOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -164,7 +164,7 @@ export const MonthlyRankingsTable = ({
         <div className="overflow-x-auto">
           <table className="w-full text-[10px] font-mono">
             <thead>
-              <tr className="border-b border-[#1a1a1a] text-zinc-600">
+              <tr className="border-b border-zinc-800/50 text-zinc-600">
                 <th className="text-left px-3 py-2 w-8">#</th>
                 <th className="text-left px-3 py-2">Fundo</th>
                 <th className="text-right px-3 py-2">Rentab.</th>
@@ -183,7 +183,7 @@ export const MonthlyRankingsTable = ({
                   <tr
                     key={f.cnpj_fundo}
                     onClick={() => onSelectFund?.(f.cnpj_fundo)}
-                    className="border-b border-[#141414] hover:bg-[#0B6C3E]/5 cursor-pointer transition-colors"
+                    className="border-b border-zinc-800/30 hover:bg-[#0B6C3E]/5 cursor-pointer transition-colors"
                   >
                     <td className="px-3 py-1.5 text-zinc-700">{i + 1}</td>
                     <td className="px-3 py-1.5">
@@ -230,7 +230,7 @@ export const FundMonthlyDetail = ({ cnpj }: { cnpj: string }) => {
   );
 
   if (isLoading) {
-    return <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse"><div className="h-40 bg-[#1a1a1a] rounded" /></div>;
+    return <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 animate-pulse"><div className="h-40 bg-[#1a1a1a] rounded" /></div>;
   }
 
   if (chartData.length === 0) return null;
@@ -251,7 +251,7 @@ export const FundMonthlyDetail = ({ cnpj }: { cnpj: string }) => {
           { label: "Meses positivos", value: `${positiveMonths}/${months.length}`, color: "text-zinc-300" },
           { label: "Meses cobertos", value: String(months.length), color: "text-zinc-300" },
         ].map((kpi) => (
-          <div key={kpi.label} className="bg-[#111111] border border-[#1a1a1a] rounded-md px-2.5 py-2">
+          <div key={kpi.label} className="bg-zinc-900/50 border border-zinc-800/50 rounded-md px-2.5 py-2">
             <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono mb-0.5">{kpi.label}</div>
             <div className={`text-sm font-bold font-mono ${kpi.color}`}>{kpi.value}</div>
           </div>
@@ -259,13 +259,13 @@ export const FundMonthlyDetail = ({ cnpj }: { cnpj: string }) => {
       </motion.div>
 
       {/* Return vs Benchmark */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
         <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
           Rentabilidade Mensal vs Benchmark
         </h3>
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
             <XAxis dataKey="month" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v.toFixed(1)}%`} width={40} />
             <Tooltip content={<ChartTooltip />} />
@@ -277,13 +277,13 @@ export const FundMonthlyDetail = ({ cnpj }: { cnpj: string }) => {
       </motion.div>
 
       {/* PL Evolution */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-3">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
         <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono mb-3">
           Evolução PL Mensal
         </h3>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
             <XAxis dataKey="month" tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 9, fill: "#52525b" }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatPL(v)} width={55} />
             <Tooltip content={<ChartTooltip />} />

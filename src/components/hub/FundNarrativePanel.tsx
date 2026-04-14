@@ -227,9 +227,9 @@ export const FundNarrativePanel = (props: FundNarrativeProps) => {
   const Icon = regime.icon;
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       {/* Regime header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a]" style={{ borderLeftColor: regime.color, borderLeftWidth: 3 }}>
+      <div className="px-4 py-3 border-b border-zinc-800/50" style={{ borderLeftColor: regime.color, borderLeftWidth: 3 }}>
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-md flex items-center justify-center"

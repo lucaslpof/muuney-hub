@@ -127,7 +127,7 @@ export function OnboardingTour() {
 
       {/* Tour card */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[calc(100vw-2rem)] sm:w-[420px] max-w-[420px]">
-        <div className="bg-[#111] border border-[#0B6C3E]/30 rounded-2xl shadow-2xl shadow-[#0B6C3E]/10 overflow-hidden">
+        <div className="bg-zinc-900/50 border border-[#0B6C3E]/30 rounded-2xl shadow-2xl shadow-[#0B6C3E]/10 overflow-hidden">
           {/* Progress bar */}
           <div className="h-1 bg-[#1a1a1a]">
             <div
@@ -148,7 +148,7 @@ export function OnboardingTour() {
 
             {/* Icon + Step indicator */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-[#0a0a0a] border border-zinc-800/50 flex items-center justify-center">
                 {current.icon}
               </div>
               <span className="text-[9px] text-zinc-600 font-mono uppercase tracking-wider">

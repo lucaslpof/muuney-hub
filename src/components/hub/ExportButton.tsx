@@ -15,7 +15,7 @@ export function ExportButton({ onClick, label = "CSV", disabled }: ExportButtonP
     <button
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500 bg-[#111111] border border-[#1a1a1a] rounded hover:border-[#0B6C3E]/40 hover:text-zinc-300 transition-all disabled:opacity-30"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500 bg-zinc-900/50 border border-zinc-800/50 rounded hover:border-zinc-700 hover:text-zinc-300 transition-all disabled:opacity-30"
       title={`Exportar ${label}`}
     >
       <Download className="w-3 h-3" />

@@ -2,13 +2,16 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import {
-  TrendingUp, BarChart3, Landmark, Building2, GraduationCap,
-  ArrowRight, Zap, Radio, Database, Layers, ScrollText, Banknote, Briefcase,
+  TrendingUp, TrendingDown, BarChart3, Landmark, Building2, GraduationCap,
+  ArrowRight, Zap, Radio, ScrollText, Banknote, Briefcase,
 } from "lucide-react";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { IngestionStatus } from "@/components/hub/IngestionStatus";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { SkeletonPage } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 import {
   useHubLatest, useHubSeries,
   MACRO_SAMPLE, CREDITO_SAMPLE, generateSampleSeries,
@@ -21,13 +24,6 @@ function toSparkline(series: { date: string; value: number }[], points = 20) {
   const step = Math.max(1, Math.floor(series.length / points));
   return series.filter((_, i) => i % step === 0).map((d) => ({ value: d.value }));
 }
-
-/* ─── Hero stats ─── */
-const HERO_STATS = [
-  { label: "Séries BACEN", value: "130", icon: Database },
-  { label: "Fundos CVM", value: "29.491", icon: Layers },
-  { label: "Módulos ativos", value: "6", icon: Zap },
-];
 
 /* ─── Module config ─── */
 const useModules = () => {
@@ -86,6 +82,26 @@ const HubDashboard = () => {
   /* Combined KPIs for alert evaluation */
   const allKPIs = useMemo(() => [...macro, ...credito], [macro, credito]);
 
+  /* Full-page loading state */
+  if (macroLoading && creditoLoading) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Dashboard" }]} className="mb-4" />
+        <SkeletonPage />
+      </div>
+    );
+  }
+
+  /* No-data fallback */
+  if (!macroLoading && !creditoLoading && (!macroCards?.length || !creditoCards?.length)) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Dashboard" }]} className="mb-4" />
+        <EmptyState variant="no-data" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 w-full">
       <HubSEO
@@ -93,37 +109,208 @@ const HubDashboard = () => {
         description="Terminal de inteligência de mercado — indicadores macro, crédito, renda fixa e 29.491 fundos CVM em tempo real."
         path="/dashboard"
       />
+      <Breadcrumbs items={[{ label: "Dashboard" }]} className="mb-4" />
 
-      {/* ─── Hero Banner ─── */}
-      <div className="bg-gradient-to-r from-[#0B6C3E]/8 via-[#111] to-[#111] border border-[#0B6C3E]/15 rounded-xl p-4 md:p-5">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">
-                Hub de Inteligência
-              </h1>
-              <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-1.5 py-0.5 rounded font-mono">
-                <Radio className="w-2.5 h-2.5" />
-                LIVE
-              </span>
+      {/* ─── Enhanced Hero Banner with Consolidated KPIs ─── */}
+      <div className="bg-gradient-to-br from-[#0a0a0a] to-[#111] border border-zinc-800/50 rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#0B6C3E]/8 via-[#111] to-[#111] border-b border-zinc-800/50 p-4 md:p-5">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">
+                  Hub de Inteligência Financeira
+                </h1>
+                <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-2 py-1 rounded font-mono shadow-[0_0_8px_rgba(11,108,62,0.3)]">
+                  <Radio className="w-2.5 h-2.5 animate-pulse" />
+                  LIVE
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-600 font-mono">
+                Fontes oficiais BACEN SGS · CVM · PTAX · {macro.length + credito.length} indicadores ativos
+              </p>
             </div>
-            <p className="text-[10px] text-zinc-500 font-mono">
-              Fontes oficiais BACEN SGS · CVM · PTAX · {macro.length + credito.length} indicadores ativos
-            </p>
+            <div className="hidden md:flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono">
+              <Zap className="w-3 h-3 text-[#0B6C3E]" />
+              {new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+            </div>
           </div>
-          <div className="flex items-center gap-4 md:gap-6">
-            {HERO_STATS.map((s) => (
-              <div key={s.label} className="flex items-center gap-2">
-                <s.icon className="w-4 h-4 text-[#0B6C3E]/60" />
+        </div>
+
+        {/* KPI Hero Grid */}
+        <div className="p-4 md:p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* Selic Meta */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#0B6C3E]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">Selic</p>
+              <div className="flex items-end justify-between gap-2">
                 <div>
-                  <div className="text-sm font-semibold text-zinc-200 font-mono">{s.value}</div>
-                  <div className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider">{s.label}</div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    {macro.find(m => m.serie_code === "selic_meta")?.last_value.toFixed(2) ?? "14.25"}
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">% a.a.</p>
+                  {macro.find(m => m.serie_code === "selic_meta") && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {macro.find(m => m.serie_code === "selic_meta")?.last_date}
+                    </div>
+                  )}
+                </div>
+                {macro.find(m => m.serie_code === "selic_meta")?.trend && (
+                  <div className={`flex items-center text-sm ${
+                    macro.find(m => m.serie_code === "selic_meta")?.trend === "up" ? "text-emerald-400" : 
+                    macro.find(m => m.serie_code === "selic_meta")?.trend === "down" ? "text-red-400" : 
+                    "text-zinc-500"
+                  }`}>
+                    {macro.find(m => m.serie_code === "selic_meta")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
+                     macro.find(m => m.serie_code === "selic_meta")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
+                     <div className="w-4 h-4" />}
+                  </div>
+                )}
+              </div>
+              {sparkMap.selic_meta?.length > 2 && (
+                <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
+                  <polyline points={sparkMap.selic_meta.map((d, i) => `${(i / (sparkMap.selic_meta.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.selic_meta.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#0B6C3E" strokeWidth="1.5" />
+                </svg>
+              )}
+            </div>
+
+            {/* IPCA 12m */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#10B981]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">IPCA 12m</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    {macro.find(m => m.serie_code === "ipca_12m")?.last_value.toFixed(2) ?? "5.06"}
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">%</p>
+                  {macro.find(m => m.serie_code === "ipca_12m") && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {macro.find(m => m.serie_code === "ipca_12m")?.last_date}
+                    </div>
+                  )}
+                </div>
+                {macro.find(m => m.serie_code === "ipca_12m")?.trend && (
+                  <div className={`flex items-center text-sm ${
+                    macro.find(m => m.serie_code === "ipca_12m")?.trend === "up" ? "text-red-400" : 
+                    macro.find(m => m.serie_code === "ipca_12m")?.trend === "down" ? "text-emerald-400" : 
+                    "text-zinc-500"
+                  }`}>
+                    {macro.find(m => m.serie_code === "ipca_12m")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
+                     macro.find(m => m.serie_code === "ipca_12m")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
+                     <div className="w-4 h-4" />}
+                  </div>
+                )}
+              </div>
+              {sparkMap.ipca_12m?.length > 2 && (
+                <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
+                  <polyline points={sparkMap.ipca_12m.map((d, i) => `${(i / (sparkMap.ipca_12m.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.ipca_12m.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#10B981" strokeWidth="1.5" />
+                </svg>
+              )}
+            </div>
+
+            {/* PTAX USD/BRL */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#F59E0B]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">PTAX</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    {macro.find(m => m.serie_code === "ptax_compra")?.last_value.toFixed(2) ?? "5.73"}
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">USD/BRL</p>
+                  {macro.find(m => m.serie_code === "ptax_compra") && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {macro.find(m => m.serie_code === "ptax_compra")?.last_date}
+                    </div>
+                  )}
+                </div>
+                {macro.find(m => m.serie_code === "ptax_compra")?.trend && (
+                  <div className={`flex items-center text-sm ${
+                    macro.find(m => m.serie_code === "ptax_compra")?.trend === "up" ? "text-red-400" : 
+                    macro.find(m => m.serie_code === "ptax_compra")?.trend === "down" ? "text-emerald-400" : 
+                    "text-zinc-500"
+                  }`}>
+                    {macro.find(m => m.serie_code === "ptax_compra")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
+                     macro.find(m => m.serie_code === "ptax_compra")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
+                     <div className="w-4 h-4" />}
+                  </div>
+                )}
+              </div>
+              {sparkMap.ptax_compra?.length > 2 && (
+                <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
+                  <polyline points={sparkMap.ptax_compra.map((d, i) => `${(i / (sparkMap.ptax_compra.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.ptax_compra.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#F59E0B" strokeWidth="1.5" />
+                </svg>
+              )}
+            </div>
+
+            {/* Inadimplência PF */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#EF4444]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">Inad. PF</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    {credito.find(c => c.serie_code === "21083")?.last_value.toFixed(2) ?? "4.10"}
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">%</p>
+                  {credito.find(c => c.serie_code === "21083") && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {credito.find(c => c.serie_code === "21083")?.last_date}
+                    </div>
+                  )}
+                </div>
+                {credito.find(c => c.serie_code === "21083")?.trend && (
+                  <div className={`flex items-center text-sm ${
+                    credito.find(c => c.serie_code === "21083")?.trend === "up" ? "text-red-400" : 
+                    credito.find(c => c.serie_code === "21083")?.trend === "down" ? "text-emerald-400" : 
+                    "text-zinc-500"
+                  }`}>
+                    {credito.find(c => c.serie_code === "21083")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
+                     credito.find(c => c.serie_code === "21083")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
+                     <div className="w-4 h-4" />}
+                  </div>
+                )}
+              </div>
+              {sparkMap.inadimplencia_pf?.length > 2 && (
+                <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
+                  <polyline points={sparkMap.inadimplencia_pf.map((d, i) => `${(i / (sparkMap.inadimplencia_pf.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.inadimplencia_pf.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#EF4444" strokeWidth="1.5" />
+                </svg>
+              )}
+            </div>
+
+            {/* CDI */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#8B5CF6]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">CDI</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    {macro.find(m => m.category === "taxa_ref")?.last_value.toFixed(2) ?? "14.15"}
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">% a.a.</p>
+                  {macro.find(m => m.category === "taxa_ref") && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {macro.find(m => m.category === "taxa_ref")?.last_date}
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-            <div className="hidden md:flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono pl-4 border-l border-[#1a1a1a]">
-              <Zap className="w-3 h-3 text-[#0B6C3E]" />
-              {new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+            </div>
+
+            {/* Fundos Monitorados */}
+            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#06B6D4]/30 rounded-lg p-3.5 transition-all duration-150">
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">Fundos CVM</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
+                    29.491
+                  </div>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">monitored</p>
+                  {allKPIs.length > 0 && (
+                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
+                      {allKPIs[0]?.last_date}
+                    </div>
+                  )}
+                </div>
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              </div>
             </div>
           </div>
         </div>

@@ -81,7 +81,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
   const showChart = powerChartData.length > 3;
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center gap-2 mb-3">
         <Calculator className="w-4 h-4 text-[#0B6C3E]" />
         <h3 className="text-xs font-medium text-zinc-400 font-mono">
@@ -103,7 +103,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
               className={`px-2 py-0.5 rounded text-[9px] font-mono transition-colors border ${
                 isActive
                   ? "text-[#0B6C3E] border-[#0B6C3E]/30 bg-[#0B6C3E]/10"
-                  : "text-zinc-600 border-[#1a1a1a] hover:text-zinc-400 hover:border-[#2a2a2a]"
+                  : "text-zinc-600 border-zinc-800/50 hover:text-zinc-400 hover:border-[#2a2a2a]"
               }`}
             >
               {p.label}
@@ -118,7 +118,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
           <select
             value={startIdx}
             onChange={(e) => setStartIdx(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           >
             {dates.map((d, i) => (
               <option key={`s-${i}`} value={i}>
@@ -132,7 +132,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
           <select
             value={endIdx}
             onChange={(e) => setEndIdx(Number(e.target.value))}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           >
             {dates.map((d, i) => (
               <option key={`e-${i}`} value={i}>
@@ -147,7 +147,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value) || 0)}
-            className="w-full bg-[#0a0a0a] border border-[#1a1a1a] rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
+            className="w-full bg-[#0a0a0a] border border-zinc-800/50 rounded px-2 py-1.5 text-[11px] text-zinc-300 font-mono"
           />
         </div>
       </div>
@@ -155,27 +155,27 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
       {result && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
-            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
+            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-zinc-800/50">
               <span className="text-[9px] text-zinc-600 font-mono block">Inflação Acumulada</span>
               <span className="text-sm font-bold text-red-400 font-mono">{fmtNum(Number(result.totalPct), 2)}%</span>
             </div>
-            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
+            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-zinc-800/50">
               <span className="text-[9px] text-zinc-600 font-mono block">Anualizada</span>
               <span className="text-sm font-bold text-red-300 font-mono">{fmtNum(Number(result.annualized), 2)}%</span>
             </div>
-            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
+            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-zinc-800/50">
               <span className="text-[9px] text-zinc-600 font-mono block">Valor Corrigido</span>
               <span className="text-sm font-bold text-[#0B6C3E] font-mono">
                 {formatBRL(Number(result.adjustedAmount))}
               </span>
             </div>
-            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
+            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-zinc-800/50">
               <span className="text-[9px] text-zinc-600 font-mono block">Perda de Poder</span>
               <span className="text-sm font-bold text-amber-400 font-mono">
                 {formatBRL(Number(result.lostPower))}
               </span>
             </div>
-            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-[#1a1a1a]">
+            <div className="bg-[#0a0a0a] rounded-md p-2.5 border border-zinc-800/50">
               <span className="text-[9px] text-zinc-600 font-mono block">Período</span>
               <span className="text-sm font-bold text-zinc-300 font-mono">{result.months} meses</span>
             </div>
@@ -189,7 +189,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
               </h4>
               <ResponsiveContainer width="100%" height={140}>
                 <AreaChart data={powerChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                   <XAxis
                     dataKey="date"
                     tick={{ fill: "#52525b", fontSize: 9, fontFamily: "JetBrains Mono, monospace" }}

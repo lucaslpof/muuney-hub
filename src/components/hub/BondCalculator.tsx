@@ -102,7 +102,7 @@ const SCENARIOS = [
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#111] border border-[#1a1a1a] rounded-lg p-2 shadow-xl">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
       {payload.map((p, i) => (
         <div key={i} className="text-[10px] font-mono text-zinc-200">
@@ -180,9 +180,9 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
   }
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg overflow-hidden">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1a1a1a] flex items-center justify-between flex-wrap gap-2">
+      <div className="px-4 py-3 border-b border-zinc-800/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Calculator className="w-4 h-4 text-[#10B981]" />
           <span className="text-sm font-bold text-zinc-100">Calculadora de Renda Fixa</span>
@@ -214,7 +214,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
                 className={`px-3 py-1.5 text-[10px] font-mono rounded-md transition-all ${
                   tipo === key
                     ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
-                    : "bg-[#111] text-zinc-500 border border-[#1a1a1a] hover:text-zinc-300"
+                    : "bg-zinc-900/50 text-zinc-500 border border-zinc-800/50 hover:text-zinc-300"
                 }`}
               >
                 {p.label}
@@ -257,7 +257,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
                 { label: "Cupom Semestral", value: preset.couponRate > 0 ? `${preset.couponRate}%` : "Zero Cupom", color: "text-zinc-400" },
                 { label: "ΔP/Δy aprox.", value: `${(-(modified * 100) + 0.5 * convexity * 100).toFixed(2)} bps/1%`, color: "text-amber-400" },
               ].map((r) => (
-                <div key={r.label} className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+                <div key={r.label} className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
                   <div className="text-[8px] text-zinc-600 font-mono">{r.label}</div>
                   <div className={`text-[12px] font-bold font-mono ${r.color}`}>{r.value}</div>
                   {r.sub && <div className="text-[8px] text-zinc-600 font-mono">{r.sub}</div>}
@@ -273,7 +273,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={cashFlows}>
-                  <CartesianGrid stroke="#1a1a1a" strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="date" tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={{ stroke: "#1a1a1a" }} tickLine={false} />
                   <YAxis tick={{ fill: "#52525b", fontSize: 8, fontFamily: "monospace" }} axisLine={false} tickLine={false} width={50} />
                   <Tooltip content={<ChartTooltip />} />
@@ -291,7 +291,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-[#141414]">
+                    <tr className="border-b border-zinc-800/30">
                       <th className="px-2 py-1.5 text-[8px] font-mono text-zinc-600 text-left">Taxa ↓ / Sem →</th>
                       {termHeaders.map((t) => (
                         <th key={t} className="px-2 py-1.5 text-[8px] font-mono text-zinc-600 text-center">{t} sem</th>
@@ -329,7 +329,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
                 const colors = ["text-emerald-400", "text-indigo-400", "text-amber-400"];
                 const bgColors = ["bg-emerald-500/5", "bg-indigo-500/5", "bg-amber-500/5"];
                 return (
-                  <div key={sc.label} className={`rounded-lg border border-[#1a1a1a] p-3 ${bgColors[idx]}`}>
+                  <div key={sc.label} className={`rounded-lg border border-zinc-800/50 p-3 ${bgColors[idx]}`}>
                     <div className={`text-[11px] font-mono font-bold ${colors[idx]} mb-2`}>{sc.label}</div>
                     <div className="text-[9px] text-zinc-500 font-mono mb-2">
                       {PRESETS[sc.tipo].label} · {sc.rate}% · {sc.periods} sem ({(sc.periods / 2).toFixed(1)}a)
@@ -352,7 +352,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
                 );
               })}
             </div>
-            <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3 mt-2">
+            <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-3 mt-2">
               <span className="text-[9px] text-zinc-600 font-mono">
                 Títulos mais longos e com menor cupom têm maior duration e convexidade — mais sensíveis a variações de taxa.
                 Em cenário de corte de juros, o título longo ganha mais; em alta, perde mais.
@@ -380,26 +380,26 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+              <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
                 <div className="text-[8px] text-zinc-600 font-mono">PU Compra</div>
                 <div className="text-[12px] font-bold font-mono text-amber-400">
                   R$ {mam.priceCompra.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
-              <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+              <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
                 <div className="text-[8px] text-zinc-600 font-mono">PU Atual (MaM)</div>
                 <div className="text-[12px] font-bold font-mono text-emerald-400">
                   R$ {mam.priceAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
-              <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+              <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
                 <div className="text-[8px] text-zinc-600 font-mono">Ganho / Perda</div>
                 <div className={`text-[12px] font-bold font-mono flex items-center gap-1 ${mam.ganho >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {mam.ganho >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   R$ {Math.abs(mam.ganho).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
-              <div className="bg-[#0a0a0a] border border-[#141414] rounded p-2.5">
+              <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-2.5">
                 <div className="text-[8px] text-zinc-600 font-mono">Variação %</div>
                 <div className={`text-[12px] font-bold font-mono ${mam.ganhoPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {mam.ganhoPct >= 0 ? "+" : ""}{mam.ganhoPct.toFixed(2)}%
@@ -407,7 +407,7 @@ export function BondCalculator({ currentSelic = 14.25 }: { currentSelic?: number
               </div>
             </div>
 
-            <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+            <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-3">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Clock className="w-3 h-3 text-zinc-500" />
                 <span className="text-[9px] font-mono font-bold text-zinc-400">Como funciona</span>

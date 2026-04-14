@@ -133,7 +133,7 @@ export const YieldCurveSimulator = ({
   const activePresets = PRESETS[shiftMode];
 
   return (
-    <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-[#10B981]" />
@@ -145,7 +145,7 @@ export const YieldCurveSimulator = ({
             {shapeAnalysis.shape}
           </span>
           {/* DV01 badge */}
-          <span className="text-[9px] font-mono text-zinc-600 px-2 py-0.5 rounded border border-[#1a1a1a]">
+          <span className="text-[9px] font-mono text-zinc-600 px-2 py-0.5 rounded border border-zinc-800/50">
             DV01 ≈ R$ {fmtNum(dv01, 2)}/1000
           </span>
         </div>
@@ -161,7 +161,7 @@ export const YieldCurveSimulator = ({
             className={`px-2 py-0.5 rounded text-[9px] font-mono transition-colors border ${
               shiftMode === m.id
                 ? "text-[#10B981] border-[#10B981]/30 bg-[#10B981]/10"
-                : "text-zinc-600 border-[#1a1a1a] hover:text-zinc-400"
+                : "text-zinc-600 border-zinc-800/50 hover:text-zinc-400"
             }`}
             title={m.desc}
           >
@@ -180,7 +180,7 @@ export const YieldCurveSimulator = ({
             className={`px-2 py-0.5 rounded text-[9px] font-mono transition-colors border ${
               deltaBps === s.bps
                 ? `${s.color} border-current/30 bg-current/10`
-                : "text-zinc-600 border-[#1a1a1a] hover:text-zinc-400 hover:border-[#2a2a2a]"
+                : "text-zinc-600 border-zinc-800/50 hover:text-zinc-400 hover:border-[#2a2a2a]"
             }`}
           >
             {s.label}
@@ -203,7 +203,7 @@ export const YieldCurveSimulator = ({
 
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={curveData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#141414" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
           <XAxis
             dataKey="tenor"
             tick={{ fill: "#52525b", fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}

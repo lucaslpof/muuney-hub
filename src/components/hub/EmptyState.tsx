@@ -80,7 +80,7 @@ export function EmptyState({ variant, title, description, ctaLabel, ctaTo, class
 
   return (
     <div className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}>
-      <div className="w-16 h-16 rounded-2xl bg-[#111] border border-[#1a1a1a] flex items-center justify-center mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center mb-4">
         {config.icon}
       </div>
       <h3 className="text-sm font-medium text-zinc-300 mb-1.5">{finalTitle}</h3>

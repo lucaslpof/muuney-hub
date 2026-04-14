@@ -38,7 +38,7 @@ const SummaryBanner = ({ items }: { items: SummaryItem[] }) => (
       const TrendIcon = item.delta > 0 ? TrendingUp : item.delta < 0 ? TrendingDown : Minus;
       const trendColor = item.delta > 0 ? "text-emerald-400" : item.delta < 0 ? "text-red-400" : "text-zinc-600";
       return (
-        <div key={item.label} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-3">
+        <div key={item.label} className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3">
           <div className="text-[9px] text-zinc-500 font-mono mb-1">{item.label}</div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-sm font-bold text-zinc-100 font-mono">{item.value}</span>
@@ -668,7 +668,7 @@ export const CreditOverviewMensal = ({ period }: CreditOverviewMensalProps) => {
       />
 
       {/* ─── Source footer ─── */}
-      <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
+      <div className="border-t border-zinc-800/30 pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
         <span>Fonte: Banco Central do Brasil — SGS · Overview Mensal · ~75 séries</span>
         <span>Dados: Mensal (último dia útil) · Variação a/a calculada</span>
       </div>

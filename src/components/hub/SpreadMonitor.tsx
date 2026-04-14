@@ -81,7 +81,7 @@ export const SpreadMonitor = ({
   };
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -99,18 +99,18 @@ export const SpreadMonitor = ({
 
       {/* System status + Selic + stress index */}
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className={`rounded border p-3 ${systemStatus.bgColor} border-[#1a1a1a]`}>
+        <div className={`rounded border p-3 ${systemStatus.bgColor} border-zinc-800/50`}>
           <div className="flex items-center gap-1.5 mb-1">
             <StatusIcon className={`w-3.5 h-3.5 ${systemStatus.color}`} />
             <span className={`text-[10px] font-mono font-bold ${systemStatus.color}`}>{systemStatus.label}</span>
           </div>
           <span className="text-[9px] text-zinc-600 font-mono">Status do sistema</span>
         </div>
-        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+        <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-3">
           <div className="text-sm font-bold font-mono text-zinc-100">{selic.toFixed(2)}%</div>
           <span className="text-[9px] text-zinc-600 font-mono">Selic Meta</span>
         </div>
-        <div className="bg-[#0a0a0a] border border-[#141414] rounded p-3">
+        <div className="bg-[#0a0a0a] border border-zinc-800/30 rounded p-3">
           <div className={`text-sm font-bold font-mono ${compositeStress >= 1.2 ? "text-red-400" : compositeStress >= 1.1 ? "text-amber-400" : "text-emerald-400"}`}>
             {(compositeStress * 100).toFixed(0)}%
           </div>
@@ -122,7 +122,7 @@ export const SpreadMonitor = ({
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] font-mono">
           <thead>
-            <tr className="text-zinc-600 border-b border-[#1a1a1a]">
+            <tr className="text-zinc-600 border-b border-zinc-800/50">
               <th className="text-left py-1.5 pr-2">Segmento</th>
               <th className="text-right py-1.5 px-2">Atual</th>
               <th className="text-right py-1.5 px-2">Média 12M</th>
@@ -138,7 +138,7 @@ export const SpreadMonitor = ({
               const status = entryStatus(e.current, e.avg5y);
               const devColor = deviation > 15 ? "text-red-400" : deviation > 5 ? "text-amber-400" : deviation < -10 ? "text-blue-400" : "text-zinc-400";
               return (
-                <tr key={e.label} className="border-b border-[#111] hover:bg-[#111] transition-colors">
+                <tr key={e.label} className="border-b border-[#111] hover:bg-zinc-900/50 transition-colors">
                   <td className="py-1.5 pr-2 text-zinc-300">{e.label}</td>
                   <td className="py-1.5 px-2 text-right text-zinc-100 font-bold">{e.current.toFixed(1)}</td>
                   <td className="py-1.5 px-2 text-right text-zinc-500">{e.avg12m.toFixed(1)}</td>

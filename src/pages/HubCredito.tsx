@@ -7,6 +7,9 @@ import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsig
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { AlertCard } from "@/components/hub/AlertCard";
+import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { SkeletonPage } from "@/components/hub/SkeletonLoader";
+import { EmptyState } from "@/components/hub/EmptyState";
 import { InterestCalculator } from "@/components/hub/InterestCalculator";
 import { DefaultRadar } from "@/components/hub/DefaultRadar";
 import { SpreadMonitor } from "@/components/hub/SpreadMonitor";
@@ -235,9 +238,30 @@ const HubCredito = () => {
     { code: "21084", label: "Inadim. PJ", data: inadPJ, unit: "%", lowerIsBetter: true },
   ], [inadTotal, inadPF, inadPJ]);
 
+  /* Full-page loading state */
+  if (cardsLoading && !kpis.length) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4" />
+        <SkeletonPage />
+      </div>
+    );
+  }
+
+  /* No-data fallback */
+  if (!cardsLoading && (!kpis || kpis.length === 0)) {
+    return (
+      <div className="p-4 md:p-6 space-y-6">
+        <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4" />
+        <EmptyState variant="no-data" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <HubSEO title="Overview Crédito" description="Spreads, inadimplência, concessões e análise de risco do SFN com 73 séries BACEN — visão completa do mercado de crédito brasileiro." path="/credito" />
+      <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4" />
       {/* ─── Sticky header bar ─── */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4 flex-wrap">

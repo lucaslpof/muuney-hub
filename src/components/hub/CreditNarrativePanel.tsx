@@ -248,7 +248,7 @@ export const CreditNarrativePanel = (props: CreditNarrativePanelProps) => {
             <p className="text-[10px] text-zinc-500 mt-1">{regime.description}</p>
 
             {/* Key metrics strip */}
-            <div className="flex flex-wrap gap-3 mt-2.5 pt-2.5 border-t border-[#1a1a1a]">
+            <div className="flex flex-wrap gap-3 mt-2.5 pt-2.5 border-t border-zinc-800/50">
               {[
                 { label: "Inadim.", value: `${fmtNum(inadTotal, 1)}%` },
                 { label: "Spread", value: `${fmtNum(spreadMedio, 0)} p.p.` },

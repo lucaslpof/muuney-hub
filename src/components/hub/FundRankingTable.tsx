@@ -52,7 +52,7 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
 
   if (loading) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 animate-pulse">
         <div className="h-4 bg-[#1a1a1a] rounded w-1/3 mb-4" />
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="h-8 bg-[#1a1a1a] rounded mb-2" />
@@ -66,10 +66,10 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1a1a1a]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800/50">
         <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
           {title || "Rankings"} <span className="text-zinc-700">({filtered.length})</span>
         </h3>
@@ -80,7 +80,7 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
             placeholder="Buscar fundo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-6 pr-2 py-1 text-[10px] bg-[#0a0a0a] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none w-40 font-mono"
+            className="pl-6 pr-2 py-1 text-[10px] bg-[#0a0a0a] border border-zinc-800/50 rounded text-zinc-300 placeholder-zinc-700 focus:border-[#0B6C3E]/40 focus:outline-none w-40 font-mono"
           />
         </div>
       </div>
@@ -89,7 +89,7 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] font-mono">
           <thead>
-            <tr className="border-b border-[#1a1a1a] text-zinc-600">
+            <tr className="border-b border-zinc-800/50 text-zinc-600">
               <th className="text-left px-3 py-2 w-8">#</th>
               <th
                 className="text-left px-3 py-2 cursor-pointer hover:text-zinc-400 transition-colors"
@@ -125,7 +125,7 @@ export const FundRankingTable = ({ funds, loading, onSelectFund, title }: FundRa
               <tr
                 key={fund.cnpj_fundo}
                 onClick={() => onSelectFund?.(fund.cnpj_fundo)}
-                className="border-b border-[#141414] hover:bg-[#0B6C3E]/5 cursor-pointer transition-colors group"
+                className="border-b border-zinc-800/30 hover:bg-[#0B6C3E]/5 cursor-pointer transition-colors group"
               >
                 <td className="px-3 py-2 text-zinc-700">{idx + 1}</td>
                 <td className="px-3 py-2 max-w-[280px]">

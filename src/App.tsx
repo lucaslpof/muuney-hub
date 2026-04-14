@@ -25,6 +25,20 @@ const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
 const HubPortfolio = React.lazy(() => import("./pages/HubPortfolio"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
+/* Preload critical routes for faster navigation */
+const preloadDashboard = () => import("./pages/HubDashboard");
+const preloadMacro = () => import("./pages/HubMacro");
+
+// Trigger preload after initial render
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      preloadDashboard();
+      preloadMacro();
+    }, 2000);
+  }, { once: true });
+}
+
 /* Gate wrapper for Pro-only routes */
 const ProRoute = ({ children, feature }: { children: React.ReactNode; feature?: string }) => (
   <RequireTier tier="pro" feature={feature}>

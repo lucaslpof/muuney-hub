@@ -73,7 +73,7 @@ export const DefaultRadar = ({
   const compositeLevel = riskLevel(compositeRisk);
 
   return (
-    <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-[#10B981]" />
@@ -97,7 +97,7 @@ export const DefaultRadar = ({
       </div>
 
       {/* Composite risk */}
-      <div className={`rounded-lg border p-3 mb-4 ${compositeLevel.bgColor} border-[#1a1a1a]`}>
+      <div className={`rounded-lg border p-3 mb-4 ${compositeLevel.bgColor} border-zinc-800/50`}>
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[9px] text-zinc-600 font-mono">Risco Composto (ponderado)</span>
@@ -109,7 +109,7 @@ export const DefaultRadar = ({
             {compositeLevel.label}
           </span>
         </div>
-        <div className="mt-2 h-2 bg-[#111] rounded-full overflow-hidden">
+        <div className="mt-2 h-2 bg-zinc-900/50 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -136,7 +136,7 @@ export const DefaultRadar = ({
                 <div className="text-[8px] font-mono text-zinc-700">{s.weight}% portfólio</div>
               </div>
               <div className="flex-1">
-                <div className="h-3 bg-[#111] rounded-full overflow-hidden">
+                <div className="h-3 bg-zinc-900/50 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -163,7 +163,7 @@ export const DefaultRadar = ({
         })}
       </div>
 
-      <div className="mt-3 pt-2 border-t border-[#141414] text-[9px] text-zinc-700 font-mono flex justify-between">
+      <div className="mt-3 pt-2 border-t border-zinc-800/30 text-[9px] text-zinc-700 font-mono flex justify-between">
         <span>Inadimplência Total SFN: {fmtNum(inadTotal, 2)}%</span>
         <span>Comparação: {PERIOD_PRESETS[periodIdx].label} anterior</span>
       </div>

@@ -65,7 +65,7 @@ function InsightCard({ insight, compact }: { insight: FundInsight; compact?: boo
     return (
       <Link
         to={fundPath}
-        className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-[#1a1a1a] transition-colors group"
+        className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 transition-colors group"
       >
         <div className="mt-0.5" style={{ color: colors.text }}>
           <InsightIcon tipo={insight.tipo} />
@@ -181,7 +181,7 @@ export function InsightsFeed({
 
   if (isLoading) {
     return (
-      <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 animate-pulse">
+      <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4 animate-pulse">
         <div className="h-4 bg-[#1a1a1a] rounded w-1/3 mb-3" />
         {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
           <div key={i} className="h-12 bg-[#1a1a1a] rounded mb-2" />
@@ -195,10 +195,10 @@ export function InsightsFeed({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden"
+      className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1a1a1a]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800/50">
         <div className="flex items-center gap-2">
           <Bell className="w-3.5 h-3.5 text-[#F59E0B]" />
           <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
@@ -230,7 +230,7 @@ export function InsightsFeed({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b border-[#1a1a1a]"
+            className="overflow-hidden border-b border-zinc-800/50"
           >
             <div className="px-3 py-2 space-y-1.5">
               {/* Type filter */}
@@ -290,7 +290,7 @@ export function InsightsFeed({
 
       {/* Summary bar */}
       {!compact && summary && totalCount > 0 && (
-        <div className="px-3 py-1.5 border-t border-[#1a1a1a] flex items-center gap-3">
+        <div className="px-3 py-1.5 border-t border-zinc-800/50 flex items-center gap-3">
           {Object.entries(summary.by_severity || {}).map(([sev, count]) => {
             const colors = INSIGHT_SEVERITY_COLORS[sev as InsightSeverity];
             return colors ? (
