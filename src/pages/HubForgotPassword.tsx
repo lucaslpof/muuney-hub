@@ -19,10 +19,30 @@ export default function HubForgotPassword() {
         email,
         { redirectTo }
       );
-      if (resetError) throw resetError;
+      if (resetError) {
+        const code = (resetError as Record<string, unknown>).status ?? (resetError as Record<string, unknown>).code;
+        if (code === 429 || resetError.message?.includes("rate limit")) {
+          throw new Error("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
+        }
+        if (code === 504 || resetError.message?.includes("timeout") || resetError.message?.includes("timed out")) {
+          throw new Error("O servidor demorou para responder. O email pode ter sido enviado — verifique sua caixa de entrada (e spam) antes de tentar novamente.");
+        }
+        if (resetError.message && resetError.message.length > 2) {
+          throw new Error(resetError.message);
+        }
+        throw new Error("Erro ao enviar email. Tente novamente em alguns instantes.");
+      }
       setSent(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro ao enviar email.";
+      let message: string;
+      if (err instanceof Error && err.message && err.message.length > 2) {
+        message = err.message;
+      } else if (typeof err === "object" && err !== null && "message" in err) {
+        const m = (err as { message: unknown }).message;
+        message = typeof m === "string" && m.length > 2 ? m : "Erro ao enviar email. Tente novamente.";
+      } else {
+        message = "Erro ao enviar email. Tente novamente.";
+      }
       setError(message);
     } finally {
       setLoading(false);
