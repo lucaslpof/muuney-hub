@@ -1,0 +1,332 @@
+/* OnboardingTour - Tech-Noir Styling */
+
+.onboarding-tour-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+/* Overlay escuro com gradiente sutil */
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Highlight box ao redor do elemento alvo */
+.onboarding-highlight {
+  position: absolute;
+  border: 3px solid #0b6c3e;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(11, 108, 62, 0.2);
+  z-index: 10000;
+  pointer-events: none;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Tooltip container */
+.onboarding-tooltip {
+  position: fixed;
+  width: 320px;
+  background: #0a0a0a;
+  border: 1px solid #0b6c3e;
+  border-radius: 8px;
+  padding: 20px;
+  z-index: 10001;
+  pointer-events: auto;
+  box-shadow: 0 20px 60px rgba(11, 108, 62, 0.15), 0 0 40px rgba(11, 108, 62, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+.onboarding-tooltip-top {
+  animation: slideInDown 0.3s ease-out;
+}
+
+.onboarding-tooltip-bottom {
+  animation: slideInUp 0.3s ease-out;
+}
+
+.onboarding-tooltip-left {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.onboarding-tooltip-right {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+/* Arrow indicator */
+.onboarding-tooltip-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #0a0a0a;
+  border: 1px solid #0b6c3e;
+  transform: rotate(45deg);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.onboarding-arrow-top {
+  bottom: -7px;
+  left: 50%;
+  margin-left: -6px;
+  border-top: none;
+  border-left: none;
+}
+
+.onboarding-arrow-bottom {
+  top: -7px;
+  left: 50%;
+  margin-left: -6px;
+  border-bottom: none;
+  border-right: none;
+}
+
+.onboarding-arrow-left {
+  right: -7px;
+  top: 50%;
+  margin-top: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.onboarding-arrow-right {
+  left: -7px;
+  top: 50%;
+  margin-top: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Conteúdo do tooltip */
+.onboarding-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.onboarding-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.onboarding-tooltip-title {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0b6c3e;
+  letter-spacing: 0.5px;
+}
+
+.onboarding-step-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.onboarding-tooltip-description {
+  margin: 0;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Progress bar */
+.onboarding-progress-bar {
+  height: 3px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: #0b6c3e;
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+/* Footer com botões */
+.onboarding-tooltip-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.onboarding-button-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Botão base */
+.onboarding-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  transition: all 0.2s ease-out;
+  outline: none;
+}
+
+.onboarding-btn:focus {
+  outline: 2px solid #0b6c3e;
+  outline-offset: 2px;
+}
+
+/* Botão primário (verde/accent) */
+.onboarding-btn-primary {
+  background: #0b6c3e;
+  color: #fff;
+  border: 1px solid #0b6c3e;
+}
+
+.onboarding-btn-primary:hover {
+  background: #0d7a47;
+  border-color: #0d7a47;
+  box-shadow: 0 0 20px rgba(11, 108, 62, 0.3);
+}
+
+.onboarding-btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Botão secundário (outline) */
+.onboarding-btn-secondary {
+  background: transparent;
+  color: #0b6c3e;
+  border: 1px solid #0b6c3e;
+}
+
+.onboarding-btn-secondary:hover {
+  background: rgba(11, 108, 62, 0.1);
+  border-color: #0d7a47;
+}
+
+.onboarding-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(11, 108, 62, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(11, 108, 62, 0.4);
+  }
+}
+
+/* Mobile responsivity */
+@media (max-width: 640px) {
+  .onboarding-tooltip {
+    width: calc(100vw - 32px);
+    padding: 16px;
+  }
+
+  .onboarding-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .onboarding-button-group {
+    gap: 6px;
+  }
+
+  .onboarding-tooltip-title {
+    font-size: 14px;
+  }
+
+  .onboarding-tooltip-description {
+    font-size: 13px;
+  }
+}

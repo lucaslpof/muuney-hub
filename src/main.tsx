@@ -8,6 +8,7 @@ import { initErrorTracking } from "@/lib/errorTracking";
 import { AuthProvider } from "@/hooks/useAuth";
 import App from "./App";
 import "./index.css";
+import "./styles/mobile-fixes.css";
 
 // Initialize global error tracking
 initErrorTracking();

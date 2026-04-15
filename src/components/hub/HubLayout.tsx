@@ -6,6 +6,7 @@ import { FeedbackWidget } from "./FeedbackWidget";
 import { OnboardingTour } from "./OnboardingTour";
 import { Toaster } from "@/components/ui/Toaster";
 import { NetworkStatus } from "./NetworkStatus";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 const HubMain = () => {
   const { collapsed } = useSidebar();
@@ -81,6 +82,9 @@ const HubMain = () => {
 
       {/* First-visit onboarding tour */}
       <OnboardingTour />
+
+      {/* Mobile bottom navigation (hidden on md+) */}
+      <MobileNav />
     </main>
   );
 };

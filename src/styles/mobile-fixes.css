@@ -1,0 +1,489 @@
+/* Mobile Responsivity Fixes - Tech-Noir Aesthetic */
+
+/* ============================================================================
+   VIEWPORT & SAFE AREA
+   =========================================================================== */
+
+html {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Notch support (iPhones with Dynamic Island) */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+/* ============================================================================
+   LAYOUT ADJUSTMENTS FOR MOBILE
+   =========================================================================== */
+
+/* HubLayout: adjust for bottom nav on mobile */
+@media (max-width: 767px) {
+  .hub-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .hub-layout-sidebar {
+    display: none;
+  }
+
+  .hub-layout-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .hub-layout-main {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hub-layout {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .hub-layout-sidebar {
+    display: flex;
+  }
+
+  .hub-layout-content {
+    flex: 1;
+    padding-bottom: 0;
+  }
+
+  .hub-layout-main {
+    padding: 24px;
+  }
+}
+
+/* ============================================================================
+   KPI CARDS & GRID LAYOUTS
+   =========================================================================== */
+
+/* Responsive grid for KPI cards */
+.kpi-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+@media (min-width: 640px) {
+  .kpi-grid {
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .kpi-grid {
+    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-grid {
+    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .kpi-grid {
+    gap: 20px;
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.kpi-card {
+  padding: 12px;
+  min-height: 100px;
+}
+
+@media (min-width: 640px) {
+  .kpi-card {
+    padding: 16px;
+    min-height: 120px;
+  }
+}
+
+/* ============================================================================
+   TABLES & DATA DISPLAYS
+   =========================================================================== */
+
+/* Horizontal scroll for tables on mobile */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 6px;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #0b6c3e;
+  border-radius: 3px;
+}
+
+/* Table styling */
+.data-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+@media (min-width: 768px) {
+  .data-table {
+    font-size: 14px;
+  }
+}
+
+.data-table thead {
+  background: #0a0a0a;
+  border-bottom: 2px solid #1a1a1a;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.data-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #0b6c3e;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ccc;
+  min-height: 44px;
+  display: table-cell;
+}
+
+@media (min-width: 768px) {
+  .data-table th,
+  .data-table td {
+    padding: 16px;
+  }
+}
+
+.data-table tbody tr:hover {
+  background: rgba(11, 108, 62, 0.05);
+}
+
+/* ============================================================================
+   CHARTS & VISUALIZATIONS
+   =========================================================================== */
+
+.chart-container {
+  width: 100%;
+  height: auto;
+  min-height: 280px;
+}
+
+@media (max-width: 767px) {
+  .chart-container {
+    min-height: 300px;
+  }
+}
+
+@media (min-width: 768px) {
+  .chart-container {
+    min-height: 400px;
+  }
+}
+
+/* Recharts ResponsiveContainer overflow fix */
+.recharts-wrapper {
+  outline: none !important;
+}
+
+.recharts-surface {
+  overflow: visible !important;
+}
+
+/* Tooltip positioning */
+.recharts-default-tooltip {
+  outline: none !important;
+}
+
+/* ============================================================================
+   BUTTONS & INTERACTIVE ELEMENTS
+   =========================================================================== */
+
+/* Ensure minimum touch target */
+button,
+a[role='button'],
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 16px;
+}
+
+@media (max-width: 767px) {
+  button,
+  a[role='button'],
+  .btn {
+    font-size: 14px;
+  }
+}
+
+/* Active feedback (no hover on touch) */
+@media (hover: hover) {
+  button:hover,
+  a[role='button']:hover,
+  .btn:hover {
+    opacity: 0.8;
+  }
+}
+
+@media (hover: none) {
+  button:active,
+  a[role='button']:active,
+  .btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+/* ============================================================================
+   FORMS & INPUTS
+   =========================================================================== */
+
+input,
+textarea,
+select {
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+@media (min-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 14px;
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type='text'],
+input[type='email'],
+input[type='number'],
+input[type='tel'],
+textarea {
+  font-size: 16px;
+  border: 1px solid #1a1a1a;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='number']:focus,
+input[type='tel']:focus,
+textarea:focus {
+  outline: none;
+  border-color: #0b6c3e;
+  box-shadow: 0 0 0 2px rgba(11, 108, 62, 0.1);
+}
+
+/* ============================================================================
+   TYPOGRAPHY & FONT SIZING
+   =========================================================================== */
+
+/* Fluid font sizes using clamp() */
+h1 {
+  font-size: clamp(20px, 5vw, 32px);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: clamp(18px, 4vw, 28px);
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: clamp(16px, 3vw, 24px);
+  line-height: 1.3;
+}
+
+p {
+  font-size: clamp(14px, 2.5vw, 16px);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  p {
+    line-height: 1.6;
+  }
+}
+
+/* ============================================================================
+   MODALS & OVERLAYS
+   =========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 9001;
+}
+
+@media (min-width: 768px) {
+  .modal-content {
+    position: absolute;
+    bottom: auto;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-50%);
+    max-height: 80vh;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    padding-bottom: 20px;
+  }
+}
+
+/* ============================================================================
+   SPACING ADJUSTMENTS
+   =========================================================================== */
+
+.section-spacing {
+  margin-bottom: 16px;
+  padding: 12px;
+}
+
+@media (min-width: 640px) {
+  .section-spacing {
+    margin-bottom: 24px;
+    padding: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .section-spacing {
+    margin-bottom: 32px;
+    padding: 20px;
+  }
+}
+
+/* ============================================================================
+   DROPDOWN & MENU POSITIONING
+   =========================================================================== */
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: auto;
+  max-width: 90vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  border-radius: 6px;
+  margin-top: 4px;
+  z-index: 1000;
+}
+
+@media (min-width: 768px) {
+  .dropdown-menu {
+    max-width: 100%;
+  }
+}
+
+/* ============================================================================
+   UTILITIES
+   =========================================================================== */
+
+/* Force visible scrollbar on tables for mobile */
+@media (max-width: 767px) {
+  .table-wrapper {
+    scrollbar-width: auto;
+  }
+}
+
+/* Prevent text selection on buttons */
+button,
+a[role='button'],
+.btn {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure proper aspect ratios for images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   =========================================================================== */
+
+/* High contrast focus indicators */
+:focus-visible {
+  outline: 2px solid #0b6c3e;
+  outline-offset: 2px;
+}
+
+/* Skip to main content link */
+.skip-to-main {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #0b6c3e;
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 10000;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
