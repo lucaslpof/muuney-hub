@@ -148,7 +148,7 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {macro.find(m => m.serie_code === "selic_meta")?.last_value.toFixed(2) ?? "14.25"}
+                    {macro.find(m => m.serie_code === "selic_meta")?.last_value.toFixed(2) ?? "—"}
                   </div>
                   <p className="text-[8px] text-zinc-700 font-mono mt-0.5">% a.a.</p>
                   {macro.find(m => m.serie_code === "selic_meta") && (
@@ -182,7 +182,7 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {macro.find(m => m.serie_code === "ipca_12m")?.last_value.toFixed(2) ?? "5.06"}
+                    {macro.find(m => m.serie_code === "ipca_12m")?.last_value.toFixed(2) ?? "—"}
                   </div>
                   <p className="text-[8px] text-zinc-700 font-mono mt-0.5">%</p>
                   {macro.find(m => m.serie_code === "ipca_12m") && (
@@ -216,7 +216,7 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {macro.find(m => m.serie_code === "ptax_compra")?.last_value.toFixed(2) ?? "5.73"}
+                    {macro.find(m => m.serie_code === "ptax_compra")?.last_value.toFixed(2) ?? "—"}
                   </div>
                   <p className="text-[8px] text-zinc-700 font-mono mt-0.5">USD/BRL</p>
                   {macro.find(m => m.serie_code === "ptax_compra") && (
@@ -250,23 +250,23 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {credito.find(c => c.serie_code === "21083")?.last_value.toFixed(2) ?? "4.10"}
+                    {credito.find(c => c.serie_code === "21082")?.last_value.toFixed(2) ?? "—"}
                   </div>
                   <p className="text-[8px] text-zinc-700 font-mono mt-0.5">%</p>
-                  {credito.find(c => c.serie_code === "21083") && (
+                  {credito.find(c => c.serie_code === "21082") && (
                     <div className="text-[8px] text-zinc-700 font-mono mt-1">
-                      {credito.find(c => c.serie_code === "21083")?.last_date}
+                      {credito.find(c => c.serie_code === "21082")?.last_date}
                     </div>
                   )}
                 </div>
-                {credito.find(c => c.serie_code === "21083")?.trend && (
+                {credito.find(c => c.serie_code === "21082")?.trend && (
                   <div className={`flex items-center text-sm ${
-                    credito.find(c => c.serie_code === "21083")?.trend === "up" ? "text-red-400" : 
-                    credito.find(c => c.serie_code === "21083")?.trend === "down" ? "text-emerald-400" : 
+                    credito.find(c => c.serie_code === "21082")?.trend === "up" ? "text-red-400" : 
+                    credito.find(c => c.serie_code === "21082")?.trend === "down" ? "text-emerald-400" : 
                     "text-zinc-500"
                   }`}>
-                    {credito.find(c => c.serie_code === "21083")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
-                     credito.find(c => c.serie_code === "21083")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
+                    {credito.find(c => c.serie_code === "21082")?.trend === "up" ? <TrendingUp className="w-4 h-4" /> :
+                     credito.find(c => c.serie_code === "21082")?.trend === "down" ? <TrendingDown className="w-4 h-4" /> :
                      <div className="w-4 h-4" />}
                   </div>
                 )}
@@ -284,7 +284,7 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {macro.find(m => m.category === "taxa_ref")?.last_value.toFixed(2) ?? "14.15"}
+                    {macro.find(m => m.category === "taxa_ref")?.last_value.toFixed(2) ?? "—"}
                   </div>
                   <p className="text-[8px] text-zinc-700 font-mono mt-0.5">% a.a.</p>
                   {macro.find(m => m.category === "taxa_ref") && (
@@ -304,7 +304,7 @@ const HubDashboard = () => {
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
                     29.491
                   </div>
-                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">monitored</p>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">monitorados</p>
                   {allKPIs.length > 0 && (
                     <div className="text-[8px] text-zinc-700 font-mono mt-1">
                       {allKPIs[0]?.last_date}

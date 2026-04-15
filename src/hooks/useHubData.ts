@@ -147,12 +147,27 @@ async function fetchHub(endpoint: string, params: Record<string, string> = {}): 
   return res.json() as Promise<unknown>;
 }
 
+/* Map numeric BACEN SGS codes to friendly serie_code used by Dashboard & MACRO_SAMPLE */
+const CODE_TO_FRIENDLY: Record<number, string> = {
+  432: "selic_meta",
+  11: "selic_efetiva",
+  433: "ipca_mensal",
+  13522: "ipca_12m",
+  1: "ptax_compra",
+  10813: "ptax_venda",
+  4189: "selic_diaria",
+  4392: "cdi_acumulado",
+  4380: "pib_var",
+  4503: "divida_pib",
+  13762: "divida_bruta_pib",
+};
+
 /* Map API "latest" response → LatestCard[] expected by frontend */
 function mapLatestResponse(apiData: unknown): LatestCard[] {
   const response = apiData as ApiLatestResponse;
   const indicators = response?.indicators || [];
   return indicators.map((ind) => ({
-    serie_code: String(ind.code),
+    serie_code: CODE_TO_FRIENDLY[ind.code] ?? String(ind.code),
     category: ind.category,
     display_name: ind.name,
     description: ind.name,
@@ -305,13 +320,13 @@ export function useProductData(tipo?: "PF" | "PJ") {
 // Sample data fallback for when API has no data yet
 export const MACRO_SAMPLE: LatestCard[] = [
   // Selic / Monetária
-  { serie_code: "selic_meta", category: "selic", display_name: "Selic Meta", description: "Taxa básica de juros", unit: "% a.a.", source: "BACEN SGS 432", last_value: 14.25, last_date: "2026-03-19", change_pct: 0.00, trend: "stable" },
+  { serie_code: "selic_meta", category: "selic", display_name: "Selic Meta", description: "Taxa básica de juros", unit: "% a.a.", source: "BACEN SGS 432", last_value: 14.75, last_date: "2026-04-29", change_pct: 0.50, trend: "up" },
   { serie_code: "4189", category: "monetaria", display_name: "Selic Diária", description: "Taxa Selic diária anualizada", unit: "% a.a.", source: "BACEN SGS 4189", last_value: 14.15, last_date: "2026-03-28", change_pct: 0.00, trend: "stable" },
   { serie_code: "27813", category: "monetaria", display_name: "M1", description: "Agregado monetário M1", unit: "R$ bi", source: "BACEN SGS 27813", last_value: 652.40, last_date: "2026-02-01", change_pct: 1.20, trend: "up" },
   { serie_code: "27814", category: "monetaria", display_name: "M2", description: "Agregado monetário M2", unit: "R$ bi", source: "BACEN SGS 27814", last_value: 4832.10, last_date: "2026-02-01", change_pct: 0.80, trend: "up" },
   // IPCA / Inflação
-  { serie_code: "ipca_mensal", category: "ipca", display_name: "IPCA Mensal", description: "Inflação oficial", unit: "%", source: "BACEN SGS 433", last_value: 0.56, last_date: "2026-02-01", change_pct: 0.12, trend: "up" },
-  { serie_code: "ipca_12m", category: "ipca", display_name: "IPCA 12m", description: "Inflação acumulada 12 meses", unit: "%", source: "BACEN SGS 13522", last_value: 5.06, last_date: "2026-02-01", change_pct: -0.20, trend: "down" },
+  { serie_code: "ipca_mensal", category: "ipca", display_name: "IPCA Mensal", description: "Inflação oficial", unit: "%", source: "BACEN SGS 433", last_value: 0.88, last_date: "2026-03-01", change_pct: 0.32, trend: "up" },
+  { serie_code: "ipca_12m", category: "ipca", display_name: "IPCA 12m", description: "Inflação acumulada 12 meses", unit: "%", source: "BACEN SGS 13522", last_value: 4.14, last_date: "2026-03-01", change_pct: 0.33, trend: "up" },
   { serie_code: "188", category: "inflacao", display_name: "INPC", description: "INPC mensal", unit: "%", source: "BACEN SGS 188", last_value: 0.48, last_date: "2026-02-01", change_pct: 0.05, trend: "up" },
   { serie_code: "16121", category: "inflacao", display_name: "IPCA Ano", description: "IPCA acumulado no ano", unit: "%", source: "BACEN SGS 16121", last_value: 1.12, last_date: "2026-02-01", change_pct: 0.56, trend: "up" },
   // Atividade
@@ -320,7 +335,7 @@ export const MACRO_SAMPLE: LatestCard[] = [
   { serie_code: "11064", category: "atividade", display_name: "Prod. Industrial", description: "Produção industrial geral", unit: "%", source: "BACEN SGS 11064", last_value: 1.80, last_date: "2026-01-01", change_pct: -0.30, trend: "down" },
   { serie_code: "22089", category: "atividade", display_name: "PIB Serviços", description: "PIB setor serviços", unit: "R$ bi", source: "BACEN SGS 22089", last_value: 1842.50, last_date: "2025-12-01", change_pct: 0.60, trend: "up" },
   // Câmbio / Externo
-  { serie_code: "ptax_compra", category: "cambio", display_name: "PTAX Compra", description: "Câmbio USD/BRL", unit: "R$", source: "BACEN SGS 1", last_value: 5.73, last_date: "2026-03-28", change_pct: -0.34, trend: "down" },
+  { serie_code: "ptax_compra", category: "cambio", display_name: "PTAX Compra", description: "Câmbio USD/BRL", unit: "R$", source: "BACEN SGS 1", last_value: 4.98, last_date: "2026-04-14", change_pct: -0.40, trend: "down" },
   { serie_code: "3546", category: "externo", display_name: "Reservas Int.", description: "Reservas internacionais", unit: "US$ bi", source: "BACEN SGS 3546", last_value: 355.20, last_date: "2026-02-01", change_pct: 0.15, trend: "up" },
   { serie_code: "29641", category: "externo", display_name: "IDP", description: "Investimento direto no país", unit: "US$ mi", source: "BACEN SGS 29641", last_value: 6820.00, last_date: "2026-01-01", change_pct: -2.10, trend: "down" },
   // Dívida / Fiscal
