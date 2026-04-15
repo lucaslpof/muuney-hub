@@ -191,18 +191,25 @@ export default function HubLogin() {
             )}
           </button>
 
-          <div className="text-center">
+          <div className="flex items-center justify-center gap-4">
             <Link
               to="/forgot-password"
               className="text-zinc-500 hover:text-[#0B6C3E] text-xs transition-colors"
             >
               Esqueci minha senha
             </Link>
+            <span className="text-zinc-700 text-xs">|</span>
+            <Link
+              to="/primeiro-acesso"
+              className="text-zinc-500 hover:text-[#0B6C3E] text-xs transition-colors"
+            >
+              Primeiro acesso
+            </Link>
           </div>
         </form>
 
         <p className="text-center text-zinc-600 text-xs mt-6">
-          Acesso restrito a usuários autorizados.
+          Acesso restrito a beta testers convidados.
         </p>
       </div>
     </div>

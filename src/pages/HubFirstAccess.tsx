@@ -2,7 +2,7 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-export default function HubForgotPassword() {
+export default function HubFirstAccess() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -14,6 +14,8 @@ export default function HubForgotPassword() {
     setLoading(true);
 
     try {
+      // Uses the same Supabase recovery flow — sends a magic link
+      // that lands on /reset-password where the user sets their password.
       const redirectTo = `${window.location.origin}/reset-password`;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
@@ -40,7 +42,7 @@ export default function HubForgotPassword() {
           <h1 className="text-3xl font-bold text-white tracking-tight">
             muuney<span className="text-[#0B6C3E]">.hub</span>
           </h1>
-          <p className="text-zinc-500 text-sm mt-2">Recuperar acesso</p>
+          <p className="text-zinc-500 text-sm mt-2">Primeiro acesso</p>
         </div>
 
         <div className="bg-[#111111] border border-zinc-800 rounded-xl p-8">
@@ -62,31 +64,42 @@ export default function HubForgotPassword() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-white font-semibold">Email enviado</h2>
+                <h2 className="text-white font-semibold">Email enviado!</h2>
                 <p className="text-zinc-400 text-sm mt-2">
-                  Se o email <span className="text-white">{email}</span> estiver cadastrado,
-                  você receberá um link para redefinir sua senha em instantes.
+                  Enviamos um link para <span className="text-white">{email}</span>.
+                  Clique no link para configurar sua senha e acessar o hub.
+                </p>
+                <p className="text-zinc-500 text-xs mt-3">
+                  Verifique também a caixa de spam.
                 </p>
               </div>
               <Link
                 to="/login"
                 className="inline-block text-[#0B6C3E] hover:text-[#0B6C3E]/80 text-sm font-medium transition-colors"
               >
-                ← Voltar ao login
+                Ir para o login
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <p className="text-zinc-400 text-sm">
-                Digite seu email e enviaremos um link para redefinir sua senha.
-              </p>
+              <div className="space-y-3">
+                <p className="text-zinc-400 text-sm">
+                  Recebeu um convite para o Muuney Hub? Digite o email que foi convidado
+                  para configurar sua senha de acesso.
+                </p>
+                <div className="px-3 py-2 bg-[#0B6C3E]/5 border border-[#0B6C3E]/20 rounded-lg">
+                  <p className="text-[11px] text-[#0B6C3E]/80">
+                    Apenas emails convidados pelo time Muuney podem criar conta.
+                  </p>
+                </div>
+              </div>
 
               <div>
                 <label
                   htmlFor="email"
                   className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wider"
                 >
-                  Email
+                  Email convidado
                 </label>
                 <input
                   id="email"
@@ -111,7 +124,7 @@ export default function HubForgotPassword() {
                 disabled={loading}
                 className="w-full py-3 bg-[#0B6C3E] hover:bg-[#0B6C3E]/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
               >
-                {loading ? "Enviando..." : "Enviar link de recuperação"}
+                {loading ? "Enviando..." : "Configurar minha senha"}
               </button>
 
               <div className="flex items-center justify-center gap-4">
@@ -119,14 +132,14 @@ export default function HubForgotPassword() {
                   to="/login"
                   className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
                 >
-                  Voltar ao login
+                  Ja tenho conta
                 </Link>
                 <span className="text-zinc-700 text-xs">|</span>
                 <Link
-                  to="/primeiro-acesso"
+                  to="/forgot-password"
                   className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
                 >
-                  Primeiro acesso
+                  Esqueci minha senha
                 </Link>
               </div>
             </form>

@@ -10,6 +10,7 @@ const HubLanding = React.lazy(() => import("./pages/HubLanding"));
 const HubLogin = React.lazy(() => import("./pages/HubLogin"));
 const HubForgotPassword = React.lazy(() => import("./pages/HubForgotPassword"));
 const HubResetPassword = React.lazy(() => import("./pages/HubResetPassword"));
+const HubFirstAccess = React.lazy(() => import("./pages/HubFirstAccess"));
 const HubUpgrade = React.lazy(() => import("./pages/HubUpgrade"));
 const HubDashboard = React.lazy(() => import("./pages/HubDashboard"));
 const HubMacro = React.lazy(() => import("./pages/HubMacro"));
@@ -63,6 +64,7 @@ const App = () => (
         <Route path="/login" element={<HubLogin />} />
         <Route path="/forgot-password" element={<HubForgotPassword />} />
         <Route path="/reset-password" element={<HubResetPassword />} />
+        <Route path="/primeiro-acesso" element={<HubFirstAccess />} />
 
         {/* Dashboard + Modules — protected, inside HubLayout (sidebar + header) */}
         <Route
