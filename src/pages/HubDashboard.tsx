@@ -14,7 +14,7 @@ import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import {
   useHubLatest, useHubSeries,
-  MACRO_SAMPLE, CREDITO_SAMPLE, generateSampleSeries,
+  MACRO_SAMPLE, CREDITO_SAMPLE,
 } from "@/hooks/useHubData";
 /* ─── Helpers ─── */
 const useHubPrefix = () => "";
@@ -62,10 +62,10 @@ const HubDashboard = () => {
   const { data: cambioSeries } = useHubSeries("cambio", "1y", "macro");
   const { data: inadSeries } = useHubSeries("inadimplencia", "1y", "credito");
 
-  const selic = selicSeries?.length ? selicSeries : generateSampleSeries(14.25, 24, 0.01);
-  const ipca = ipcaSeries?.length ? ipcaSeries : generateSampleSeries(0.5, 24, 0.15);
-  const cambio = cambioSeries?.length ? cambioSeries : generateSampleSeries(5.7, 24, 0.03);
-  const inadimplencia = inadSeries?.length ? inadSeries : generateSampleSeries(3.3, 24, 0.03);
+  const selic = selicSeries?.length ? selicSeries : [];
+  const ipca = ipcaSeries?.length ? ipcaSeries : [];
+  const cambio = cambioSeries?.length ? cambioSeries : [];
+  const inadimplencia = inadSeries?.length ? inadSeries : [];
 
   /* Sparklines for KPI cards */
   const sparkMap = useMemo(() => ({
@@ -106,7 +106,7 @@ const HubDashboard = () => {
     <div className="space-y-6 w-full">
       <HubSEO
         title="Dashboard"
-        description="Painel de inteligência financeira com indicadores em tempo real: Selic, IPCA, câmbio, inadimplência e 29.491 fundos CVM monitorados."
+        description="Painel de inteligência financeira com indicadores em tempo real: Selic, IPCA, câmbio, inadimplência e fundos CVM monitorados."
         path="/dashboard"
         keywords="dashboard financeiro, indicadores econômicos, Selic hoje, IPCA acumulado, câmbio dólar, spreads bancários, inadimplência PF"
         isProtected={true}
@@ -123,10 +123,16 @@ const HubDashboard = () => {
                 <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">
                   Hub de Inteligência Financeira
                 </h1>
-                <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-2 py-1 rounded font-mono shadow-[0_0_8px_rgba(11,108,62,0.3)]">
-                  <Radio className="w-2.5 h-2.5 animate-pulse" />
-                  LIVE
-                </span>
+                {macroCards?.length ? (
+                  <span className="flex items-center gap-1 text-[9px] bg-[#0B6C3E]/15 text-[#0B6C3E] px-2 py-1 rounded font-mono shadow-[0_0_8px_rgba(11,108,62,0.3)]">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" />
+                    LIVE
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[9px] bg-zinc-800/50 text-zinc-500 px-2 py-1 rounded font-mono">
+                    OFFLINE
+                  </span>
+                )}
               </div>
               <p className="text-[10px] text-zinc-600 font-mono">
                 Fontes oficiais BACEN SGS · CVM · PTAX · {macro.length + credito.length} indicadores ativos
@@ -302,9 +308,9 @@ const HubDashboard = () => {
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    29.491
+                    {(macro.find(m => m.serie_code === "fund_count")?.last_value ?? macro.length + credito.length).toLocaleString("pt-BR")}
                   </div>
-                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">monitorados</p>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">indicadores ativos</p>
                   {allKPIs.length > 0 && (
                     <div className="text-[8px] text-zinc-700 font-mono mt-1">
                       {allKPIs[0]?.last_date}

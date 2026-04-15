@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { CreditHeatmap } from "@/components/hub/CreditHeatmap";
-import { useHubSeries, generateSampleSeries, type SeriesDataPoint } from "@/hooks/useHubData";
+import { useHubSeries, type SeriesDataPoint } from "@/hooks/useHubData";
 import { percentChange } from "@/lib/statistics";
 import {
   TrendingUp, TrendingDown, Minus,
@@ -57,9 +57,9 @@ const SummaryBanner = ({ items }: { items: SummaryItem[] }) => (
 );
 
 /* ─── Helper: use series with fallback ─── */
-function useSeries(category: string, period: string, base: number, vol = 0.02) {
+function useSeries(category: string, period: string, _base?: number, _vol?: number) {
   const { data } = useHubSeries(category, period, "credito");
-  return data?.length ? data : generateSampleSeries(base, 24, vol);
+  return data?.length ? data : [];
 }
 
 /* ─── Compute YoY growth from monthly series ─── */

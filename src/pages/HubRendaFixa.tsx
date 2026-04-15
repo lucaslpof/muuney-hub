@@ -19,7 +19,7 @@ import {
   useHubSeriesBundle,
   pickSeries,
   RENDA_FIXA_SAMPLE,
-  generateSampleSeries,
+
 } from "@/hooks/useHubData";
 import {
   TrendingUp, Landmark,
@@ -125,8 +125,8 @@ const HubRendaFixa = () => {
   );
 
   /* ─── KPI data ─── */
-  const { isLoading: cardsLoading } = useHubLatest("macro");
-  const kpis = RENDA_FIXA_SAMPLE;
+  const { data: rfCards, isLoading: cardsLoading } = useHubLatest("macro");
+  const kpis = rfCards && rfCards.length > 0 ? rfCards : RENDA_FIXA_SAMPLE;
 
   /* ─── Series bundles (lazy-loaded per section) ─── */
   // Overview + Taxas & Curva (eager — first two sections)
@@ -142,32 +142,32 @@ const HubRendaFixa = () => {
   // Crédito Privado (lazy)
   const { data: credprivBundle } = useHubSeriesBundle("credpriv", period, "macro", sectionVisible("credpriv"));
 
-  /* ─── Extract individual series with fallbacks ─── */
-  const selic = pickSeries(taxaRefBundle, "432").length ? pickSeries(taxaRefBundle, "432") : generateSampleSeries(14.25, 24, 0.008);
-  const cdi = pickSeries(taxaRefBundle, "4392").length ? pickSeries(taxaRefBundle, "4392") : generateSampleSeries(14.15, 24, 0.008);
-  const tr = pickSeries(taxaRefBundle, "226").length ? pickSeries(taxaRefBundle, "226") : generateSampleSeries(0.18, 24, 0.15);
-  const tlp = pickSeries(taxaRefBundle, "27547").length ? pickSeries(taxaRefBundle, "27547") : generateSampleSeries(7.10, 24, 0.02);
-  const poupanca = pickSeries(poupancaBundle, "195").length ? pickSeries(poupancaBundle, "195") : generateSampleSeries(7.45, 24, 0.005);
+  /* ─── Extract individual series (no synthetic fallbacks) ─── */
+  const selic = pickSeries(taxaRefBundle, "432");
+  const cdi = pickSeries(taxaRefBundle, "4392");
+  const tr = pickSeries(taxaRefBundle, "226");
+  const tlp = pickSeries(taxaRefBundle, "27547");
+  const poupanca = pickSeries(poupancaBundle, "195");
 
-  const di30 = pickSeries(curvaDiBundle, "7813").length ? pickSeries(curvaDiBundle, "7813") : generateSampleSeries(14.18, 24, 0.01);
-  const di360 = pickSeries(curvaDiBundle, "7817").length ? pickSeries(curvaDiBundle, "7817") : generateSampleSeries(14.82, 24, 0.012);
-  const di720 = pickSeries(curvaDiBundle, "7818").length ? pickSeries(curvaDiBundle, "7818") : generateSampleSeries(14.55, 24, 0.015);
-  const di1800 = pickSeries(curvaDiBundle, "7821").length ? pickSeries(curvaDiBundle, "7821") : generateSampleSeries(13.65, 24, 0.018);
+  const di30 = pickSeries(curvaDiBundle, "7813");
+  const di360 = pickSeries(curvaDiBundle, "7817");
+  const di720 = pickSeries(curvaDiBundle, "7818");
+  const di1800 = pickSeries(curvaDiBundle, "7821");
 
-  const ntnb2029 = pickSeries(ntnbBundle, "12460").length ? pickSeries(ntnbBundle, "12460") : generateSampleSeries(7.25, 24, 0.015);
-  const ntnb2035 = pickSeries(ntnbBundle, "12461").length ? pickSeries(ntnbBundle, "12461") : generateSampleSeries(7.10, 24, 0.012);
-  const ntnb2045 = pickSeries(ntnbBundle, "12462").length ? pickSeries(ntnbBundle, "12462") : generateSampleSeries(6.85, 24, 0.010);
+  const ntnb2029 = pickSeries(ntnbBundle, "12460");
+  const ntnb2035 = pickSeries(ntnbBundle, "12461");
+  const ntnb2045 = pickSeries(ntnbBundle, "12462");
 
-  const bei1 = pickSeries(breakevenBundle, "990101").length ? pickSeries(breakevenBundle, "990101") : generateSampleSeries(5.82, 24, 0.02);
-  const bei3 = pickSeries(breakevenBundle, "990102").length ? pickSeries(breakevenBundle, "990102") : generateSampleSeries(5.35, 24, 0.015);
-  const bei5 = pickSeries(breakevenBundle, "990103").length ? pickSeries(breakevenBundle, "990103") : generateSampleSeries(5.10, 24, 0.012);
+  const bei1 = pickSeries(breakevenBundle, "990101");
+  const bei3 = pickSeries(breakevenBundle, "990102");
+  const bei5 = pickSeries(breakevenBundle, "990103");
 
-  const estoqueTD = pickSeries(tesouroBundle, "990201").length ? pickSeries(tesouroBundle, "990201") : generateSampleSeries(142.5, 24, 0.012);
-  const vendasTD = pickSeries(tesouroBundle, "990202").length ? pickSeries(tesouroBundle, "990202") : generateSampleSeries(3.85, 24, 0.1);
+  const estoqueTD = pickSeries(tesouroBundle, "990201");
+  const vendasTD = pickSeries(tesouroBundle, "990202");
 
-  const spreadAASeries = pickSeries(credprivBundle, "990301").length ? pickSeries(credprivBundle, "990301") : generateSampleSeries(1.35, 24, 0.04);
-  const spreadASeries = pickSeries(credprivBundle, "990302").length ? pickSeries(credprivBundle, "990302") : generateSampleSeries(2.10, 24, 0.05);
-  const emissoesSeries = pickSeries(credprivBundle, "990303").length ? pickSeries(credprivBundle, "990303") : generateSampleSeries(28.4, 24, 0.08);
+  const spreadAASeries = pickSeries(credprivBundle, "990301");
+  const spreadASeries = pickSeries(credprivBundle, "990302");
+  const emissoesSeries = pickSeries(credprivBundle, "990303");
 
   /* ─── Sparkline map ─── */
   const sparklineMap = useMemo(() => {
@@ -207,15 +207,15 @@ const HubRendaFixa = () => {
 
   /* ─── Yield Curve snapshot ─── */
   const yieldCurveData = useMemo(() => [
-    { tenor: "30d", days: 30, rate: kpis.find((k) => k.serie_code === "7813")?.last_value ?? 14.18 },
-    { tenor: "60d", days: 60, rate: kpis.find((k) => k.serie_code === "7814")?.last_value ?? 14.32 },
-    { tenor: "90d", days: 90, rate: kpis.find((k) => k.serie_code === "7815")?.last_value ?? 14.48 },
-    { tenor: "180d", days: 180, rate: kpis.find((k) => k.serie_code === "7816")?.last_value ?? 14.65 },
-    { tenor: "1a", days: 360, rate: kpis.find((k) => k.serie_code === "7817")?.last_value ?? 14.82 },
-    { tenor: "2a", days: 720, rate: kpis.find((k) => k.serie_code === "7818")?.last_value ?? 14.55 },
-    { tenor: "3a", days: 1080, rate: kpis.find((k) => k.serie_code === "7819")?.last_value ?? 14.20 },
-    { tenor: "4a", days: 1440, rate: kpis.find((k) => k.serie_code === "7820")?.last_value ?? 13.90 },
-    { tenor: "5a", days: 1800, rate: kpis.find((k) => k.serie_code === "7821")?.last_value ?? 13.65 },
+    { tenor: "30d", days: 30, rate: kpis.find((k) => k.serie_code === "7813")?.last_value ?? 0 },
+    { tenor: "60d", days: 60, rate: kpis.find((k) => k.serie_code === "7814")?.last_value ?? 0 },
+    { tenor: "90d", days: 90, rate: kpis.find((k) => k.serie_code === "7815")?.last_value ?? 0 },
+    { tenor: "180d", days: 180, rate: kpis.find((k) => k.serie_code === "7816")?.last_value ?? 0 },
+    { tenor: "1a", days: 360, rate: kpis.find((k) => k.serie_code === "7817")?.last_value ?? 0 },
+    { tenor: "2a", days: 720, rate: kpis.find((k) => k.serie_code === "7818")?.last_value ?? 0 },
+    { tenor: "3a", days: 1080, rate: kpis.find((k) => k.serie_code === "7819")?.last_value ?? 0 },
+    { tenor: "4a", days: 1440, rate: kpis.find((k) => k.serie_code === "7820")?.last_value ?? 0 },
+    { tenor: "5a", days: 1800, rate: kpis.find((k) => k.serie_code === "7821")?.last_value ?? 0 },
   ], [kpis]);
 
   /* Curve shape analysis */
@@ -237,10 +237,10 @@ const HubRendaFixa = () => {
 
   /* ─── NTN-B term structure for MacroChart v2 ─── */
   const ntnbTermStructure = useMemo(() => [
-    { date: "2029", value: kpis.find((k) => k.serie_code === "12460")?.last_value ?? 7.25 },
-    { date: "2035", value: kpis.find((k) => k.serie_code === "12461")?.last_value ?? 7.10 },
-    { date: "2045", value: kpis.find((k) => k.serie_code === "12462")?.last_value ?? 6.85 },
-    { date: "2055", value: kpis.find((k) => k.serie_code === "12463")?.last_value ?? 6.70 },
+    { date: "2029", value: kpis.find((k) => k.serie_code === "12460")?.last_value ?? 0 },
+    { date: "2035", value: kpis.find((k) => k.serie_code === "12461")?.last_value ?? 0 },
+    { date: "2045", value: kpis.find((k) => k.serie_code === "12462")?.last_value ?? 0 },
+    { date: "2055", value: kpis.find((k) => k.serie_code === "12463")?.last_value ?? 0 },
   ], [kpis]);
 
   /* ─── Insight inputs for dynamic MacroInsightCards ─── */
@@ -323,9 +323,9 @@ const HubRendaFixa = () => {
     const alerts: Array<{ type: string; title: string; description: string; severity: 'critical' | 'warning' | 'info' }> = [];
 
     // 1. Inversão de Curva: Compare DI 30d vs DI 1800d
-    const di30_curr = di30.length > 0 ? di30[di30.length - 1]?.value ?? 14.18 : 14.18;
-    const di1800_curr = di1800.length > 0 ? di1800[di1800.length - 1]?.value ?? 13.65 : 13.65;
-    if (di30_curr > di1800_curr) {
+    const di30_curr = di30.length > 0 ? di30[di30.length - 1]?.value : null;
+    const di1800_curr = di1800.length > 0 ? di1800[di1800.length - 1]?.value : null;
+    if (di30_curr !== null && di1800_curr !== null && di30_curr > di1800_curr) {
       alerts.push({
         type: 'curva_invertida',
         title: 'Curva Invertida',
@@ -335,8 +335,8 @@ const HubRendaFixa = () => {
     }
 
     // 2. Breakeven Desancoragem: If breakeven 3a > 5% (target 3.0% + 1.5pp tolerance)
-    const bei3_curr = bei3.length > 0 ? bei3[bei3.length - 1]?.value ?? 5.35 : 5.35;
-    if (bei3_curr > 5.0) {
+    const bei3_curr = bei3.length > 0 ? bei3[bei3.length - 1]?.value : null;
+    if (bei3_curr !== null && bei3_curr > 5.0) {
       alerts.push({
         type: 'breakeven_desancora',
         title: 'Breakeven Desancorado',
@@ -346,20 +346,22 @@ const HubRendaFixa = () => {
     }
 
     // 3. Juro Real Elevado: If Selic - IPCA12m > 7%
-    const selic_curr = selic.length > 0 ? selic[selic.length - 1]?.value ?? 14.25 : 14.25;
-    const ipca12m = RENDA_FIXA_SAMPLE.find((k) => k.serie_code === "13522")?.last_value ?? 5.06;
-    const realRate = selic_curr - ipca12m;
-    if (realRate > 7.0) {
-      alerts.push({
-        type: 'juro_real_elevado',
-        title: 'Juro Real Restritivo',
-        description: `Taxa real (${realRate.toFixed(2)}%) elevada — acima de 7% a.a., indicando postura muito restritiva`,
-        severity: 'info'
-      });
+    const selic_curr = selic.length > 0 ? selic[selic.length - 1]?.value : null;
+    const ipca12m = kpis.find((k) => k.serie_code === "13522")?.last_value;
+    if (selic_curr !== null && ipca12m !== undefined) {
+      const realRate = selic_curr - ipca12m;
+      if (realRate > 7.0) {
+        alerts.push({
+          type: 'juro_real_elevado',
+          title: 'Juro Real Restritivo',
+          description: `Taxa real (${realRate.toFixed(2)}%) elevada — acima de 7% a.a., indicando postura muito restritiva`,
+          severity: 'info'
+        });
+      }
     }
 
     return alerts;
-  }, [di30, di1800, bei3, selic]);
+  }, [di30, di1800, bei3, selic, kpis]);
 
   /* ─── Sidebar click handler ─── */
   const scrollToSection = useCallback((id: string) => {

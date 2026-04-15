@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, Banknote, Percent, ShieldAlert,
   RotateCcw, Download, BarChart3,
 } from "lucide-react";
-import { useHubSeries, generateSampleSeries, type SeriesDataPoint } from "@/hooks/useHubData";
+import { useHubSeries, type SeriesDataPoint } from "@/hooks/useHubData";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PAINEL DE OPERAÇÕES DE CRÉDITO — Interactive SGS Query Builder
@@ -435,12 +435,12 @@ export function CreditOperationsPanel() {
   const seriesMap = useMemo(() => {
     const map: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[] }> = {};
 
-    const baseSaldoPF = saldoPFData?.length ? saldoPFData : generateSampleSeries(3580, 24, 0.012);
-    const baseSaldoPJ = saldoPJData?.length ? saldoPJData : generateSampleSeries(1240, 24, 0.015);
-    const baseTaxaPF = taxaPFData?.length ? taxaPFData : generateSampleSeries(52, 24, 0.015);
-    const baseTaxaPJ = taxaPJData?.length ? taxaPJData : generateSampleSeries(24, 24, 0.015);
-    const baseInadPF = inadPFData?.length ? inadPFData : generateSampleSeries(4.1, 24, 0.025);
-    const baseInadPJ = inadPJData?.length ? inadPJData : generateSampleSeries(2.4, 24, 0.03);
+    const baseSaldoPF = saldoPFData?.length ? saldoPFData : [];
+    const baseSaldoPJ = saldoPJData?.length ? saldoPJData : [];
+    const baseTaxaPF = taxaPFData?.length ? taxaPFData : [];
+    const baseTaxaPJ = taxaPJData?.length ? taxaPJData : [];
+    const baseInadPF = inadPFData?.length ? inadPFData : [];
+    const baseInadPJ = inadPJData?.length ? inadPJData : [];
 
     /* Proportional weights for each modalidade (approximate market share) */
     const weights: Record<string, { saldo: number; taxa: number; inadim: number; base: "PF" | "PJ" }> = {
