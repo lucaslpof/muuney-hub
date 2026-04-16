@@ -12,6 +12,7 @@ const HubForgotPassword = React.lazy(() => import("./pages/HubForgotPassword"));
 const HubResetPassword = React.lazy(() => import("./pages/HubResetPassword"));
 const HubFirstAccess = React.lazy(() => import("./pages/HubFirstAccess"));
 const HubUpgrade = React.lazy(() => import("./pages/HubUpgrade"));
+const HubSettings = React.lazy(() => import("./pages/HubSettings"));
 const HubDashboard = React.lazy(() => import("./pages/HubDashboard"));
 const HubMacro = React.lazy(() => import("./pages/HubMacro"));
 const HubCredito = React.lazy(() => import("./pages/HubCredito"));
@@ -105,6 +106,7 @@ const App = () => (
           <Route path="/fundos" element={<HubFundos />} />
           <Route path="/portfolio" element={<HubPortfolio />} />
           <Route path="/upgrade" element={<HubUpgrade />} />
+          <Route path="/configuracoes" element={<HubSettings />} />
         </Route>
 
         {/* Backward compat: /hub/* redirects from old muuney-landing routes */}

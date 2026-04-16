@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, Link } from "react-router-dom";
 import { SidebarProvider, MobileMenuButton, useSidebar } from "./HubSidebar";
 import { Helmet } from "react-helmet-async";
+import { Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { OnboardingTour } from "./OnboardingTour";
@@ -60,6 +61,14 @@ const HubMain = () => {
           {user && (
             <>
               {tierBadge}
+              <Link
+                to="/configuracoes"
+                className="inline-flex items-center justify-center w-7 h-7 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70 transition-colors"
+                title={`Configurações da conta${user.email ? ` — ${user.email}` : ""}`}
+                aria-label="Configurações da conta"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
               <button
                 onClick={handleLogout}
                 className="text-[10px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors ml-1"

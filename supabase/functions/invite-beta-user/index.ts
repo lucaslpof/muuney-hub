@@ -15,7 +15,7 @@
  * Deploy: supabase functions deploy invite-beta-user
  *
  * POST body: { emails: ["email1@test.com", "email2@test.com"] }
- * Optional:  { emails: [...], redirect_to: "https://muuney.app/reset-password" }
+ * Optional:  { emails: [...], redirect_to: "https://hub.muuney.com.br/reset-password" }
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
     const emails: string[] = body.emails;
     const redirectTo =
       body.redirect_to || Deno.env.get("SITE_URL") + "/reset-password" ||
-      "https://muuney.app/reset-password";
+      "https://hub.muuney.com.br/reset-password";
 
     if (!Array.isArray(emails) || emails.length === 0) {
       return json({ error: "emails must be a non-empty array" }, 400);

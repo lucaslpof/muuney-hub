@@ -1,6 +1,8 @@
 import { useState, useEffect, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+
+type OtpType = "recovery" | "invite" | "magiclink" | "signup" | "email_change";
 
 export default function HubResetPassword() {
   const [password, setPassword] = useState("");
@@ -9,10 +11,10 @@ export default function HubResetPassword() {
   const [loading, setLoading] = useState(false);
   const [validToken, setValidToken] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Supabase auto-detects the recovery token in the URL hash
-    // and emits PASSWORD_RECOVERY event on onAuthStateChange
+    // Listen for PASSWORD_RECOVERY (fallback if Supabase auto-parses hash)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
@@ -21,11 +23,39 @@ export default function HubResetPassword() {
       }
     });
 
-    // Fallback: if user already has a session from the recovery link
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setValidToken(true);
-      else if (validToken === null) setValidToken(false);
-    });
+    (async () => {
+      // Primary flow: our Send Email Hook delivers ?token_hash=...&type=... directly
+      // to this page. Verify via the SDK (which handles apikey automatically).
+      const tokenHash = searchParams.get("token_hash");
+      const type = searchParams.get("type") as OtpType | null;
+
+      if (tokenHash && type) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type,
+        });
+        if (otpError) {
+          console.error("verifyOtp failed:", otpError);
+          setValidToken(false);
+          setError(
+            otpError.message?.toLowerCase().includes("expired")
+              ? "Link expirado. Solicite um novo link de recuperação."
+              : "Link inválido ou já utilizado. Solicite um novo link."
+          );
+          return;
+        }
+        setValidToken(true);
+        return;
+      }
+
+      // Fallback: user already has an active session (e.g., Supabase auto-parsed hash)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setValidToken(true);
+      } else {
+        setValidToken(false);
+      }
+    })();
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,7 +107,7 @@ export default function HubResetPassword() {
           {validToken === false ? (
             <div className="text-center space-y-4">
               <p className="text-red-400 text-sm">
-                Link inválido ou expirado. Solicite uma nova recuperação.
+                {error ?? "Link inválido ou expirado. Solicite uma nova recuperação."}
               </p>
               <button
                 onClick={() => navigate("/forgot-password")}
@@ -85,6 +115,11 @@ export default function HubResetPassword() {
               >
                 Solicitar novo link
               </button>
+            </div>
+          ) : validToken === null ? (
+            <div className="text-center space-y-3">
+              <div className="w-8 h-8 mx-auto rounded-full border-2 border-zinc-800 border-t-[#0B6C3E] animate-spin" />
+              <p className="text-zinc-500 text-sm">Validando link...</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">

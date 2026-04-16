@@ -55,10 +55,31 @@ interface HookPayload {
 }
 
 function buildConfirmationUrl(data: EmailData): string {
-  // Supabase uses token_hash for the verification link
-  const baseUrl = data.site_url || HUB_URL;
-  const redirectTo = data.redirect_to || `${HUB_URL}/dashboard`;
-  return `${baseUrl}/auth/v1/verify?token=${data.token_hash}&type=${mapActionToType(data.email_action_type)}&redirect_to=${encodeURIComponent(redirectTo)}`;
+  // IMPORTANT: We link DIRECTLY to the app (bypassing Supabase /auth/v1/verify)
+  // because /auth/v1/verify requires the apikey header/query param, which browsers
+  // don't send when following an email link. The app page calls
+  // supabase.auth.verifyOtp({ token_hash, type }) using the SDK, which handles
+  // apikey injection automatically.
+  const type = mapActionToType(data.email_action_type);
+  const redirectTo = data.redirect_to || resolveDefaultRedirect(type);
+  const url = new URL(redirectTo);
+  url.searchParams.set("token_hash", data.token_hash);
+  url.searchParams.set("type", type);
+  return url.toString();
+}
+
+function resolveDefaultRedirect(type: string): string {
+  switch (type) {
+    case "recovery":
+    case "invite":
+      return `${HUB_URL}/reset-password`;
+    case "signup":
+    case "email_change":
+    case "magiclink":
+    case "reauthentication":
+    default:
+      return `${HUB_URL}/dashboard`;
+  }
 }
 
 function mapActionToType(action: string): string {
