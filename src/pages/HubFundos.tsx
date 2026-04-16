@@ -19,6 +19,7 @@ import {
 import {
   useFundCatalog, useFundDetail, useFundRankings, useFundStats,
   useFundSearch, useGestoraRankings, useAdminRankings,
+  useFidcV4Overview, useFiiV4Overview,
   formatPL, formatPct, formatCnpj, fundDisplayName, primaryCnpj,
 } from "@/hooks/useHubFundos";
 import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
@@ -726,6 +727,21 @@ const AdminRankingsTable = () => {
   );
 };
 
+/* ─── MetricasDetail (extracted to avoid hooks-in-callback violation) ─── */
+const MetricasDetail = ({ cnpj, period }: { cnpj: string; period: string }) => {
+  const { data: fundData } = useFundDetail(cnpj, period);
+  if (!fundData?.daily?.length) return null;
+  return (
+    <div className="space-y-3">
+      <FundMetricsSummary daily={fundData.daily} title={`Métricas — ${fundDisplayName(fundData.meta)}`} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <DrawdownChart daily={fundData.daily} />
+        <VolatilityChart daily={fundData.daily} />
+      </div>
+    </div>
+  );
+};
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN COMPONENT — HubFundos (H1.4 Fase B — 6 Narrative Sections)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -796,6 +812,10 @@ const HubFundos = () => {
   const { data: stats } = useFundStats();
   const { data: rankings, isLoading: rankingsLoading } = useFundRankings(undefined, 30);
 
+  /* Cross-module data for NarrativePanel + Intelligence Strip */
+  const { data: fidcOverview } = useFidcV4Overview();
+  const { data: fiiOverview } = useFiiV4Overview();
+
   /* ─── Overview KPIs ─── */
   const overviewKPIs = useMemo(() => {
     if (!stats || !catalog) return [];
@@ -815,28 +835,113 @@ const HubFundos = () => {
     { label: "Dados diários (meses)", current: 6, target: 12, unit: "" },
   ], [stats]);
 
-  const analyticsInsights = useMemo(() => [
-    {
-      title: "RCVM 175 Adaptado",
-      desc: "27k+ classes com cnpj_fundo_classe como chave primária. Hierarquia Fundo→Classe→Subclasse implementada. Badge ✓ RCVM 175 visível.",
-      color: "#0B6C3E",
-    },
-    {
+  /* ─── Narrative Panel Props (wired with real cross-module data) ─── */
+  const narrativeProps = useMemo(() => {
+    const totalPL = stats ? Object.values(stats.by_classe).reduce((a, c) => a + c.pl_total, 0) : undefined;
+    return {
+      totalFunds: stats?.total_funds,
+      totalPL,
+      avgRentab: fidcOverview?.avg_rentab_senior ?? null,
+      fidcInadim: fidcOverview?.avg_inadimplencia ?? null,
+      fiiAvgDY: fiiOverview?.avg_dividend_yield ?? null,
+      selicMeta: 14.25,
+      ipcaAccum: 5.5,
+    };
+  }, [stats, fidcOverview, fiiOverview]);
+
+  /* ─── Quick Intelligence Strip data ─── */
+  const intelligenceStrip = useMemo(() => {
+    const items: { label: string; value: string; color: string; detail: string }[] = [];
+
+    // FIDC Inadimplência
+    const inadim = fidcOverview?.avg_inadimplencia;
+    if (inadim != null) {
+      items.push({
+        label: "FIDC Inadim",
+        value: `${inadim.toFixed(1)}%`,
+        color: inadim > 5 ? "text-red-400" : inadim > 3 ? "text-amber-400" : "text-emerald-400",
+        detail: inadim > 5 ? "Acima do limiar de stress" : inadim > 3 ? "Atenção redobrada" : "Controlada",
+      });
+    }
+
+    // FII DY
+    const dy = fiiOverview?.avg_dividend_yield;
+    if (dy != null) {
+      items.push({
+        label: "FII DY Médio",
+        value: `${dy.toFixed(2)}%/mês`,
+        color: dy > 0.8 ? "text-emerald-400" : "text-zinc-400",
+        detail: dy > 0.8 ? "Atrativo vs Selic" : "Comprimido pela Selic alta",
+      });
+    }
+
+    // FIDC Subordinação
+    const subord = fidcOverview?.avg_subordinacao;
+    if (subord != null) {
+      items.push({
+        label: "FIDC Subord Média",
+        value: `${subord.toFixed(1)}%`,
+        color: subord < 10 ? "text-red-400" : subord < 20 ? "text-amber-400" : "text-emerald-400",
+        detail: subord < 10 ? "Proteção insuficiente" : "Nível adequado",
+      });
+    }
+
+    // Total fundos catalogados
+    if (stats?.total_funds) {
+      items.push({
+        label: "Classes CVM",
+        value: `${(stats.total_funds / 1000).toFixed(1)}k`,
+        color: "text-zinc-300",
+        detail: "RCVM 175 catalogadas",
+      });
+    }
+
+    return items;
+  }, [fidcOverview, fiiOverview, stats]);
+
+  const analyticsInsights = useMemo(() => {
+    const items: { title: string; desc: string; color: string }[] = [];
+
+    // Dynamic FIDC health insight
+    const inadim = fidcOverview?.avg_inadimplencia;
+    const subord = fidcOverview?.avg_subordinacao;
+    if (inadim != null && subord != null) {
+      const ratio = subord / Math.max(inadim, 0.01);
+      items.push({
+        title: "Saúde FIDC",
+        desc: `Inadimplência média ${inadim.toFixed(2)}% vs subordinação ${subord.toFixed(1)}%. Razão cobertura: ${ratio.toFixed(1)}x. ${ratio > 3 ? "Proteção robusta." : ratio > 1.5 ? "Proteção adequada." : "Proteção frágil — monitorar."}`,
+        color: ratio > 3 ? "#22C55E" : ratio > 1.5 ? "#F59E0B" : "#EF4444",
+      });
+    }
+
+    // Dynamic FII vs Selic
+    const dy = fiiOverview?.avg_dividend_yield;
+    if (dy != null) {
+      const selicMensal = (Math.pow(1 + 14.25 / 100, 1 / 12) - 1) * 100;
+      const spread = dy - selicMensal;
+      items.push({
+        title: "FII vs Selic",
+        desc: `DY médio FII (${dy.toFixed(2)}%/mês) vs Selic mensal (${selicMensal.toFixed(2)}%). Spread: ${spread >= 0 ? "+" : ""}${spread.toFixed(2)}pp. ${spread > 0 ? "FII gerando prêmio sobre RF." : "Selic comprimindo atratividade dos FIIs."}`,
+        color: spread > 0 ? "#EC4899" : "#8B5CF6",
+      });
+    }
+
+    // Coverage
+    items.push({
       title: "Cobertura de Dados",
-      desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · 2.6M+ registros diários · 6 meses (Out 2025 — Mar 2026) · Ingestão via pg_cron D+1.`,
+      desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · ${fidcOverview?.total_fidcs || "—"} FIDCs · ${fiiOverview?.total_fiis || "—"} FIIs · RCVM 175 · Dados diários 6M`,
       color: "#3B82F6",
-    },
-    {
+    });
+
+    // Modo Assessor
+    items.push({
       title: "Modo Assessor",
       desc: "Toggle entre visão Investidor (simplificada, Fund Score™) e Assessor (Sharpe, Sortino, Calmar, VaR, composição CDA, due diligence).",
       color: "#06B6D4",
-    },
-    {
-      title: "Cross-module",
-      desc: "Correlação fundos × Selic: fundos RF tendem a captar mais em ciclos de alta. Monitorar spread DI vs cota.",
-      color: "#EC4899",
-    },
-  ], [stats]);
+    });
+
+    return items;
+  }, [stats, fidcOverview, fiiOverview]);
 
   /* ─── Scroll to section ─── */
   const scrollTo = useCallback((id: string) => {
@@ -961,6 +1066,19 @@ const HubFundos = () => {
                   </motion.div>
                 ))}
               </div>
+
+              {/* Quick Intelligence Strip */}
+              {intelligenceStrip.length > 0 && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {intelligenceStrip.map((item) => (
+                    <div key={item.label} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-md px-3 py-2">
+                      <div className="text-[8px] text-zinc-600 uppercase tracking-wider font-mono">{item.label}</div>
+                      <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
+                      <div className="text-[8px] text-zinc-700 font-mono mt-0.5">{item.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Insights Feed — Últimas Movimentações (Pro) */}
               <RequireTier tier="pro" feature="o feed de insights e alertas">
@@ -1128,22 +1246,9 @@ const HubFundos = () => {
                   <MonthlyRankingsTable onSelectFund={setSelectedFund} />
 
                   {/* Metrics: show when a fund is selected */}
-                  {selectedFund && (() => {
-                    const MetricasDetail = () => {
-                      const { data: fundData } = useFundDetail(selectedFund, period);
-                      if (!fundData?.daily?.length) return null;
-                      return (
-                        <div className="space-y-3">
-                          <FundMetricsSummary daily={fundData.daily} title={`Métricas — ${fundDisplayName(fundData.meta)}`} />
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            <DrawdownChart daily={fundData.daily} />
-                            <VolatilityChart daily={fundData.daily} />
-                          </div>
-                        </div>
-                      );
-                    };
-                    return <MetricasDetail />;
-                  })()}
+                  {selectedFund && (
+                    <MetricasDetail cnpj={selectedFund} period={period} />
+                  )}
 
                   {/* Monthly detail for selected fund */}
                   {selectedFund && <FundMonthlyDetail cnpj={selectedFund} />}
@@ -1225,10 +1330,7 @@ const HubFundos = () => {
               {sectionVisible("analytics") ? (
                 <div className="space-y-4">
                   {/* Fund Market Intelligence */}
-                  <FundNarrativePanel
-                    totalFunds={stats?.total_funds}
-                    totalPL={stats ? Object.values(stats.by_classe).reduce((a, c) => a + c.pl_total, 0) : undefined}
-                  />
+                  <FundNarrativePanel {...narrativeProps} />
 
                   {/* Benchmarks */}
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">

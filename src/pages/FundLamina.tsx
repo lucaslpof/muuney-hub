@@ -112,8 +112,9 @@ export default function FundLamina() {
   const similarFunds = useMemo(() => {
     if (!catalogData?.funds || !fundData?.meta) return [];
     const meta = fundData.meta;
+    const selfCnpj = meta.cnpj_fundo_classe || meta.cnpj_fundo;
     return catalogData.funds
-      .filter((f) => f.cnpj_fundo !== meta.cnpj_fundo)
+      .filter((f) => (f.cnpj_fundo_classe || f.cnpj_fundo) !== selfCnpj)
       .slice(0, 6);
   }, [catalogData, fundData]);
 
@@ -424,7 +425,7 @@ export default function FundLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Performance</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Metrics Table */}
               <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
                 <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Métricas Principais</h3>
@@ -537,7 +538,7 @@ export default function FundLamina() {
                 <h2 className="text-sm font-semibold text-zinc-300">Composição de Carteira</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {compositionSummary.summary && compositionSummary.summary.length > 0 && (
                   <div className="space-y-3">
                     <CompositionSummary cnpj={cnpj} />
@@ -674,7 +675,7 @@ export default function FundLamina() {
                 <h2 className="text-sm font-semibold text-zinc-300">Fundos Similares ({similarClasse})</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {similarFunds.map((fund) => (
                   <Link
                     key={fund.cnpj_fundo}

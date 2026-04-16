@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { CreditHeatmap } from "@/components/hub/CreditHeatmap";
-import { useHubSeries, type SeriesDataPoint } from "@/hooks/useHubData";
+import {
+  useHubSeriesBundle,
+  pickSeries,
+  type SeriesDataPoint,
+} from "@/hooks/useHubData";
 import { percentChange } from "@/lib/statistics";
 import {
   TrendingUp, TrendingDown, Minus,
@@ -56,12 +60,6 @@ const SummaryBanner = ({ items }: { items: SummaryItem[] }) => (
   </div>
 );
 
-/* ─── Helper: use series with fallback ─── */
-function useSeries(category: string, period: string, _base?: number, _vol?: number) {
-  const { data } = useHubSeries(category, period, "credito");
-  return data?.length ? data : [];
-}
-
 /* ─── Compute YoY growth from monthly series ─── */
 function yoyGrowth(data: SeriesDataPoint[]): SeriesDataPoint[] {
   if (data.length < 13) return percentChange(data, 1);
@@ -92,74 +90,89 @@ interface CreditOverviewMensalProps {
 }
 
 export const CreditOverviewMensal = ({ period }: CreditOverviewMensalProps) => {
-  /* ── Fetch all series ── */
-  // Saldos agregados
-  const saldoTotal = useSeries("saldo_credito", period, 6120, 0.01);
-  const saldoPF = useSeries("saldo_pf", period, 3580, 0.012);
-  const saldoPJ = useSeries("saldo_pj_total", period, 2340, 0.012);
-  const saldoLivres = useSeries("saldo_livres", period, 3520, 0.011);
-  const saldoDirecionados = useSeries("saldo_direcionados", period, 2600, 0.010);
+  /* ══════ Data: fetch bundles by REAL category names ══════ */
+  const { data: saldoBundle } = useHubSeriesBundle("saldo_credito", period, "credito");
+  const { data: pfModalBundle } = useHubSeriesBundle("saldo_pf_modal", period, "credito");
+  const { data: pjModalBundle } = useHubSeriesBundle("saldo_pj_modal", period, "credito");
+  const { data: concessaoBundle } = useHubSeriesBundle("concessao", period, "credito");
+  const { data: inadBundle } = useHubSeriesBundle("inadimplencia", period, "credito");
+  const { data: inadDetalheBundle } = useHubSeriesBundle("inadim_detalhe", period, "credito");
+  const { data: inadBundle15 } = useHubSeriesBundle("inadim_15_90", period, "credito");
+  const { data: taxaBundle } = useHubSeriesBundle("taxa", period, "credito");
+  const { data: spreadBundle } = useHubSeriesBundle("spread", period, "credito");
+  const { data: alavBundle } = useHubSeriesBundle("alavancagem", period, "credito");
 
-  // PF por modalidade
-  const pfPessoal = useSeries("pf_pessoal", period, 428, 0.02);
-  const pfConsignado = useSeries("pf_consignado", period, 582, 0.01);
-  const pfVeiculos = useSeries("pf_veiculos", period, 312, 0.02);
-  const pfCartao = useSeries("pf_cartao", period, 548, 0.025);
-  const pfRural = useSeries("pf_rural", period, 384, 0.015);
-  const pfHabitacional = useSeries("pf_habitacional", period, 892, 0.008);
-  const pfBndes = useSeries("pf_bndes", period, 42, 0.02);
+  /* ══════ Pick individual series by BACEN SGS code ══════ */
 
-  // PJ por modalidade
-  const pjCapitalGiro = useSeries("pj_capital_giro", period, 498, 0.015);
-  const pjDuplicatas = useSeries("pj_duplicatas", period, 142, 0.02);
-  const pjContaGarantida = useSeries("pj_conta_garantida", period, 54, 0.03);
-  const pjComercioExt = useSeries("pj_comercio_ext", period, 112, 0.025);
-  const pjRural = useSeries("pj_rural", period, 412, 0.015);
-  const pjHabitacional = useSeries("pj_habitacional", period, 98, 0.012);
-  const pjBndes = useSeries("pj_bndes", period, 310, 0.01);
+  // Saldos agregados (category: saldo_credito)
+  const saldoTotal = pickSeries(saldoBundle, "20540");
+  const saldoPF    = pickSeries(saldoBundle, "20541");
+  const saldoPJ    = pickSeries(saldoBundle, "20542");
+  const saldoLivres = pickSeries(saldoBundle, "20543");
+  const saldoDirecionados = pickSeries(saldoBundle, "20544");
 
-  // Concessões
-  const concessaoPF = useSeries("concessao_pf", period, 254, 0.04);
-  const concessaoPJ = useSeries("concessao_pj", period, 198, 0.035);
-  const concessaoPFLivres = useSeries("concessao_pf_livres", period, 198, 0.04);
-  const concessaoPJLivres = useSeries("concessao_pj_livres", period, 165, 0.035);
+  // PF por modalidade (category: saldo_pf_modal)
+  const pfPessoal      = pickSeries(pfModalBundle, "20570");
+  const pfConsignado   = pickSeries(pfModalBundle, "20572");
+  const pfRural        = pickSeries(pfModalBundle, "20593");
+  const pfHabitacional = pickSeries(pfModalBundle, "20599");
+  const pfBndes        = pickSeries(pfModalBundle, "20606");
+  // Veículos and Cartão are in saldo_credito, not saldo_pf_modal
+  const pfVeiculos = pickSeries(saldoBundle, "20581");
+  const pfCartao   = pickSeries(saldoBundle, "20590");
 
-  // Inadimplência >90d
-  const inadTotal = useSeries("inadimplencia", period, 3.3, 0.03);
-  const inadPF = useSeries("inadimplencia_pf", period, 4.1, 0.025);
-  const inadPJ = useSeries("inadimplencia_pj", period, 2.4, 0.03);
-  const inadLivres = useSeries("inadim_livres", period, 4.5, 0.025);
-  const inadDirecionados = useSeries("inadim_direcionados", period, 1.6, 0.02);
-  const inadPFLivres = useSeries("inadim_pf_livres", period, 5.8, 0.025);
-  const inadPJLivres = useSeries("inadim_pj_livres", period, 2.8, 0.03);
-  const inadPFDir = useSeries("inadim_pf_dir", period, 1.9, 0.02);
-  const inadPJDir = useSeries("inadim_pj_dir", period, 1.2, 0.02);
+  // PJ por modalidade (category: saldo_pj_modal)
+  const pjCapitalGiro   = pickSeries(pjModalBundle, "20551");
+  const pjComercioExt   = pickSeries(pjModalBundle, "20565");   // Financ. Exportações in data
+  const pjRural         = pickSeries(pjModalBundle, "20611");
+  const pjHabitacional  = pickSeries(pjModalBundle, "20614");
+  const pjBndes         = pickSeries(pjModalBundle, "20622");
 
-  // Inadimplência 15-90d
-  const inad15Total = useSeries("inadim_15_90_total", period, 4.2, 0.025);
-  const inad15PF = useSeries("inadim_15_90_pf", period, 5.1, 0.025);
-  const inad15PJ = useSeries("inadim_15_90_pj", period, 2.9, 0.03);
-  const inad15Livres = useSeries("inadim_15_90_livres", period, 5.6, 0.025);
-  const inad15Dir = useSeries("inadim_15_90_dir", period, 2.1, 0.02);
+  // Concessões (category: concessao)
+  const concessaoPF       = pickSeries(concessaoBundle, "20631");
+  const concessaoPJ       = pickSeries(concessaoBundle, "20632");
+  const concessaoPFLivres = pickSeries(concessaoBundle, "20633");
+  const concessaoPJLivres = pickSeries(concessaoBundle, "20634");
 
-  // Taxas
-  const taxaPF = useSeries("taxa_pf", period, 52, 0.015);
-  const taxaPJ = useSeries("taxa_pj", period, 24, 0.015);
-  const taxaPFLivres = useSeries("taxa_pf_livres", period, 58, 0.015);
-  const taxaPJLivres = useSeries("taxa_pj_livres", period, 25.6, 0.015);
-  const taxaPFDir = useSeries("taxa_pf_dir", period, 10.8, 0.01);
-  const taxaPJDir = useSeries("taxa_pj_dir", period, 14.2, 0.01);
+  // Inadimplência >90d (category: inadimplencia)
+  const inadTotal  = pickSeries(inadBundle, "21082");
+  const inadPF     = pickSeries(inadBundle, "21083");
+  const inadPJ     = pickSeries(inadBundle, "21084");
 
-  // Spreads
-  const spreadPF = useSeries("spread_pf", period, 30, 0.02);
-  const spreadPJ = useSeries("spread_pj", period, 10.8, 0.025);
-  const spreadLivres = useSeries("spread_livres_pf", period, 35.6, 0.02);
-  const spreadDir = useSeries("spread_direcionados", period, 5.2, 0.015);
+  // Inadimplência detalhada (category: inadim_detalhe)
+  const inadLivres       = pickSeries(inadDetalheBundle, "21085");
+  const inadDirecionados = pickSeries(inadDetalheBundle, "21086");
+  const inadPFLivres     = pickSeries(inadDetalheBundle, "21087");
+  const inadPJLivres     = pickSeries(inadDetalheBundle, "21088");
+  const inadPFDir        = pickSeries(inadDetalheBundle, "21089");
+  const inadPJDir        = pickSeries(inadDetalheBundle, "21090");
 
-  // Alavancagem
-  const endivExclHab = useSeries("endiv_excl_hab", period, 32.4, 0.01);
-  const endivComHab = useSeries("endiv_com_hab", period, 48.2, 0.01);
-  const comprometRenda = useSeries("compromet_renda", period, 26.8, 0.012);
+  // Inadimplência 15-90d (category: inadim_15_90 — stored in saldo_pj_modal on BACEN)
+  // These codes are in hub_credito_series under saldo_pj_modal category: 21128
+  // And in inadim_15_90 meta category but no data.
+  // Fallback: try saldo_pj_modal where 21128 has 62 data points
+  const inad15Total  = pickSeries(inadBundle15, "21128").length ? pickSeries(inadBundle15, "21128") : pickSeries(pjModalBundle, "21128");
+  const inad15Livres = pickSeries(inadBundle15, "21131");
+  const inad15Dir    = pickSeries(inadBundle15, "21132");
+
+  // Taxas (category: taxa)
+  const taxaPF       = pickSeries(taxaBundle, "20714");
+  const taxaPJ       = pickSeries(taxaBundle, "20715");
+  const taxaPFLivres = pickSeries(taxaBundle, "20740");
+  const taxaPJLivres = pickSeries(taxaBundle, "20751");
+  const taxaPFDir    = pickSeries(taxaBundle, "20760");
+  const taxaPJDir    = pickSeries(taxaBundle, "20763");
+
+  // Spreads (category: spread)
+  const spreadPF     = pickSeries(spreadBundle, "20783");
+  const spreadPJ     = pickSeries(spreadBundle, "20784");
+  const spreadLivres = pickSeries(spreadBundle, "20785");
+  const spreadDir    = pickSeries(spreadBundle, "20787");
+
+  // Alavancagem (category: alavancagem)
+  const endivExclHab   = pickSeries(alavBundle, "29037");
+  const endivComHab    = pickSeries(alavBundle, "29038");
+  const comprometRenda = pickSeries(alavBundle, "29039");
 
   /* ── Derived: YoY series ── */
   const saldoTotalYoY = useMemo(() => yoyGrowth(saldoTotal), [saldoTotal]);
@@ -199,13 +212,11 @@ export const CreditOverviewMensal = ({ period }: CreditOverviewMensalProps) => {
 
   const heatmapPJ = useMemo(() => [
     { label: "Capital de Giro", values: pjCapitalGiro },
-    { label: "Duplicatas", values: pjDuplicatas },
-    { label: "Conta Garantida", values: pjContaGarantida },
     { label: "Comércio Exterior", values: pjComercioExt },
     { label: "Rural", values: pjRural },
     { label: "Habitacional", values: pjHabitacional },
     { label: "BNDES", values: pjBndes },
-  ], [pjCapitalGiro, pjDuplicatas, pjContaGarantida, pjComercioExt, pjRural, pjHabitacional, pjBndes]);
+  ], [pjCapitalGiro, pjComercioExt, pjRural, pjHabitacional, pjBndes]);
 
   const heatmapInadPF = useMemo(() => [
     { label: "Total PF", values: inadPF },
@@ -349,29 +360,19 @@ export const CreditOverviewMensal = ({ period }: CreditOverviewMensalProps) => {
       <Section title="Crédito a Empresas" icon={Building2}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <MacroChart
-            data={pjCapitalGiro.map((d, i) => ({
-              ...d,
-              value2: pjDuplicatas[i]?.value ?? 0,
-            }))}
-            title="PJ Livres — Capital de Giro vs Duplicatas"
+            data={pjCapitalGiro}
+            title="PJ — Capital de Giro"
             type="line"
             color={C.emerald}
-            color2={C.indigo}
             label="Capital Giro"
-            label2="Duplicatas"
             unit=" R$ bi"
           />
           <MacroChart
-            data={pjComercioExt.map((d, i) => ({
-              ...d,
-              value2: pjContaGarantida[i]?.value ?? 0,
-            }))}
-            title="PJ Livres — Com. Exterior vs Conta Garantida"
+            data={pjComercioExt}
+            title="PJ — Financiamento Comércio Exterior"
             type="line"
             color={C.amber}
-            color2={C.red}
             label="Com. Ext."
-            label2="Cta. Garantida"
             unit=" R$ bi"
           />
         </div>
@@ -419,11 +420,11 @@ export const CreditOverviewMensal = ({ period }: CreditOverviewMensalProps) => {
             unit="%"
           />
           <MacroChart
-            data={inad15PF.map((d, i) => ({
+            data={inadPF.map((d, i) => ({
               ...d,
-              value2: inad15PJ[i]?.value ?? 0,
+              value2: inadPJ[i]?.value ?? 0,
             }))}
-            title="NPL 15-90 dias por Tomador"
+            title="NPL >90d por Tomador"
             type="line"
             color={C.red}
             color2={C.amber}

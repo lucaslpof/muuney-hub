@@ -194,12 +194,6 @@ export default function FiiHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("overview"))}
                 className="space-y-6"
               >
-                {/* Title */}
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <LayoutGrid className="w-5 h-5 text-[#EC4899]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Visão Geral</h2>
-                </div>
-
                 {/* KPI Cards */}
                 {overviewData && !overviewLoading ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -324,12 +318,8 @@ export default function FiiHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("rankings"))}
                 className="space-y-6"
               >
-                {/* Title + Export */}
-                <div className="flex items-center justify-between gap-3 border-b border-[#1a1a1a] pb-4">
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="w-5 h-5 text-[#EC4899]" />
-                    <h2 className="text-lg font-semibold text-zinc-300">Rankings</h2>
-                  </div>
+                {/* Export */}
+                <div className="flex justify-end mb-2">
                   <ExportButton onClick={handleExportRankings} label="CSV" disabled={rankingsFunds.length === 0} />
                 </div>
 
@@ -489,12 +479,6 @@ export default function FiiHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("screener"))}
                 className="space-y-6"
               >
-                {/* Title */}
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Search className="w-5 h-5 text-[#EC4899]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Screener</h2>
-                </div>
-
                 {/* Filters */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Search */}
@@ -607,11 +591,6 @@ export default function FiiHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("segmentos"))}
                 className="space-y-6"
               >
-                {/* Title */}
-                <div className="flex items-center gap-3 border-b border-[#1a1a1a] pb-4">
-                  <Zap className="w-5 h-5 text-[#EC4899]" />
-                  <h2 className="text-lg font-semibold text-zinc-300">Segmentos Imobiliários</h2>
-                </div>
 
                 {/* Segment Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -63,6 +63,33 @@ export default function FiiLamina() {
   const dyMes = latest?.dividend_yield_mes != null ? Number(latest.dividend_yield_mes) : null;
   const rentabMes = latest?.rentabilidade_efetiva_mes != null ? Number(latest.rentabilidade_efetiva_mes) : null;
 
+  // Auto-generated assessment
+  const fiiAssessment = useMemo(() => {
+    const signals: { label: string; severity: "positive" | "warning" | "alert"; text: string }[] = [];
+
+    // DY assessment
+    if (dyMes != null) {
+      const selicMensal = (Math.pow(1 + 14.25 / 100, 1 / 12) - 1) * 100;
+      const dyAnual = dyMes * 12;
+      if (dyMes > selicMensal) signals.push({ label: "DY Acima da Selic", severity: "positive", text: `DY mensal (${dyMes.toFixed(2)}%) supera Selic mensal (${selicMensal.toFixed(2)}%). DY anualizado: ~${dyAnual.toFixed(1)}%.` });
+      else if (dyMes > selicMensal * 0.8) signals.push({ label: "DY Próximo da Selic", severity: "warning", text: `DY mensal (${dyMes.toFixed(2)}%) ligeiramente abaixo da Selic mensal (${selicMensal.toFixed(2)}%). Considerar custo oportunidade.` });
+      else signals.push({ label: "DY Comprimido", severity: "alert", text: `DY mensal (${dyMes.toFixed(2)}%) significativamente abaixo da Selic mensal (${selicMensal.toFixed(2)}%). Descontando prêmio de risco.` });
+    }
+
+    // Rentab vs DY spread (distributing more than earning?)
+    if (dyMes != null && rentabMes != null) {
+      if (rentabMes < 0 && dyMes > 0) signals.push({ label: "Yield Trap Risk", severity: "alert", text: `Rentabilidade efetiva negativa (${rentabMes.toFixed(2)}%) mas DY positivo (${dyMes.toFixed(2)}%). Distribuindo mais do que gera — possível destruição de valor patrimonial.` });
+      else if (rentabMes > dyMes * 1.5) signals.push({ label: "Valorização Patrimonial", severity: "positive", text: `Rentabilidade efetiva (${rentabMes.toFixed(2)}%) supera DY (${dyMes.toFixed(2)}%). Apreciação real do patrimônio.` });
+    }
+
+    // Cotistas trend (basic - just show count)
+    if (latest?.nr_cotistas != null && latest.nr_cotistas > 10000) {
+      signals.push({ label: "Alta Liquidez", severity: "positive", text: `${latest.nr_cotistas.toLocaleString("pt-BR")} cotistas — base ampla indica boa liquidez no mercado secundário.` });
+    }
+
+    return signals;
+  }, [dyMes, rentabMes, latest]);
+
   if (fiiLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] p-6">
@@ -186,6 +213,29 @@ export default function FiiLamina() {
                 <div className="text-zinc-300">{tipoGestao}</div>
               </div>
             </div>
+            {/* FII Assessment */}
+            {fiiAssessment.length > 0 && (
+              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 space-y-2">
+                <h4 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Avaliação Automática</h4>
+                {fiiAssessment.map((s) => {
+                  const severityStyles = {
+                    positive: { bg: "bg-emerald-500/5", border: "border-emerald-500/20", text: "text-emerald-400", dot: "bg-emerald-400" },
+                    warning: { bg: "bg-amber-500/5", border: "border-amber-500/20", text: "text-amber-400", dot: "bg-amber-400" },
+                    alert: { bg: "bg-red-500/5", border: "border-red-500/20", text: "text-red-400", dot: "bg-red-400" },
+                  };
+                  const style = severityStyles[s.severity];
+                  return (
+                    <div key={s.label} className={`${style.bg} border ${style.border} rounded px-3 py-2 flex items-start gap-2`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-1 shrink-0`} />
+                      <div>
+                        <span className={`text-[9px] font-mono font-bold ${style.text}`}>{s.label}</span>
+                        <p className="text-[8px] text-zinc-600 mt-0.5">{s.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         </SectionErrorBoundary>
 
@@ -326,7 +376,7 @@ export default function FiiLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Classificação & Segmento</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-[10px] font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] font-mono">
               <div className="bg-[#111111] border border-[#1a1a1a] rounded p-4 space-y-3">
                 <div className="text-zinc-600 uppercase tracking-wider text-[9px] pb-2 border-b border-[#1a1a1a]">
                   Classificação
@@ -383,7 +433,7 @@ export default function FiiLamina() {
             </div>
 
             {meta && (
-              <div className="grid grid-cols-2 gap-4 text-[9px] font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[9px] font-mono">
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded p-4">
                   <div className="text-zinc-600 uppercase tracking-wider mb-2 flex items-center gap-1">
                     <Info className="w-3 h-3" /> Gestor
@@ -417,7 +467,7 @@ export default function FiiLamina() {
                 <h2 className="text-sm font-semibold text-zinc-300">FIIs Similares (mesmo segmento)</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fiiData.similar.slice(0, 6).map((fund, idx) => (
                   <Link
                     key={idx}

@@ -155,6 +155,41 @@ export default function FidcLamina() {
   const totalInadim = latest?.taxa_inadimplencia != null ? latest.taxa_inadimplencia : null;
   const carteiraPrejuizo = latest?.vl_carteira_prejuizo || 0;
 
+  // Auto-generated health assessment
+  const healthAssessment = useMemo(() => {
+    const signals: { label: string; severity: "positive" | "warning" | "alert"; text: string }[] = [];
+
+    // Subordinação assessment
+    if (totalSubord != null) {
+      if (totalSubord < 5) signals.push({ label: "Subordinação Crítica", severity: "alert", text: `Índice de ${totalSubord.toFixed(1)}% abaixo do mínimo aceitável (5%). Proteção insuficiente para cotistas senior.` });
+      else if (totalSubord < 15) signals.push({ label: "Subordinação Baixa", severity: "warning", text: `Índice de ${totalSubord.toFixed(1)}% moderado. Monitorar tendência.` });
+      else signals.push({ label: "Subordinação Adequada", severity: "positive", text: `Índice de ${totalSubord.toFixed(1)}% — proteção robusta para cotistas senior.` });
+    }
+
+    // Inadimplência assessment
+    if (totalInadim != null) {
+      if (totalInadim > 10) signals.push({ label: "Inadimplência Elevada", severity: "alert", text: `Taxa de ${totalInadim.toFixed(2)}% muito acima do limiar de stress (5%). Risco de perda patrimonial.` });
+      else if (totalInadim > 5) signals.push({ label: "Inadimplência Alta", severity: "warning", text: `Taxa de ${totalInadim.toFixed(2)}% acima do limiar de atenção.` });
+      else signals.push({ label: "Inadimplência Controlada", severity: "positive", text: `Taxa de ${totalInadim.toFixed(2)}% dentro dos parâmetros saudáveis.` });
+    }
+
+    // PDD Coverage
+    if (latest?.vl_carteira_inadimplente && latest?.vl_pdd) {
+      const coverage = (latest.vl_pdd / latest.vl_carteira_inadimplente) * 100;
+      if (coverage < 50) signals.push({ label: "Cobertura PDD Baixa", severity: "alert", text: `PDD cobre apenas ${coverage.toFixed(0)}% da carteira inadimplente. Risco de provisão adicional.` });
+      else if (coverage < 100) signals.push({ label: "Cobertura PDD Parcial", severity: "warning", text: `PDD cobre ${coverage.toFixed(0)}% da inadimplência. Próximo ao adequado.` });
+      else signals.push({ label: "PDD Adequada", severity: "positive", text: `PDD cobre ${coverage.toFixed(0)}% da carteira inadimplente.` });
+    }
+
+    // vs CDI
+    if (vsCDIMetric) {
+      if (vsCDIMetric.excess > 1) signals.push({ label: "Retorno Acima CDI", severity: "positive", text: `Fundo supera CDI em ${vsCDIMetric.excess.toFixed(2)}pp no período. Geração de alpha.` });
+      else if (vsCDIMetric.excess < -1) signals.push({ label: "Retorno Abaixo CDI", severity: "alert", text: `Fundo abaixo do CDI em ${Math.abs(vsCDIMetric.excess).toFixed(2)}pp. Avaliar custo de oportunidade.` });
+    }
+
+    return signals;
+  }, [totalSubord, totalInadim, latest, vsCDIMetric]);
+
   if (fidcLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] p-6">
@@ -265,6 +300,30 @@ export default function FidcLamina() {
                 <div className="text-zinc-300">{formatPL(latest?.vl_carteira_inadimplente)}</div>
               </div>
             </div>
+
+            {/* Health Assessment */}
+            {healthAssessment.length > 0 && (
+              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3 space-y-2">
+                <h4 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">Avaliação Automática</h4>
+                {healthAssessment.map((s) => {
+                  const severityStyles = {
+                    positive: { bg: "bg-emerald-500/5", border: "border-emerald-500/20", text: "text-emerald-400", dot: "bg-emerald-400" },
+                    warning: { bg: "bg-amber-500/5", border: "border-amber-500/20", text: "text-amber-400", dot: "bg-amber-400" },
+                    alert: { bg: "bg-red-500/5", border: "border-red-500/20", text: "text-red-400", dot: "bg-red-400" },
+                  };
+                  const style = severityStyles[s.severity];
+                  return (
+                    <div key={s.label} className={`${style.bg} border ${style.border} rounded px-3 py-2 flex items-start gap-2`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-1 shrink-0`} />
+                      <div>
+                        <span className={`text-[9px] font-mono font-bold ${style.text}`}>{s.label}</span>
+                        <p className="text-[8px] text-zinc-600 mt-0.5">{s.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         </SectionErrorBoundary>
 
