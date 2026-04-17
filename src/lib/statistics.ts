@@ -174,8 +174,9 @@ export function healthIndex(
   components: { data: DataPoint[]; weight: number; higherIsBetter: boolean }[]
 ): DataPoint[] {
   if (components.length === 0) return [];
-  const minLen = Math.min(...components.map((c) => c.data.length));
-  if (minLen === 0) return [];
+  const lens = components.map((c) => c.data.length);
+  const minLen = lens.length > 0 ? Math.min(...lens) : 0;
+  if (minLen === 0 || !Number.isFinite(minLen)) return [];
 
   const result: DataPoint[] = [];
   for (let i = 0; i < minLen; i++) {

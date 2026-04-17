@@ -814,8 +814,14 @@ export function useInsightsFeed(opts?: {
   if (opts?.days) params.days = String(opts.days);
   if (opts?.limit) params.limit = String(opts.limit);
 
+  // Stable, sorted serialization so React Query treats equal-input calls as the same key
+  const keyHash = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join("&");
+
   return useQuery<InsightsFeedResponse>({
-    queryKey: ["cvm", "insights", params],
+    queryKey: ["cvm", "insights", keyHash],
     queryFn: () => fetchCvm("insights", params) as Promise<InsightsFeedResponse>,
     staleTime: STALE_REALTIME,
     enabled: opts?.enabled !== false,

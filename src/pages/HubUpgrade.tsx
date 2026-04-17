@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Check, X, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,20 +58,60 @@ export default function HubUpgrade() {
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState(false);
   const [cancelledBanner, setCancelledBanner] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmTimeout, setConfirmTimeout] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Handle checkout return
+  // Handle checkout return — poll for tier upgrade with timeout
   useEffect(() => {
     const status = searchParams.get("status");
     if (status === "success") {
       setSuccessBanner(true);
-      // Refresh tier after webhook processes (give it 3s)
-      const timer = setTimeout(() => refreshTier(), 3000);
-      return () => clearTimeout(timer);
+      setConfirming(true);
+      setConfirmTimeout(false);
+
+      // Initial refresh after 2s (give webhook a head start)
+      const initialDelay = setTimeout(() => {
+        refreshTier();
+      }, 2000);
+
+      // Poll every 3s until tier becomes pro or 30s elapse
+      pollRef.current = setInterval(() => {
+        refreshTier();
+      }, 3000);
+
+      // Hard timeout at 30s
+      timeoutRef.current = setTimeout(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = null;
+        setConfirming(false);
+        setConfirmTimeout(true);
+      }, 30_000);
+
+      return () => {
+        clearTimeout(initialDelay);
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        pollRef.current = null;
+        timeoutRef.current = null;
+      };
     }
     if (status === "cancelled") {
       setCancelledBanner(true);
     }
   }, [searchParams, refreshTier]);
+
+  // Stop polling when tier upgrades successfully
+  useEffect(() => {
+    if (confirming && (tier === "pro" || tier === "admin")) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      pollRef.current = null;
+      timeoutRef.current = null;
+      setConfirming(false);
+    }
+  }, [tier, confirming]);
 
   async function startCheckout(plan: "monthly" | "yearly") {
     setError(null);
@@ -113,12 +153,53 @@ export default function HubUpgrade() {
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-16">
         {/* Status banners */}
-        {successBanner && (
+        {successBanner && confirming && (
+          <div className="mb-8 px-4 py-3 bg-[#0B6C3E]/10 border border-[#0B6C3E]/40 rounded-lg flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-[#0B6C3E] shrink-0 animate-spin" />
+            <div>
+              <p className="text-sm text-[#0B6C3E] font-semibold">Confirmando pagamento…</p>
+              <p className="text-xs text-zinc-400">Estamos ativando seu acesso Pro. Isso costuma levar até 30 segundos.</p>
+            </div>
+          </div>
+        )}
+        {successBanner && !confirming && !confirmTimeout && (isPro || isAdmin) && (
           <div className="mb-8 px-4 py-3 bg-[#0B6C3E]/10 border border-[#0B6C3E]/40 rounded-lg flex items-center gap-3">
             <Check className="w-5 h-5 text-[#0B6C3E] shrink-0" />
             <div>
-              <p className="text-sm text-[#0B6C3E] font-semibold">Pagamento confirmado</p>
-              <p className="text-xs text-zinc-400">Seu acesso Pro será ativado em alguns segundos.</p>
+              <p className="text-sm text-[#0B6C3E] font-semibold">Acesso Pro ativado ✓</p>
+              <p className="text-xs text-zinc-400">Tudo pronto. Aproveite os módulos avançados do Hub.</p>
+            </div>
+          </div>
+        )}
+        {successBanner && confirmTimeout && (
+          <div className="mb-8 px-4 py-3 bg-amber-500/10 border border-amber-500/40 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-amber-400 font-semibold">Pagamento processado, confirmação demorando</p>
+              <p className="text-xs text-zinc-400 mt-1">
+                Atualize a página em alguns minutos. Se o acesso não for liberado, escreva para{" "}
+                <a href="mailto:contato@muuney.com.br" className="text-amber-300 underline">
+                  contato@muuney.com.br
+                </a>{" "}
+                — vamos resolver na hora.
+              </p>
+              <button
+                onClick={() => {
+                  setConfirmTimeout(false);
+                  setConfirming(true);
+                  refreshTier();
+                  pollRef.current = setInterval(() => refreshTier(), 3000);
+                  timeoutRef.current = setTimeout(() => {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    pollRef.current = null;
+                    setConfirming(false);
+                    setConfirmTimeout(true);
+                  }, 30_000);
+                }}
+                className="mt-2 text-xs text-amber-300 hover:text-amber-200 underline font-medium"
+              >
+                Tentar verificar novamente
+              </button>
             </div>
           </div>
         )}

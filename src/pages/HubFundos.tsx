@@ -446,13 +446,13 @@ const ComparadorSection = ({ period }: { period: string }) => {
                     <tbody className="text-zinc-300">
                       {(["rentabilidade", "risco", "liquidez", "custos"] as const).map((pilar) => {
                         const vals = fundScores.map((f) => f.score.pilares[pilar]);
-                        const maxVal = Math.max(...vals);
+                        const maxVal = vals.length > 0 ? Math.max(...vals) : 0;
                         return (
                           <tr key={pilar} className="border-b border-[#141414]">
                             <td className="px-2 py-1 text-zinc-500 capitalize">{pilar}</td>
                             {fundScores.map((f) => {
                               const v = f.score.pilares[pilar];
-                              const isBest = v === maxVal && vals.filter((x) => x === maxVal).length === 1;
+                              const isBest = vals.length > 0 && v === maxVal && vals.filter((x) => x === maxVal).length === 1;
                               return (
                                 <td key={f.cnpj} className={`px-2 py-1 text-right ${isBest ? "text-emerald-400 font-bold" : ""}`}>
                                   {v}

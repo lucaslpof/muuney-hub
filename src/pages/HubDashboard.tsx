@@ -25,6 +25,25 @@ function toSparkline(series: { date: string; value: number }[], points = 20) {
   return series.filter((_, i) => i % step === 0).map((d) => ({ value: d.value }));
 }
 
+/** Safely render polyline points for an inline sparkline. Filters NaN and avoids divide-by-zero. */
+function sparkPoints(arr: { value: number }[]): string {
+  if (!arr || arr.length < 2) return "";
+  const vals = arr.map((d) => d.value).filter((v) => Number.isFinite(v));
+  if (vals.length < 2) return "";
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  const range = max - min || 1;
+  const w = 80;
+  const h = 24;
+  return arr
+    .map((d, i) => {
+      const x = (i / (arr.length - 1)) * w;
+      const y = Number.isFinite(d.value) ? h - ((d.value - min) / range) * h : h;
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
 /* ─── Module config ─── */
 const useModules = () => {
   const prefix = useHubPrefix();
@@ -177,7 +196,7 @@ const HubDashboard = () => {
               </div>
               {sparkMap.selic_meta?.length > 2 && (
                 <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
-                  <polyline points={sparkMap.selic_meta.map((d, i) => `${(i / (sparkMap.selic_meta.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.selic_meta.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#0B6C3E" strokeWidth="1.5" />
+                  <polyline points={sparkPoints(sparkMap.selic_meta)} fill="none" stroke="#0B6C3E" strokeWidth="1.5" />
                 </svg>
               )}
             </div>
@@ -211,7 +230,7 @@ const HubDashboard = () => {
               </div>
               {sparkMap.ipca_12m?.length > 2 && (
                 <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
-                  <polyline points={sparkMap.ipca_12m.map((d, i) => `${(i / (sparkMap.ipca_12m.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.ipca_12m.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#10B981" strokeWidth="1.5" />
+                  <polyline points={sparkPoints(sparkMap.ipca_12m)} fill="none" stroke="#10B981" strokeWidth="1.5" />
                 </svg>
               )}
             </div>
@@ -245,7 +264,7 @@ const HubDashboard = () => {
               </div>
               {sparkMap.ptax_compra?.length > 2 && (
                 <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
-                  <polyline points={sparkMap.ptax_compra.map((d, i) => `${(i / (sparkMap.ptax_compra.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.ptax_compra.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#F59E0B" strokeWidth="1.5" />
+                  <polyline points={sparkPoints(sparkMap.ptax_compra)} fill="none" stroke="#F59E0B" strokeWidth="1.5" />
                 </svg>
               )}
             </div>
@@ -279,7 +298,7 @@ const HubDashboard = () => {
               </div>
               {sparkMap.inadimplencia_pf?.length > 2 && (
                 <svg width="100%" height="24" viewBox="0 0 80 24" className="mt-2 opacity-50" style={{ maxWidth: "100%" }}>
-                  <polyline points={sparkMap.inadimplencia_pf.map((d, i) => `${(i / (sparkMap.inadimplencia_pf.length - 1)) * 80},${24 - (d.value / Math.max(...sparkMap.inadimplencia_pf.map(x => x.value))) * 24}`).join(" ")} fill="none" stroke="#EF4444" strokeWidth="1.5" />
+                  <polyline points={sparkPoints(sparkMap.inadimplencia_pf)} fill="none" stroke="#EF4444" strokeWidth="1.5" />
                 </svg>
               )}
             </div>

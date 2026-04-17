@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,12 +12,16 @@ export default function HubResetPassword() {
   const [validToken, setValidToken] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     // Listen for PASSWORD_RECOVERY (fallback if Supabase auto-parses hash)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
+      if (!isMountedRef.current) return;
       if (event === "PASSWORD_RECOVERY") {
         setValidToken(true);
       }
@@ -34,6 +38,7 @@ export default function HubResetPassword() {
           token_hash: tokenHash,
           type,
         });
+        if (!isMountedRef.current) return;
         if (otpError) {
           console.error("verifyOtp failed:", otpError);
           setValidToken(false);
@@ -50,6 +55,7 @@ export default function HubResetPassword() {
 
       // Fallback: user already has an active session (e.g., Supabase auto-parsed hash)
       const { data: { session } } = await supabase.auth.getSession();
+      if (!isMountedRef.current) return;
       if (session) {
         setValidToken(true);
       } else {
@@ -57,7 +63,10 @@ export default function HubResetPassword() {
       }
     })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMountedRef.current = false;
+      subscription.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -879,10 +879,12 @@ export default function OfertasRadar() {
                       Volume por Segmento
                     </h3>
                     <div className="space-y-2">
-                      {stats.by_segmento.slice(0, 10).map((s) => {
-                        const max = Math.max(...stats.by_segmento.map((x) => x.valor));
-                        const pct = max > 0 ? (s.valor / max) * 100 : 0;
-                        return (
+                      {(() => {
+                        const segValues = stats.by_segmento.map((x) => x.valor).filter((v) => Number.isFinite(v) && v > 0);
+                        const max = segValues.length > 0 ? Math.max(...segValues) : 0;
+                        return stats.by_segmento.slice(0, 10).map((s) => {
+                          const pct = max > 0 ? (s.valor / max) * 100 : 0;
+                          return (
                           <div key={s.segmento} className="space-y-0.5">
                             <div className="flex justify-between text-[10px] font-mono">
                               <span className="text-zinc-400 truncate max-w-[60%]">{s.segmento}</span>
@@ -898,7 +900,8 @@ export default function OfertasRadar() {
                             </div>
                           </div>
                         );
-                      })}
+                        });
+                      })()}
                     </div>
                   </div>
                 )}

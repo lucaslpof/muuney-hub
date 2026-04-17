@@ -16,12 +16,28 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-charts': ['recharts'],
-          'vendor-motion': ['framer-motion'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-query': ['@tanstack/react-query'],
+        manualChunks(id) {
+          // Vendor chunk splitting — keeps initial bundle lean
+          if (id.includes('node_modules')) {
+            // Recharts: split d3 sub-deps into separate chunk to reduce vendor-charts size
+            if (id.includes('d3-') || id.includes('victory-vendor')) return 'vendor-d3';
+            if (id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('framer-motion')) return 'vendor-motion';
+            if (id.includes('@supabase/')) return 'vendor-supabase';
+            if (id.includes('@tanstack/react-query')) return 'vendor-query';
+            if (id.includes('react-helmet')) return 'vendor-helmet';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-router') ||
+              id.includes('/scheduler/')
+            ) {
+              return 'vendor-react';
+            }
+            // Catch-all for remaining small node_modules deps
+            return 'vendor-misc';
+          }
         },
       },
     },

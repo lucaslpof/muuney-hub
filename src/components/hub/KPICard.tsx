@@ -22,8 +22,9 @@ interface KPICardProps {
 /* Tiny inline SVG sparkline - no deps, 30-point max */
 const Sparkline = ({ data, trend }: { data: SparklinePoint[]; trend?: string }) => {
   const { path, areaPath } = useMemo(() => {
-    if (!data.length) return { path: "", areaPath: "" };
-    const vals = data.map((d) => d.value);
+    if (!data.length || data.length < 2) return { path: "", areaPath: "" };
+    const vals = data.map((d) => d.value).filter((v) => Number.isFinite(v));
+    if (vals.length < 2) return { path: "", areaPath: "" };
     const min = Math.min(...vals);
     const max = Math.max(...vals);
     const range = max - min || 1;
