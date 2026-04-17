@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { HubSEO } from "@/lib/seo";
 import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import {
   Briefcase,
@@ -172,6 +173,13 @@ export default function HubPortfolio() {
 
   return (
     <div className="w-full">
+      <HubSEO
+        title="Portfolio Tracker"
+        description="Monte e acompanhe carteiras de fundos com alocação alvo, drift e performance indexada. Multi-portfolio, holdings detalhadas, metas por classe RCVM 175."
+        path="/portfolio"
+        keywords="portfolio tracker, alocação fundos, drift carteira, holdings, metas alocação, RCVM 175"
+        isProtected={true}
+      />
       {/* ─── Top bar: portfolio switcher + actions ─── */}
       <div className="border-b border-[#141414] bg-[#0a0a0a] sticky top-14 z-20">
         <div className="px-4 lg:px-6 py-3 flex items-center gap-3 flex-wrap">

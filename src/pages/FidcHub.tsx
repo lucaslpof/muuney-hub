@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { LayoutGrid, Zap, Search, TrendingUp, BarChart3 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { HubSEO } from "@/lib/seo";
 import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
@@ -153,6 +154,13 @@ export default function FidcHub() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
+      <HubSEO
+        title="FIDC Deep Module"
+        description="Inteligência completa de FIDCs: rankings sortable, screener multi-filtro, análise de subordinação e inadimplência, breakdown por lastro. Dados CVM RCVM 175."
+        path="/fundos/fidc"
+        keywords="FIDC, fundos de direitos creditórios, subordinação, inadimplência, lastro, CVM RCVM 175, ranking FIDC"
+        isProtected={true}
+      />
       {/* Sidebar Navigation */}
       <MacroSidebar
         items={SECTIONS}

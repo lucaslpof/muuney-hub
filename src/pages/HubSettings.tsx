@@ -12,6 +12,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 
 type TabId = "profile" | "email" | "password" | "plan";
@@ -287,6 +288,12 @@ export default function HubSettings() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <HubSEO
+        title="Configurações"
+        description="Gerencie sua conta muuney.hub: perfil, email, senha e plano de assinatura."
+        path="/settings"
+        isProtected={true}
+      />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl md:text-2xl font-semibold text-white tracking-tight">

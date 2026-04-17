@@ -4,6 +4,7 @@ import { useDebouncedValue } from "@/hooks/useDebounce";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { LayoutGrid, Zap, Search, TrendingUp, Building2 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { HubSEO } from "@/lib/seo";
 import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
@@ -155,6 +156,13 @@ export default function FiiHub() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
+      <HubSEO
+        title="FII Deep Module"
+        description="Inteligência completa de FIIs: rankings sortable, screener multi-filtro, dividend yield, breakdown por segmento. 1.250+ fundos imobiliários monitorados."
+        path="/fundos/fii"
+        keywords="FII, fundos imobiliários, dividend yield, segmento FII, lajes corporativas, logística, shoppings, CRI, ranking FII"
+        isProtected={true}
+      />
       {/* Sidebar Navigation */}
       <MacroSidebar
         items={SECTIONS}

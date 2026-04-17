@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Check, X, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Feature {
@@ -151,6 +152,13 @@ export default function HubUpgrade() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
+      <HubSEO
+        title="Upgrade Pro"
+        description="Upgrade para muuney.hub Pro: lâminas ilimitadas, comparador 6 fundos, FIDC/FII Deep Modules, insights & alertas. R$49/mês ou R$490/ano."
+        path="/upgrade"
+        keywords="muuney pro, assinatura fintech, fundos premium, FIDC, FII, lâminas fundos"
+        isProtected={true}
+      />
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-16">
         {/* Status banners */}
         {successBanner && confirming && (
