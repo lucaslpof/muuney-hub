@@ -77,7 +77,7 @@ export const FundScoreCard = ({ score, fundName, compact }: FundScoreCardProps) 
       </div>
 
       {/* Pillar breakdown */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {pilares.map((p) => (
           <div key={p.key} className="text-center">
             <div className="text-[8px] text-zinc-600 uppercase font-mono mb-1">{p.label}</div>

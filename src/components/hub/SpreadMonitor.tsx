@@ -98,7 +98,7 @@ export const SpreadMonitor = ({
       </div>
 
       {/* System status + Selic + stress index */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
         <div className={`rounded border p-3 ${systemStatus.bgColor} border-zinc-800/50`}>
           <div className="flex items-center gap-1.5 mb-1">
             <StatusIcon className={`w-3.5 h-3.5 ${systemStatus.color}`} />

@@ -567,7 +567,9 @@ export const MacroChart = ({
               </button>
               <button
                 onClick={() => toggleOverlay("trend")}
-                className={`p-1 rounded transition-colors ${
+                aria-label="Linha de tendência (regressão linear)"
+                aria-pressed={overlays.has("trend")}
+                className={`p-1 rounded transition-colors hub-focus-ring ${
                   overlays.has("trend") ? "bg-red-500/20 text-red-400" : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
                 }`}
                 title="Linha de Tendencia (Regressao Linear)"
@@ -591,7 +593,8 @@ export const MacroChart = ({
           {zoomDomain && (
             <button
               onClick={resetZoom}
-              className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors"
+              aria-label="Resetar zoom do gráfico"
+              className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors hub-focus-ring"
               title="Resetar zoom"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -599,7 +602,8 @@ export const MacroChart = ({
           )}
           <button
             onClick={() => exportCSV(data, title, label, label2)}
-            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors"
+            aria-label="Exportar dados do gráfico em CSV"
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-400 transition-colors hub-focus-ring"
             title="Exportar CSV"
           >
             <Download className="w-3.5 h-3.5" />

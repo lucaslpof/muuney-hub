@@ -68,3 +68,74 @@
     scrollbar-width: none;
   }
 }
+
+/* ==========================================================================
+   Typography scale (6 tiers) — apply on Hub pages for visual consistency
+   Use semantic classes; raw font-size utilities only for one-off cases
+   ========================================================================== */
+@layer components {
+  /* Tier 1: Page title (h1) — appears once per page in hero/breadcrumb area */
+  .hub-h1 {
+    @apply text-xl md:text-2xl font-bold text-white tracking-tight leading-tight;
+  }
+
+  /* Tier 2: Section heading (h2) — narrative section labels */
+  .hub-h2 {
+    @apply text-base md:text-lg font-semibold text-white tracking-tight;
+  }
+
+  /* Tier 3: Subsection / card title (h3) */
+  .hub-h3 {
+    @apply text-sm font-semibold text-zinc-100;
+  }
+
+  /* Tier 4: Eyebrow / module label — uppercase, mono, subtle */
+  .hub-eyebrow {
+    @apply text-[10px] uppercase tracking-wider font-mono text-zinc-500;
+  }
+
+  /* Tier 5: Body text — default reading copy */
+  .hub-body {
+    @apply text-sm text-zinc-300 leading-relaxed;
+  }
+
+  /* Tier 6: Caption / meta — timestamps, footnotes, helpers */
+  .hub-caption {
+    @apply text-xs text-zinc-500;
+  }
+
+  /* Mono variant for numeric data display */
+  .hub-mono {
+    @apply font-mono tabular-nums text-zinc-200;
+  }
+
+  /* Focus ring helper — applies the standard tech-noir green ring to any element */
+  .hub-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B6C3E]/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0a0a0a];
+  }
+
+  /* Standard interactive transition (matches hover semantics across the Hub) */
+  .hub-transition {
+    @apply transition-colors duration-150 ease-out;
+  }
+
+  /*
+   * Horizontal scroll wrapper for wide tables on mobile.
+   * Adds a subtle right-edge gradient hint when content overflows.
+   * Usage: <div class="hub-scroll-x"> <table>...</table> </div>
+   */
+  .hub-scroll-x {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    background:
+      linear-gradient(to right, transparent, transparent),
+      linear-gradient(to right, #0a0a0a 30%, transparent),
+      linear-gradient(to left, #0a0a0a 30%, transparent) 100% 0,
+      radial-gradient(farthest-side at 0 50%, rgba(11, 108, 62, 0.4), rgba(0, 0, 0, 0)),
+      radial-gradient(farthest-side at 100% 50%, rgba(11, 108, 62, 0.4), rgba(0, 0, 0, 0)) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 100% 100%, 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, local, scroll, scroll;
+  }
+}

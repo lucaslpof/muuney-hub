@@ -99,7 +99,11 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
                 {location.pathname}{section ? ` → ${section}` : ""}
               </p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Fechar feedback"
+              className="text-zinc-600 hover:text-zinc-400 transition-colors hub-focus-ring rounded"
+            >
               <X size={16} />
             </button>
           </div>
@@ -192,7 +196,9 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
       <button
         onClick={() => setOpen(!open)}
         data-tour="feedback"
-        className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
+        aria-label={open ? "Fechar feedback" : "Enviar feedback"}
+        aria-expanded={open}
+        className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all hub-focus-ring ${
           open
             ? "bg-zinc-800 text-zinc-400 scale-90"
             : "bg-[#0B6C3E] text-white hover:bg-[#0B6C3E]/80 hover:scale-105"
