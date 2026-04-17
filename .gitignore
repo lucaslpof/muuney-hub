@@ -21,4 +21,21 @@ dist/
 npm-debug.log*
 .vercel
 .env*.local
+
+# Vite build artifacts
 vite.config.ts.timestamp-*
+vite.config.*.timestamp-*
+
+# Backup / refactor leftovers
+*.bak
+*.bak.*
+*.orig
+*.rej
+
+# OS / temp
+Thumbs.db
+.cache/
+.tmp/
+
+# Supabase CLI cache
+supabase/.temp/
