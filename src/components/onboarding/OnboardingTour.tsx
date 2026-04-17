@@ -40,7 +40,6 @@ export const OnboardingTour: React.FC = () => {
 
     setHighlightBox(rect);
 
-    const padding = 12;
     const tooltipWidth = 320;
     const tooltipHeight = 160;
     const offset = 20;

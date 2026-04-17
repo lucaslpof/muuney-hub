@@ -167,7 +167,7 @@ function mapLatestResponse(apiData: unknown): LatestCard[] {
   const response = apiData as ApiLatestResponse;
   const indicators = response?.indicators || [];
   return indicators.map((ind) => ({
-    serie_code: CODE_TO_FRIENDLY[ind.code] ?? String(ind.code),
+    serie_code: CODE_TO_FRIENDLY[Number(ind.code)] ?? String(ind.code),
     category: ind.category,
     display_name: ind.name,
     description: ind.name,

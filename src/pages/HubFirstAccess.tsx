@@ -23,7 +23,7 @@ export default function HubFirstAccess() {
       );
       if (resetError) {
         // Map Supabase error codes to user-friendly Portuguese messages
-        const code = (resetError as Record<string, unknown>).status ?? (resetError as Record<string, unknown>).code;
+        const code = (resetError as unknown as Record<string, unknown>).status ?? (resetError as unknown as Record<string, unknown>).code;
         if (code === 429 || resetError.message?.includes("rate limit")) {
           throw new Error("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
         }

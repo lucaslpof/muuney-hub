@@ -1,19 +1,68 @@
 import React, { ComponentType, ReactNode } from 'react';
-import { SkeletonLoader } from '@/components/hub/SkeletonLoader';
+import {
+  SkeletonSection,
+  SkeletonChart,
+  SkeletonTableRow,
+  SkeletonKPI,
+} from '@/components/hub/SkeletonLoader';
 import { EmptyState } from '@/components/hub/EmptyState';
+
+export type ModuleSkeletonVariant = 'Section' | 'Chart' | 'Table' | 'KPI';
 
 export interface WithModuleStateProps {
   isLoading: boolean;
   isError: boolean;
   isEmpty: boolean;
   onRetry?: () => void;
-  skeletonVariant?: 'Section' | 'Chart' | 'Table' | 'KPI';
+  skeletonVariant?: ModuleSkeletonVariant;
   skeletonCount?: number;
   errorTitle?: string;
   errorDescription?: string;
   emptyTitle?: string;
   emptyDescription?: string;
   children: ReactNode;
+}
+
+/**
+ * Renders the appropriate skeleton based on variant + count.
+ * Internal helper for ModuleStateWrapper.
+ */
+function renderSkeleton(variant: ModuleSkeletonVariant, count: number): ReactNode {
+  switch (variant) {
+    case 'Chart':
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: count }).map((_, i) => (
+            <SkeletonChart key={i} />
+          ))}
+        </div>
+      );
+    case 'Table':
+      return (
+        <div className="space-y-1">
+          {Array.from({ length: count }).map((_, i) => (
+            <SkeletonTableRow key={i} />
+          ))}
+        </div>
+      );
+    case 'KPI':
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: count }).map((_, i) => (
+            <SkeletonKPI key={i} />
+          ))}
+        </div>
+      );
+    case 'Section':
+    default:
+      return (
+        <>
+          {Array.from({ length: count }).map((_, i) => (
+            <SkeletonSection key={i} />
+          ))}
+        </>
+      );
+  }
 }
 
 /**
@@ -44,17 +93,27 @@ export const ModuleStateWrapper: React.FC<WithModuleStateProps> = ({
   children,
 }) => {
   if (isLoading) {
-    return <SkeletonLoader variant={skeletonVariant} count={skeletonCount} />;
+    return <>{renderSkeleton(skeletonVariant, skeletonCount)}</>;
   }
 
   if (isError) {
     return (
-      <EmptyState
-        variant="error"
-        title={errorTitle}
-        description={errorDescription}
-        onRetry={onRetry}
-      />
+      <div className="flex flex-col items-center">
+        <EmptyState
+          variant="section-error"
+          title={errorTitle}
+          description={errorDescription}
+        />
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 px-4 py-2 rounded-lg bg-[#0B6C3E]/20 border border-[#0B6C3E]/30 text-[#0B6C3E] text-xs font-medium hover:bg-[#0B6C3E]/30 transition-colors hub-focus-ring"
+          >
+            Tentar novamente
+          </button>
+        )}
+      </div>
     );
   }
 

@@ -31,7 +31,7 @@ export function useModuleState(
   refetch: (() => void) | undefined = () => {}
 ): UseModuleStateResult {
   const isEmpty = !isLoading && !isError && (!data || data.length === 0);
-  const hasData = !isLoading && !isError && data && data.length > 0;
+  const hasData = !isLoading && !isError && !!data && data.length > 0;
 
   let state: 'loading' | 'error' | 'empty' | 'ready';
   if (isLoading) {

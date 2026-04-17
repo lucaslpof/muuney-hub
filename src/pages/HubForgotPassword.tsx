@@ -20,7 +20,7 @@ export default function HubForgotPassword() {
         { redirectTo }
       );
       if (resetError) {
-        const code = (resetError as Record<string, unknown>).status ?? (resetError as Record<string, unknown>).code;
+        const code = (resetError as unknown as Record<string, unknown>).status ?? (resetError as unknown as Record<string, unknown>).code;
         if (code === 429 || resetError.message?.includes("rate limit")) {
           throw new Error("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
         }
