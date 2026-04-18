@@ -39,3 +39,6 @@ Thumbs.db
 
 # Supabase CLI cache
 supabase/.temp/
+
+# Marketing assets (live in workspace/drive, not repo)
+marketing-assets/
