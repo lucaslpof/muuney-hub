@@ -1,5 +1,6 @@
 import { useHubIngestionStatus } from "@/hooks/useHubData";
 import { CheckCircle, AlertCircle, Clock, Database } from "lucide-react";
+import { formatDayShort } from "@/lib/format";
 
 interface IngestionModule {
   module: string;
@@ -41,7 +42,7 @@ export const IngestionStatus = () => {
     const diffH = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60));
     if (diffH < 1) return "< 1h atrás";
     if (diffH < 24) return `${diffH}h atrás`;
-    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    return formatDayShort(d);
   };
 
   return (

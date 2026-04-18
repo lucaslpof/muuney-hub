@@ -214,3 +214,35 @@ export function formatMonthLabel(yearMonth: string): string {
   const [year, month] = yearMonth.split("-");
   return `${MONTH_ABBR[Number(month) - 1] ?? month}/${year?.slice(2) ?? ""}`;
 }
+
+/**
+ * Format a date as "dd abr" (day + short month) in pt-BR.
+ * Accepts Date or ISO string. For YYYY-MM-DD strings, anchors at noon to
+ * avoid UTC-to-local day shift.
+ *
+ * Examples:
+ *   formatDayShort("2026-04-17")  → "17 abr."
+ *   formatDayShort(new Date())    → "18 abr."
+ */
+export function formatDayShort(input: Date | string): string {
+  const d = input instanceof Date
+    ? input
+    : new Date(/^\d{4}-\d{2}-\d{2}$/.test(input) ? `${input}T12:00:00` : input);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+/**
+ * Format a date as "abr 26" (short month + 2-digit year) in pt-BR.
+ * Accepts Date or ISO string. For YYYY-MM-DD strings, anchors at noon to
+ * avoid UTC-to-local day shift.
+ *
+ * Examples:
+ *   formatMonthShort("2026-04-01")  → "abr. 26"
+ *   formatMonthShort(new Date())    → "abr. 26"
+ */
+export function formatMonthShort(input: Date | string): string {
+  const d = input instanceof Date
+    ? input
+    : new Date(/^\d{4}-\d{2}-\d{2}$/.test(input) ? `${input}T12:00:00` : input);
+  return d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+}

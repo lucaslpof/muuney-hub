@@ -11,6 +11,7 @@ import {
   type FundMetricsResult,
 } from "@/lib/fundMetrics";
 import type { TooltipEntry } from "@/components/hub/ChartTooltip";
+import { formatDayShort } from "@/lib/format";
 
 /* ─── Tooltip ─── */
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
@@ -119,7 +120,7 @@ export const DrawdownChart = ({ daily, title, height = 200 }: DrawdownChartProps
   const data = useMemo(() => {
     const dd = maxDrawdown(daily);
     return dd.drawdownSeries.map((d) => ({
-      date: new Date(d.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+      date: formatDayShort(d.date),
       drawdown: d.drawdown,
     }));
   }, [daily]);
@@ -174,7 +175,7 @@ interface VolatilityChartProps {
 export const VolatilityChart = ({ daily, window = 21, title, height = 200 }: VolatilityChartProps) => {
   const data = useMemo(() =>
     rollingVolatility(daily, window).map((d) => ({
-      date: new Date(d.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+      date: formatDayShort(d.date),
       volatility: d.volatility,
     })), [daily, window]
   );

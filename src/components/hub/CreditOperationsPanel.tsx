@@ -9,6 +9,7 @@ import {
   RotateCcw, Download, BarChart3,
 } from "lucide-react";
 import { useHubSeries, type SeriesDataPoint } from "@/hooks/useHubData";
+import { formatMonthShort } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PAINEL DE OPERAÇÕES DE CRÉDITO — Interactive SGS Query Builder
@@ -171,7 +172,7 @@ function ChartPanel({ title, icon, series, unit, chartType = "line" }: {
     return baseData.map((d, i) => {
       const point: Record<string, string | number> = {
         date: d.date,
-        dateLabel: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+        dateLabel: formatMonthShort(d.date),
       };
       series.forEach((s) => {
         point[s.label] = s.data[i]?.value ?? 0;

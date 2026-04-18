@@ -8,6 +8,7 @@ import type { FundDaily } from "@/hooks/useHubFundos";
 import { formatPL, shortCnpj } from "@/hooks/useHubFundos";
 
 import type { TooltipEntry } from "@/components/hub/ChartTooltip";
+import { formatDayShort } from "@/lib/format";
 
 const COLORS = ["#0B6C3E", "#6366F1", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6"];
 
@@ -53,7 +54,7 @@ export const QuotaCompareChart = ({ funds, title, height = 280 }: QuotaCompareCh
     // Build index map per fund (base 100)
     return dates.map((date) => {
       const point: Record<string, any> = {
-        date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+        date: formatDayShort(date),
       };
       funds.forEach((f) => {
         const baseQuota = f.daily[0]?.vl_quota;
@@ -126,7 +127,7 @@ interface PLEvolutionChartProps {
 export const PLEvolutionChart = ({ daily, title, height = 220 }: PLEvolutionChartProps) => {
   const data = useMemo(() =>
     daily.map((d) => ({
-      date: new Date(d.dt_comptc).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+      date: formatDayShort(d.dt_comptc),
       pl: d.vl_patrim_liq ? d.vl_patrim_liq / 1e9 : null,
     })), [daily]
   );
@@ -181,7 +182,7 @@ interface FlowChartProps {
 export const FlowChart = ({ daily, title, height = 220 }: FlowChartProps) => {
   const data = useMemo(() =>
     daily.map((d) => ({
-      date: new Date(d.dt_comptc).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+      date: formatDayShort(d.dt_comptc),
       captacao: d.captc_dia ? d.captc_dia / 1e6 : 0,
       resgate: d.resg_dia ? -(d.resg_dia / 1e6) : 0,
       net: ((d.captc_dia || 0) - (d.resg_dia || 0)) / 1e6,

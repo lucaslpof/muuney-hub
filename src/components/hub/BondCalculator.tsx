@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Calculator, TrendingUp, TrendingDown, Clock, BarChart3, GitCompare } from "lucide-react";
+import { formatMonthShort } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CALCULADORA DE RENDA FIXA v2
@@ -66,7 +67,7 @@ function buildCashFlows(faceValue: number, rate: number, periods: number, coupon
     const pv = total / Math.pow(1 + r, t);
     flows.push({
       period: t,
-      date: date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      date: formatMonthShort(date),
       coupon,
       principal,
       total,

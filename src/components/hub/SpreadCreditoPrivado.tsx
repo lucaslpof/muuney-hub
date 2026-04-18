@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { ShieldAlert, TrendingUp, AlertTriangle, Landmark, Download, Minus } from "lucide-react";
 import type { SeriesDataPoint } from "@/hooks/useHubData";
-import { fmtNum } from "@/lib/format";
+import { fmtNum, formatMonthShort } from "@/lib/format";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SPREAD CRÉDITO PRIVADO v2
@@ -118,7 +118,7 @@ export function SpreadCreditoPrivado({
     if (!baseAA.length) return [];
     return baseAA.map((d, i) => ({
       date: d.date,
-      dateLabel: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      dateLabel: formatMonthShort(d.date),
       AA: d.value,
       A: baseA[i]?.value ?? d.value * 1.6,
       diff: (baseA[i]?.value ?? d.value * 1.6) - d.value,
@@ -130,7 +130,7 @@ export function SpreadCreditoPrivado({
     if (!base.length) return [];
     return base.map((d) => ({
       date: d.date,
-      dateLabel: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      dateLabel: formatMonthShort(d.date),
       volume: d.value,
     }));
   }, [emissoesSeries]);

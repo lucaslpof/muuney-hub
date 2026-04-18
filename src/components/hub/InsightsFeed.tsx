@@ -18,6 +18,7 @@ import {
   type FundInsight,
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
+import { formatDayShort } from "@/lib/format";
 
 interface InsightsFeedProps {
   /** Restrict to specific type */
@@ -54,7 +55,7 @@ function timeAgo(dateStr: string): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return "ontem";
   if (diffD < 7) return `${diffD}d atrás`;
-  return new Date(dateStr).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return formatDayShort(dateStr);
 }
 
 function InsightCard({ insight, compact }: { insight: FundInsight; compact?: boolean }) {

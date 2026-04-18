@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { fmtNum, formatBRL, formatBRLCompact } from "@/lib/format";
+import { fmtNum, formatBRL, formatBRLCompact, formatMonthShort } from "@/lib/format";
 
 interface InflationCalculatorProps {
   ipcaData: { date: string; value: number }[];
@@ -69,7 +69,7 @@ export const InflationCalculator = ({ ipcaData }: InflationCalculatorProps) => {
       cumulative *= 1 + d.value / 100;
       const purchasingPower = amount / cumulative;
       return {
-        date: new Date(d.date).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+        date: formatMonthShort(d.date),
         poder: Math.round(purchasingPower * 100) / 100,
         inflacao: Math.round((cumulative - 1) * 10000) / 100,
       };

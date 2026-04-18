@@ -11,6 +11,7 @@ import {
   type MonthlyRankingItem, type FundMonthly,
 } from "@/hooks/useHubFundos";
 import type { TooltipEntry } from "@/components/hub/ChartTooltip";
+import { formatMonthShort } from "@/lib/format";
 
 /* ─── Tooltip ─── */
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
@@ -42,7 +43,7 @@ export const MonthlyOverviewChart = ({ months = 12 }: { months?: number }) => {
 
   const chartData = useMemo(() =>
     (data?.months || []).map((m) => ({
-      month: new Date(m.month).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      month: formatMonthShort(m.month),
       avg_rentab: m.avg_rentab,
       median_rentab: m.median_rentab,
       total_pl: m.total_pl,
@@ -227,7 +228,7 @@ export const FundMonthlyDetail = ({ cnpj }: { cnpj: string }) => {
 
   const chartData = useMemo(() =>
     (data?.months || []).map((m: FundMonthly) => ({
-      month: new Date(m.dt_comptc).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      month: formatMonthShort(m.dt_comptc),
       rentab: m.rentab_fundo,
       benchmark: m.rentab_benchmark,
       pl: m.vl_patrim_liq,
