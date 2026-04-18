@@ -54,7 +54,7 @@ function computeCDIIndex(cdiDaily: Array<{ date?: string; value?: number | null 
   if (!cdiDaily || cdiDaily.length === 0) return [];
 
   let cumulativeReturn = 1.0;
-  const result: any[] = [];
+  const result: { date: string | undefined; cdi: number }[] = [];
 
   for (const d of cdiDaily) {
     const dailyRate = d.value ?? 0; // CDI as annual % rate
@@ -384,7 +384,7 @@ export default function FundLamina() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                       labelStyle={{ color: "#d4d4d8" }}
-                      formatter={(v: any) => v?.toFixed(2)}
+                      formatter={(v: number | string) => (typeof v === "number" ? v.toFixed(2) : String(v))}
                     />
                     <Legend
                       wrapperStyle={{ paddingTop: 12 }}

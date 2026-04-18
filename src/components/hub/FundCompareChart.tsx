@@ -7,15 +7,17 @@ import { motion } from "framer-motion";
 import type { FundDaily } from "@/hooks/useHubFundos";
 import { formatPL, shortCnpj } from "@/hooks/useHubFundos";
 
+import type { TooltipEntry } from "@/components/hub/ChartTooltip";
+
 const COLORS = ["#0B6C3E", "#6366F1", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6"];
 
 /* ─── Tooltip ─── */
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="text-[10px] font-mono">
           <span style={{ color: p.color }}>{p.name}:</span>{" "}
           <span className="text-zinc-100 font-bold">
@@ -212,10 +214,10 @@ export const FlowChart = ({ daily, title, height = 220 }: FlowChartProps) => {
               return (
                 <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
                   <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
-                  {payload.map((p: any, i: number) => (
+                  {(payload as TooltipEntry[]).map((p, i) => (
                     <div key={i} className="text-[10px] font-mono">
                       <span style={{ color: p.color }}>{p.name}:</span>{" "}
-                      <span className="text-zinc-100 font-bold">R$ {Math.abs(p.value).toFixed(1)}M</span>
+                      <span className="text-zinc-100 font-bold">R$ {Math.abs(Number(p.value ?? 0)).toFixed(1)}M</span>
                     </div>
                   ))}
                 </div>

@@ -12,7 +12,7 @@ export function FIPNarrativePanel() {
     return null;
   }
 
-  const topType = fipOverview.by_tipo.reduce((prev: any, curr: any) =>
+  const topType = fipOverview.by_tipo.reduce((prev, curr) =>
     curr.pct_pl > prev.pct_pl ? curr : prev
   );
 

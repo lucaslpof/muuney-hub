@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import {
   useFidcDetail, useFidcV4Monthly,
   formatPL, formatCnpj,
+  type FidcMonthlyItem,
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
@@ -23,20 +24,20 @@ import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
  */
 const CORRUPT_RENTAB_THRESHOLD = 95; // % in a single month; above this we consider CVM data corrupt
 
-function cleanRentab(v: any): number | null {
+function cleanRentab(v: unknown): number | null {
   if (v == null) return null;
-  const n = typeof v === "number" ? v : parseFloat(v);
+  const n = typeof v === "number" ? v : parseFloat(String(v));
   if (!isFinite(n)) return null;
   if (Math.abs(n) > CORRUPT_RENTAB_THRESHOLD) return null;
   return n;
 }
 
 /** Compute base-100 indexed series from FIDC monthly rentabilidade */
-function computeIndexedSeries(monthly: any[]) {
+function computeIndexedSeries(monthly: FidcMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
 
   let cumulativeReturn = 1.0;
-  const result: any[] = [];
+  const result: { date: string; index: number }[] = [];
 
   for (const m of monthly) {
     const rentab = cleanRentab(m.rentab_fundo);
@@ -55,7 +56,7 @@ function computeIndexedSeries(monthly: any[]) {
 /** Compute accumulated CDI index from monthly data using Selic-derived compound rate
  *  Formula: monthly rate = (1 + Selic_annual/100)^(1/12) - 1
  *  Default 14.15% Selic annual ≈ 1.106% monthly (vs naive 1.1%) */
-function computeCDIIndexMonthly(monthly: any[], selicAnnual = 14.15) {
+function computeCDIIndexMonthly(monthly: FidcMonthlyItem[], selicAnnual = 14.15) {
   if (!monthly || monthly.length === 0) return [];
 
   const monthlyRate = Math.pow(1 + selicAnnual / 100, 1 / 12) - 1;
@@ -73,7 +74,7 @@ function computeCDIIndexMonthly(monthly: any[], selicAnnual = 14.15) {
   return result;
 }
 
-function computeRentabilidadeSeries(monthly: any[]) {
+function computeRentabilidadeSeries(monthly: FidcMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly
     .map((m) => ({
@@ -86,7 +87,7 @@ function computeRentabilidadeSeries(monthly: any[]) {
 }
 
 /** Compute capital structure series (PL Senior, Subord, Mezanino) */
-function computeCapitalSeries(monthly: any[]) {
+function computeCapitalSeries(monthly: FidcMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly.map((m) => ({
     date: m.dt_comptc,
@@ -97,7 +98,7 @@ function computeCapitalSeries(monthly: any[]) {
 }
 
 /** Compute subordinacao index over time */
-function computeSubordinacaoSeries(monthly: any[]) {
+function computeSubordinacaoSeries(monthly: FidcMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly.map((m) => ({
     date: m.dt_comptc,
@@ -352,7 +353,7 @@ export default function FidcLamina() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                       labelStyle={{ color: "#d4d4d8" }}
-                      formatter={(v: any) => `R$ ${v?.toFixed(0)} Mi`}
+                      formatter={(v: number | string) => `R$ ${typeof v === "number" ? v.toFixed(0) : Number(v).toFixed(0)} Mi`}
                     />
                     <Bar dataKey="senior" stackId="a" fill="#0B6C3E" name="Senior" />
                     <Bar dataKey="subord" stackId="a" fill="#F59E0B" name="Subordinada" />
@@ -378,7 +379,7 @@ export default function FidcLamina() {
                       <Tooltip
                         contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                         labelStyle={{ color: "#d4d4d8" }}
-                        formatter={(v: any) => `${v?.toFixed(2)}%`}
+                        formatter={(v: number | string) => `${typeof v === "number" ? v.toFixed(2) : Number(v).toFixed(2)}%`}
                       />
                       <Line
                         type="monotone"
@@ -505,7 +506,7 @@ export default function FidcLamina() {
                         <Tooltip
                           contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                           labelStyle={{ color: "#d4d4d8" }}
-                          formatter={(v: any) => v?.toFixed(2)}
+                          formatter={(v: number | string) => (typeof v === "number" ? v.toFixed(2) : String(v))}
                         />
                         <Legend
                           wrapperStyle={{ paddingTop: 12 }}
@@ -553,7 +554,7 @@ export default function FidcLamina() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                       labelStyle={{ color: "#d4d4d8" }}
-                      formatter={(v: any) => v?.toFixed(2)}
+                      formatter={(v: number | string) => (typeof v === "number" ? v.toFixed(2) : String(v))}
                     />
                     <Line
                       type="monotone"

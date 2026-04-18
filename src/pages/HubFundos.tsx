@@ -951,7 +951,8 @@ const HubFundos = () => {
   }, []);
 
   /* Full-page loading state */
-  if (rankingsLoading && !(rankings as any)?.funds?.length) {
+  const rankingsData = rankings as { classe?: string; funds?: unknown[] } | undefined;
+  if (rankingsLoading && !rankingsData?.funds?.length) {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <Breadcrumbs items={[{ label: "Fundos" }]} className="mb-4" />

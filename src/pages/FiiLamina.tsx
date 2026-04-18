@@ -9,13 +9,14 @@ import { motion } from "framer-motion";
 import {
   useFiiDetail, useFiiV4Monthly,
   formatPL, formatCnpj,
+  type FiiMonthlyItem,
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 
 /** Compute monthly performance series (rentabilidade + DY) */
-function computePerformanceSeries(monthly: any[]) {
+function computePerformanceSeries(monthly: FiiMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly.map((m) => ({
     date: m.dt_comptc,
@@ -26,7 +27,7 @@ function computePerformanceSeries(monthly: any[]) {
 }
 
 /** Compute PL over time (in Millions) */
-function computePlSeries(monthly: any[]) {
+function computePlSeries(monthly: FiiMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly.map((m) => ({
     date: m.dt_comptc,
@@ -36,7 +37,7 @@ function computePlSeries(monthly: any[]) {
 }
 
 /** Compute cotistas series */
-function computeCotistasSeries(monthly: any[]) {
+function computeCotistasSeries(monthly: FiiMonthlyItem[]) {
   if (!monthly || monthly.length === 0) return [];
   return monthly.map((m) => ({
     date: m.dt_comptc,
@@ -266,7 +267,7 @@ export default function FiiLamina() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                       labelStyle={{ color: "#d4d4d8" }}
-                      formatter={(v: any) => (v != null ? `${Number(v).toFixed(2)}%` : "—")}
+                      formatter={(v: number | string) => (v != null ? `${Number(v).toFixed(2)}%` : "—")}
                     />
                     <Line
                       type="monotone"
@@ -318,7 +319,7 @@ export default function FiiLamina() {
                       <Tooltip
                         contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                         labelStyle={{ color: "#d4d4d8" }}
-                        formatter={(v: any) => `R$ ${Number(v).toFixed(0)} Mi`}
+                        formatter={(v: number | string) => `R$ ${Number(v).toFixed(0)} Mi`}
                       />
                       <Line
                         type="monotone"
@@ -350,7 +351,7 @@ export default function FiiLamina() {
                       <Tooltip
                         contentStyle={{ backgroundColor: "#111111", border: "1px solid #1a1a1a", borderRadius: 4 }}
                         labelStyle={{ color: "#d4d4d8" }}
-                        formatter={(v: any) => Number(v).toLocaleString("pt-BR")}
+                        formatter={(v: number | string) => Number(v).toLocaleString("pt-BR")}
                       />
                       <Line
                         type="monotone"

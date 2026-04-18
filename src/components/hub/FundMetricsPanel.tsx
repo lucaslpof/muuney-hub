@@ -10,14 +10,15 @@ import {
   fmtMetric, fmtMetricSigned, metricColor, sharpeLabel,
   type FundMetricsResult,
 } from "@/lib/fundMetrics";
+import type { TooltipEntry } from "@/components/hub/ChartTooltip";
 
 /* ─── Tooltip ─── */
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 shadow-xl">
       <div className="text-[9px] text-zinc-500 font-mono mb-1">{label}</div>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="text-[10px] font-mono">
           <span style={{ color: p.color }}>{p.name}:</span>{" "}
           <span className="text-zinc-100 font-bold">{typeof p.value === "number" ? p.value.toFixed(2) + "%" : p.value}</span>

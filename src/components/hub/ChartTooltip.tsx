@@ -2,10 +2,11 @@
  * Shared Tech-Noir tooltip for Recharts charts (PieChart, BarChart, etc.)
  * Mirrors the style of MacroChart's RichTooltip for visual consistency.
  */
-interface TooltipEntry {
+export interface TooltipEntry {
   name?: string;
   value?: number | string;
   color?: string;
+  dataKey?: string;
   payload?: Record<string, unknown>;
 }
 
