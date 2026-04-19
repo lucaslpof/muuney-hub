@@ -8,6 +8,51 @@ import { OnboardingTour } from "./OnboardingTour";
 import { Toaster } from "@/components/ui/Toaster";
 import { NetworkStatus } from "./NetworkStatus";
 import { MobileNav } from "@/components/layout/MobileNav";
+import {
+  HubSectionsProvider,
+  useHubSections,
+} from "@/contexts/HubSectionsContext";
+
+/**
+ * Top-bar horizontal section navigator.
+ * Picks up sections registered by the current page via MacroSidebar →
+ * HubSectionsContext. When no sections are registered (e.g. landing/dashboard),
+ * renders nothing.
+ */
+const TopBarSectionNav = () => {
+  const ctx = useHubSections();
+  if (!ctx || ctx.sections.length === 0) return null;
+
+  return (
+    <nav
+      className="flex-1 min-w-0 overflow-x-auto scrollbar-none"
+      aria-label="Navegação de seções da página"
+    >
+      <div className="flex gap-1.5 min-w-max">
+        {ctx.sections.map((item) => {
+          const isActive = ctx.activeId === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => ctx.navigate(item.id)}
+              data-sidebar-id={item.id}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors whitespace-nowrap ${
+                isActive
+                  ? "bg-[#0B6C3E]/15 text-[#0B6C3E] border border-[#0B6C3E]/30"
+                  : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 border border-transparent"
+              }`}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Icon className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
 
 const HubMain = () => {
   const { collapsed } = useSidebar();
@@ -38,20 +83,19 @@ const HubMain = () => {
 
   return (
     <main
-      className={`min-h-screen transition-all duration-200 ${
+      className={`min-h-screen flex flex-col transition-all duration-200 ${
         collapsed ? "md:ml-16" : "md:ml-52"
       }`}
     >
-      {/* Top bar */}
-      <header className="h-14 border-b border-zinc-800/50 flex items-center justify-between px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
-        <div className="flex items-center gap-3">
-          <MobileMenuButton />
+      {/* Top bar — holds per-page section navigator */}
+      <header className="h-14 border-b border-zinc-800/50 flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
+        <MobileMenuButton />
+
+        {/* Section navigator (replaces static "Fontes:" label) */}
+        <TopBarSectionNav />
+
+        <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
           <span className="text-[10px] text-zinc-600 font-mono hidden sm:inline">
-            Fontes: BACEN SGS &middot; PTAX &middot; CVM
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] text-zinc-600 font-mono">
             {new Date().toLocaleDateString("pt-BR")}
           </span>
           <div
@@ -82,9 +126,15 @@ const HubMain = () => {
       </header>
 
       {/* Page content */}
-      <div className="p-4 md:p-6 overflow-x-hidden">
+      <div className="flex-1 p-4 md:p-6 overflow-x-hidden">
         <Outlet />
       </div>
+
+      {/* Footer — subtle sources attribution */}
+      <footer className="px-4 md:px-6 py-3 border-t border-zinc-900/70 text-[9px] text-zinc-700 font-mono flex items-center justify-between gap-2 flex-wrap">
+        <span>Fontes: BACEN SGS &middot; PTAX &middot; CVM</span>
+        <span className="text-zinc-800">muuney.hub &middot; {new Date().getFullYear()}</span>
+      </footer>
 
       {/* Beta feedback widget */}
       <FeedbackWidget />
@@ -111,7 +161,9 @@ export const HubLayout = () => {
       <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
         <NetworkStatus />
         <SidebarProvider>
-          <HubMain />
+          <HubSectionsProvider>
+            <HubMain />
+          </HubSectionsProvider>
         </SidebarProvider>
         <Toaster />
       </div>

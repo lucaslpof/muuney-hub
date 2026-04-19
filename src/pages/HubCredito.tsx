@@ -298,19 +298,14 @@ const HubCredito = () => {
         </div>
       </div>
 
-      {/* ─── Main layout: sidebar + content ─── */}
-      <div className="flex gap-6 mt-4">
-        {/* Sidebar navigation */}
-        <div className="hidden md:block w-44 flex-shrink-0">
-          <MacroSidebar
-            items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
-            activeId={activeSection}
-            onNavigate={scrollTo}
-          />
-        </div>
-
-        {/* Content area */}
-        <div className="flex-1 min-w-0 space-y-8">
+      {/* ─── Main layout: full-width (section nav lives in top bar) ─── */}
+      <MacroSidebar
+        items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
+        activeId={activeSection}
+        onNavigate={scrollTo}
+      />
+      <div className="mt-4">
+        <div className="min-w-0 space-y-8">
           {/* ─── Alerts ─── */}
           <AlertCard kpis={kpis} module="credito" />
 

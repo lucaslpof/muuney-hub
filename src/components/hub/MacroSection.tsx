@@ -1,6 +1,7 @@
-import { type ReactNode, forwardRef } from "react";
+import { type ReactNode, forwardRef, useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { useHubSections } from "@/contexts/HubSectionsContext";
 
 interface MacroSectionProps {
   id: string;
@@ -66,6 +67,14 @@ interface SidebarNavItem {
   icon: LucideIcon;
 }
 
+/**
+ * MacroSidebar — back-compat shim.
+ *
+ * Historically rendered a vertical sidebar (desktop) + horizontal pills (mobile).
+ * The Hub now renders a single horizontal navigator in the HubLayout top bar,
+ * fed by HubSectionsContext. This component stays as the page-side registration
+ * point and renders nothing visually.
+ */
 export const MacroSidebar = ({
   items,
   activeId,
@@ -75,58 +84,13 @@ export const MacroSidebar = ({
   activeId: string;
   onNavigate: (id: string) => void;
 }) => {
-  return (
-    <>
-      {/* Mobile: horizontal scroll nav */}
-      <div className="md:hidden sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-zinc-800/50 -mx-4 px-4 py-2 overflow-x-auto scrollbar-none">
-        <div className="flex gap-2 min-w-max">
-          {items.map((item) => {
-            const isActive = activeId === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                data-sidebar-id={item.id}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-                  isActive
-                    ? "bg-[#0B6C3E] text-white"
-                    : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <Icon className="w-3 h-3" />
-                <span className="hidden xs:inline">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  const ctx = useHubSections();
 
-      {/* Desktop: existing sidebar */}
-      <nav className="sticky top-28 self-start max-h-[calc(100vh-8rem)] overflow-y-auto space-y-0.5 pr-3 hidden md:block scrollbar-none">
-        {items.map((item) => {
-          const isActive = activeId === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              data-sidebar-id={item.id}
-              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left transition-all text-[11px] font-mono ${
-                isActive
-                  ? "bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/20"
-                  : "text-zinc-600 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent"
-              }`}
-            >
-              <Icon className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto w-1 h-1 rounded-full bg-[#0B6C3E]" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
-    </>
-  );
+  useEffect(() => {
+    if (!ctx) return;
+    ctx.registerSections(items, activeId, onNavigate);
+    return () => ctx.clearSections();
+  }, [items, activeId, onNavigate, ctx]);
+
+  return null;
 };

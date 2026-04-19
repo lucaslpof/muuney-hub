@@ -407,7 +407,7 @@ const HubRendaFixa = () => {
   }
 
   return (
-    <div className="flex gap-4 w-full">
+    <div className="w-full">
       <HubSEO
         title="Renda Fixa"
         description="Terminal de renda fixa: curva DI, NTN-B, Tesouro Direto, spreads de crédito privado, simulador de yield curve e calculadora de bonds."
@@ -415,7 +415,7 @@ const HubRendaFixa = () => {
         keywords="renda fixa, curva DI, NTN-B, Tesouro Direto, spread debêntures, calculadora renda fixa, juros Brasil, yield curve, breakeven inflation"
         isProtected={true}
       />
-      {/* ─── Sidebar ─── */}
+      {/* ─── Section nav (registered into top-bar via context) ─── */}
       <MacroSidebar
         items={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))}
         activeId={activeSection}
@@ -423,7 +423,7 @@ const HubRendaFixa = () => {
       />
 
       {/* ─── Main content ─── */}
-      <div className="flex-1 min-w-0 space-y-4">
+      <div className="min-w-0 space-y-4">
         <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
         {/* ─── Sticky header ─── */}
         <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">

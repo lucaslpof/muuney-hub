@@ -236,8 +236,8 @@ export default function HubPortfolio() {
         </div>
       </div>
 
-      {/* ─── Main layout: sidebar + sections ─── */}
-      <div className="px-4 lg:px-6 py-4 grid grid-cols-1 md:grid-cols-[160px_1fr] gap-4">
+      {/* ─── Main layout: full-width (section nav in top bar via context) ─── */}
+      <div className="px-4 lg:px-6 py-4">
         <MacroSidebar
           items={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))}
           activeId={activeSection}

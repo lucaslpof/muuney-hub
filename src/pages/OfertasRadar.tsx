@@ -38,6 +38,7 @@ import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { ChartTooltip } from "@/components/hub/ChartTooltip";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { HubSEO } from "@/lib/seo";
 import { SkeletonKPI, SkeletonChart, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
@@ -412,24 +413,36 @@ export default function OfertasRadar() {
           <Radar className="w-5 h-5 text-[#0B6C3E]" />
           Ofertas Públicas Radar
         </h1>
-        <p className="text-[9px] text-zinc-500 mt-2 font-mono">
-          CVM 160 · 476 · 400 — Debêntures · CRI · CRA · FIDC · FII · Ações
-        </p>
-      </div>
-
-      {/* Sidebar + Content flex layout */}
-      <div className="flex gap-6 px-4 md:px-8 py-8">
-        {/* Sidebar — hidden on mobile */}
-        <div className="hidden md:block w-40 flex-shrink-0">
-          <MacroSidebar
-            items={SECTIONS}
-            activeId={activeSection}
-            onNavigate={scrollTo}
+        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+          <p className="text-[9px] text-zinc-500 font-mono">
+            CVM 160 · 476 · 400 — Debêntures · CRI · CRA · FIDC · FII · Ações
+          </p>
+          <DataAsOfStamp
+            date={
+              listData?.ofertas && listData.ofertas.length > 0
+                ? listData.ofertas.reduce<string | null>((max, o) => {
+                    const d = o.data_protocolo ?? o.data_registro;
+                    if (!d) return max;
+                    return !max || d > max ? d : max;
+                  }, null)
+                : null
+            }
+            cadence="weekly"
+            source="CVM SRE"
           />
         </div>
+      </div>
 
-        {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-8">
+      {/* Section nav registers into top bar via context */}
+      <MacroSidebar
+        items={SECTIONS}
+        activeId={activeSection}
+        onNavigate={scrollTo}
+      />
+
+      {/* Main content */}
+      <div className="px-4 md:px-8 py-8">
+        <div className="min-w-0 space-y-8">
           {/* === SECTION 1: Visão Geral === */}
           <MacroSection
             ref={(el) => {

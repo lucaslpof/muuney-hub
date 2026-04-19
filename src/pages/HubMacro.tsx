@@ -305,19 +305,14 @@ const HubMacro = () => {
         </div>
       </div>
 
-      {/* ═══ Layout: sidebar + content ═══ */}
-      <div className="flex gap-6 mt-4">
-        {/* Sidebar nav */}
-        <div className="hidden md:block w-40 flex-shrink-0">
-          <MacroSidebar
-            items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
-            activeId={activeSection}
-            onNavigate={scrollTo}
-          />
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-8">
+      {/* ═══ Layout: full-width content (section nav lives in top bar) ═══ */}
+      <MacroSidebar
+        items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
+        activeId={activeSection}
+        onNavigate={scrollTo}
+      />
+      <div className="mt-4">
+        <div className="min-w-0 space-y-8">
 
           {/* ═══════════════════════════════════════════
               VISÃO GERAL — Hero KPIs + Alerts
