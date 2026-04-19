@@ -22,6 +22,7 @@ import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
+import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -226,6 +227,27 @@ export default function FidcLamina() {
       ipcaAccum: 5.0,
     };
   }, [meta, monthly, latest, riskMetrics, rollingRows]);
+
+  // Peer beats: similar FIDCs outperforming current fund on rentab_fundo
+  const peerBeatsItems = useMemo<PeerBeatsItem[]>(() => {
+    const similar = fidcData?.similar ?? [];
+    const baseRentab = cleanRentab(latest?.rentab_fundo);
+    if (baseRentab == null) return [];
+    return similar
+      .map((f) => {
+        const peerRentab = cleanRentab(f.rentab_fundo);
+        if (peerRentab == null) return null;
+        return {
+          name: f.denom_social || `FIDC ${f.cnpj_fundo}`,
+          slug: f.slug ?? null,
+          cnpjFallback: f.cnpj_fundo ?? null,
+          value: peerRentab,
+          delta: peerRentab - baseRentab,
+          secondary: f.tp_lastro_principal ?? undefined,
+        } as PeerBeatsItem;
+      })
+      .filter((x): x is PeerBeatsItem => x !== null);
+  }, [fidcData?.similar, latest?.rentab_fundo]);
 
   // Indexed chart series (fund + CDI benchmark)
   const indexedSeries = useMemo(() => {
@@ -648,6 +670,18 @@ export default function FidcLamina() {
                     subtitle="Retornos acumulados e anualizados — base informes mensais CVM."
                     accent="#F97316"
                   />
+
+                  {/* Peer beats — "Fundos que estão batendo este" */}
+                  {peerBeatsItems.length > 0 && (
+                    <PeerBeatsPanel
+                      accent="#F97316"
+                      basePath="/fundos/fidc"
+                      peers={peerBeatsItems}
+                      baseValue={cleanRentab(latest?.rentab_fundo)}
+                      metricLabel="Rentab"
+                      unit="%"
+                    />
+                  )}
 
                   {/* Drawdown Heatmap — calendário mensal ano × mês */}
                   {drawdownCells.length > 0 && (

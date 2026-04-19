@@ -23,6 +23,7 @@ import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
 
 // FII rentabilidade can be corrupt at edges (e.g. funds in liquidation);
 // cap at ±95%/mês same as FIDC.
@@ -132,6 +133,26 @@ export default function FiiLamina() {
 
   const dyMes = latest?.dividend_yield_mes != null ? Number(latest.dividend_yield_mes) : null;
   const rentabMes = latest?.rentabilidade_efetiva_mes != null ? Number(latest.rentabilidade_efetiva_mes) : null;
+
+  // Peer beats: similar FIIs outperforming current fund on dividend_yield_mes
+  const peerBeatsItems = useMemo<PeerBeatsItem[]>(() => {
+    const similar = fiiData?.similar ?? [];
+    if (dyMes == null) return [];
+    return similar
+      .map((f) => {
+        const peerDy = f.dividend_yield_mes != null ? Number(f.dividend_yield_mes) : null;
+        if (peerDy == null || !Number.isFinite(peerDy)) return null;
+        return {
+          name: f.denom_social || `FII ${f.cnpj_fundo}`,
+          slug: f.slug ?? null,
+          cnpjFallback: f.cnpj_fundo ?? null,
+          value: peerDy,
+          delta: peerDy - dyMes,
+          secondary: f.segmento ?? undefined,
+        } as PeerBeatsItem;
+      })
+      .filter((x): x is PeerBeatsItem => x !== null);
+  }, [fiiData?.similar, dyMes]);
 
   // Per-fund narrative context (FII regime + signals)
   const fundNarrativeContext = useMemo<FundScopeContext | null>(() => {
@@ -413,6 +434,19 @@ export default function FiiLamina() {
                 subtitle="Janelas calculadas sobre a rentabilidade efetiva mensal CVM."
                 accent="#EC4899"
               />
+
+              {/* Peer beats — "Fundos que estão batendo este" (por DY mês) */}
+              {peerBeatsItems.length > 0 && (
+                <PeerBeatsPanel
+                  accent="#EC4899"
+                  basePath="/fundos/fii"
+                  peers={peerBeatsItems}
+                  baseValue={dyMes}
+                  metricLabel="DY"
+                  unit="%"
+                  title="Fundos com DY acima deste"
+                />
+              )}
 
               {/* Drawdown Heatmap — calendário mensal ano × mês */}
               {drawdownCells.length > 0 && (
