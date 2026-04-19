@@ -32,6 +32,9 @@ import {
 } from "@/components/hub/FundCompositionPanel";
 import { useLaminaQuota } from "@/hooks/useLaminaQuota";
 import { InlinePaywall } from "@/components/hub/RequireTier";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+
+const SELIC_ANNUAL = 14.15;
 
 const PERIODS = ["1m", "3m", "6m", "1y", "max"] as const;
 
@@ -254,6 +257,96 @@ export default function FundLamina() {
     return { weekly, netTotal, totalInflow, totalOutflow };
   }, [daily]);
 
+  // Narrative regime + opener (generic fund)
+  const resumoNarrative = useMemo(() => {
+    if (!meta) return null;
+    const returnAnnual = metrics?.return_annualized ?? null;
+    const sharpe = metrics?.sharpe ?? null;
+    const maxDD = metrics?.max_drawdown ?? null;
+    const vsCdiExcess = vsCDIMetric?.excess ?? null;
+
+    // Regime classification
+    let regimeLabel = "Neutro";
+    let regimeColor = "text-zinc-300";
+    if (sharpe != null && sharpe > 1 && returnAnnual != null && returnAnnual > SELIC_ANNUAL) {
+      regimeLabel = "Performance Superior";
+      regimeColor = "text-emerald-400";
+    } else if (maxDD != null && maxDD < -20) {
+      regimeLabel = "Stress de Risco";
+      regimeColor = "text-red-400";
+    } else if (vsCdiExcess != null && vsCdiExcess < -2) {
+      regimeLabel = "Abaixo do CDI";
+      regimeColor = "text-red-400";
+    } else if (returnAnnual != null && returnAnnual > SELIC_ANNUAL) {
+      regimeLabel = "Acima do CDI";
+      regimeColor = "text-emerald-400";
+    } else if (sharpe != null && sharpe < 0) {
+      regimeLabel = "Risco Sem Prêmio";
+      regimeColor = "text-amber-400";
+    }
+
+    return { regimeLabel, regimeColor, returnAnnual, sharpe, maxDD, vsCdiExcess };
+  }, [meta, metrics, vsCDIMetric]);
+
+  const resumoMiniStats = useMemo<MiniStat[]>(() => {
+    if (!resumoNarrative) return [];
+    const stats: MiniStat[] = [];
+
+    stats.push({
+      label: "Regime Fundo",
+      value: resumoNarrative.regimeLabel,
+      color: resumoNarrative.regimeColor,
+      tooltip: "Classificação baseada em Sharpe + retorno anualizado vs CDI + max drawdown.",
+    });
+
+    if (resumoNarrative.returnAnnual != null) {
+      stats.push({
+        label: "Retorno (a.a.)",
+        value: `${resumoNarrative.returnAnnual >= 0 ? "+" : ""}${resumoNarrative.returnAnnual.toFixed(2)}%`,
+        sublabel: "anualizado",
+        color: resumoNarrative.returnAnnual > SELIC_ANNUAL ? "text-emerald-400" : resumoNarrative.returnAnnual > 0 ? "text-zinc-300" : "text-red-400",
+      });
+    }
+
+    if (resumoNarrative.vsCdiExcess != null) {
+      stats.push({
+        label: "Alpha vs CDI",
+        value: `${resumoNarrative.vsCdiExcess >= 0 ? "+" : ""}${resumoNarrative.vsCdiExcess.toFixed(2)}pp`,
+        sublabel: "excesso período",
+        color: resumoNarrative.vsCdiExcess > 0 ? "text-emerald-400" : "text-red-400",
+      });
+    }
+
+    if (resumoNarrative.sharpe != null) {
+      stats.push({
+        label: "Sharpe",
+        value: resumoNarrative.sharpe.toFixed(2),
+        sublabel: "risco-retorno",
+        color: resumoNarrative.sharpe > 1 ? "text-emerald-400" : resumoNarrative.sharpe > 0 ? "text-zinc-300" : "text-red-400",
+      });
+    }
+
+    if (resumoNarrative.maxDD != null) {
+      stats.push({
+        label: "Max Drawdown",
+        value: `${resumoNarrative.maxDD.toFixed(2)}%`,
+        sublabel: "pior queda",
+        color: "text-red-400",
+      });
+    }
+
+    if (meta?.vl_patrim_liq) {
+      stats.push({
+        label: "PL",
+        value: formatPL(meta.vl_patrim_liq),
+        sublabel: meta.nr_cotistas != null ? `${meta.nr_cotistas.toLocaleString("pt-BR")} cotistas` : undefined,
+        color: "text-zinc-200",
+      });
+    }
+
+    return stats;
+  }, [resumoNarrative, meta]);
+
     if (fundLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] p-6">
@@ -390,6 +483,62 @@ export default function FundLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Resumo</h2>
             </div>
 
+            <NarrativeSection
+              accent="#0B6C3E"
+              prose={
+                resumoNarrative ? (
+                  <>
+                    <span className={`font-semibold ${resumoNarrative.regimeColor}`}>
+                      {resumoNarrative.regimeLabel}
+                    </span>
+                    {resumoNarrative.returnAnnual != null && (
+                      <>
+                        {" · retorno anualizado "}
+                        <span className={resumoNarrative.returnAnnual > 0 ? "text-emerald-400" : "text-red-400"}>
+                          {resumoNarrative.returnAnnual >= 0 ? "+" : ""}
+                          {resumoNarrative.returnAnnual.toFixed(2)}%
+                        </span>
+                        {" vs CDI "}
+                        <span className="text-zinc-300">{SELIC_ANNUAL.toFixed(2)}%</span>
+                      </>
+                    )}
+                    {resumoNarrative.vsCdiExcess != null && (
+                      <>
+                        {" → alpha período "}
+                        <span className={resumoNarrative.vsCdiExcess > 0 ? "text-emerald-400" : "text-red-400"}>
+                          {resumoNarrative.vsCdiExcess >= 0 ? "+" : ""}
+                          {resumoNarrative.vsCdiExcess.toFixed(2)}pp
+                        </span>
+                      </>
+                    )}
+                    {resumoNarrative.sharpe != null && (
+                      <>
+                        {". Sharpe "}
+                        <span className={resumoNarrative.sharpe > 1 ? "text-emerald-400" : resumoNarrative.sharpe > 0 ? "text-zinc-300" : "text-red-400"}>
+                          {resumoNarrative.sharpe.toFixed(2)}
+                        </span>
+                      </>
+                    )}
+                    {resumoNarrative.maxDD != null && (
+                      <>
+                        {" · drawdown máximo "}
+                        <span className="text-red-400">{resumoNarrative.maxDD.toFixed(2)}%</span>
+                      </>
+                    )}
+                    {meta?.classe_rcvm175 && (
+                      <>
+                        {" · classe "}
+                        <span className="text-[#0B6C3E]">{meta.classe_rcvm175}</span>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  "Indicadores de risco-retorno ainda não disponíveis (requer histórico mínimo)."
+                )
+              }
+              miniStats={resumoMiniStats}
+            >
             {/* KPI Cards — Risco & Retorno */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <KPICard
@@ -481,6 +630,7 @@ export default function FundLamina() {
                 </ResponsiveContainer>
               </div>
             )}
+            </NarrativeSection>
           </motion.div>
         </SectionErrorBoundary>
 

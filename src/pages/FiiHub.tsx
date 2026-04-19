@@ -21,6 +21,7 @@ import { SkeletonKPI, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
@@ -129,24 +130,128 @@ export default function FiiHub() {
     );
   }, [rankingsFunds]);
 
-  /* ─── Benchmark vs CDI Narrative ─── */
-  const benchmarkNarrative = useMemo(() => {
-    if (overviewData?.avg_rentabilidade == null) return null;
+  /* ─── Narrative Analytics (regime + derived KPIs) ─── */
+  const narrativeOverview = useMemo(() => {
+    if (!overviewData) return null;
 
-    const avgRentab = overviewData.avg_rentabilidade; // monthly %
-    // Compound monthly CDI from annual Selic (accurate vs naive 1.1%)
     const SELIC_ANNUAL = 14.15;
     const cdiMonthly = (Math.pow(1 + SELIC_ANNUAL / 100, 1 / 12) - 1) * 100;
-    const spreadNum = avgRentab - cdiMonthly;
+    const avgRentab = overviewData.avg_rentabilidade ?? 0;
+    const avgDy = overviewData.avg_dividend_yield ?? 0;
+    const spread = avgRentab - cdiMonthly;
+
+    // DY annualized (~ × 12)
+    const dyAnnualized = avgDy * 12;
+    // DY Spread vs CDI annualized
+    const cdiAnnual = SELIC_ANNUAL;
+    const dySpread = dyAnnualized - cdiAnnual;
+
+    // Concentration HHI on PL by segmento
+    const bySeg = overviewData.by_segmento ?? [];
+    const totalPl = overviewData.total_pl ?? 0;
+    const shares = bySeg
+      .map((s) => (totalPl > 0 ? s.pl / totalPl : 0))
+      .filter((x) => x > 0);
+    const hhi = shares.reduce((acc, s) => acc + s * s, 0);
+    const hhiPct = (hhi * 10000).toFixed(0);
+    const topSegment = bySeg.length
+      ? [...bySeg].sort((a, b) => b.pl - a.pl)[0]
+      : null;
+    const topShare = topSegment && totalPl > 0 ? (topSegment.pl / totalPl) * 100 : 0;
+
+    // Regime (DY × Rentab)
+    const regime =
+      avgRentab > 0 && dySpread > 2
+        ? { label: "Prêmio Atrativo", color: "text-emerald-400" }
+        : avgRentab > 0 && dySpread > 0
+        ? { label: "Alinhado CDI", color: "text-zinc-300" }
+        : avgRentab < 0 && dySpread > 0
+        ? { label: "Reprecificação DY+", color: "text-amber-400" }
+        : { label: "Stress Imobiliário", color: "text-red-400" };
 
     return {
-      avgRentab: avgRentab.toFixed(2),
-      cdiMonthly: cdiMonthly.toFixed(2),
-      spread: spreadNum.toFixed(2),
-      color: spreadNum > 0 ? "text-emerald-400" : "text-red-400",
-      sentiment: spreadNum > 0.5 ? "acima" : spreadNum > 0 ? "alinhada" : "abaixo",
+      avgRentab,
+      avgDy,
+      cdiMonthly,
+      cdiAnnual,
+      spread,
+      dyAnnualized,
+      dySpread,
+      spreadColor:
+        spread > 0.5
+          ? "text-emerald-400"
+          : spread > 0
+          ? "text-zinc-300"
+          : "text-red-400",
+      spreadSentiment:
+        spread > 0.5 ? "acima" : spread > 0 ? "alinhada" : "abaixo",
+      hhi,
+      hhiPct,
+      hhiColor:
+        hhi > 0.25
+          ? "text-red-400"
+          : hhi > 0.15
+          ? "text-amber-400"
+          : "text-emerald-400",
+      topSegment: topSegment?.segmento ?? "—",
+      topShare,
+      regime,
     };
   }, [overviewData]);
+
+  const overviewMiniStats = useMemo<MiniStat[]>(() => {
+    if (!narrativeOverview || !overviewData) return [];
+    return [
+      {
+        label: "Regime FII",
+        value: narrativeOverview.regime.label,
+        sublabel: `${narrativeOverview.avgRentab.toFixed(2)}% rentab mês`,
+        color: narrativeOverview.regime.color,
+        tooltip: "Regime inferido de DY anualizado × rentabilidade mensal",
+      },
+      {
+        label: "DY Anualizado",
+        value: `${narrativeOverview.dyAnnualized.toFixed(2)}%`,
+        sublabel: `DY mês ${narrativeOverview.avgDy.toFixed(2)}%`,
+        color: narrativeOverview.dySpread > 0 ? "text-emerald-400" : "text-red-400",
+      },
+      {
+        label: "Prêmio DY vs CDI",
+        value: `${narrativeOverview.dySpread > 0 ? "+" : ""}${narrativeOverview.dySpread.toFixed(2)}pp`,
+        sublabel: `CDI ${narrativeOverview.cdiAnnual.toFixed(2)}% a.a.`,
+        color:
+          narrativeOverview.dySpread > 2
+            ? "text-emerald-400"
+            : narrativeOverview.dySpread > 0
+            ? "text-zinc-300"
+            : "text-red-400",
+      },
+      {
+        label: "Spread Rentab vs CDI",
+        value: `${narrativeOverview.spread > 0 ? "+" : ""}${narrativeOverview.spread.toFixed(2)}pp`,
+        sublabel: `CDI mês ${narrativeOverview.cdiMonthly.toFixed(2)}%`,
+        color: narrativeOverview.spreadColor,
+      },
+      {
+        label: "Concentração (HHI)",
+        value: narrativeOverview.hhiPct,
+        sublabel:
+          narrativeOverview.hhi > 0.25
+            ? "Alta"
+            : narrativeOverview.hhi > 0.15
+            ? "Moderada"
+            : "Dispersa",
+        color: narrativeOverview.hhiColor,
+        tooltip: "HHI sobre PL por segmento (0-10000)",
+      },
+      {
+        label: "Segmento Líder",
+        value: narrativeOverview.topSegment,
+        sublabel: `${narrativeOverview.topShare.toFixed(1)}% do PL`,
+        color: "text-zinc-200",
+      },
+    ];
+  }, [narrativeOverview, overviewData]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
@@ -203,46 +308,74 @@ export default function FiiHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("overview"))}
                 className="space-y-6"
               >
-                {/* KPI Cards */}
-                {overviewData && !overviewLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <KPICard
-                      label="Total FIIs"
-                      value={String(overviewData.total_fiis)}
-                      color="text-zinc-300"
-                    />
-                    <KPICard
-                      label="PL Agregado"
-                      value={formatPL(overviewData.total_pl)}
-                      color="text-[#EC4899]"
-                    />
-                    <KPICard
-                      label="DY Médio (mês)"
-                      value={overviewData.avg_dividend_yield != null ? overviewData.avg_dividend_yield.toFixed(2) : "—"}
-                      unit="%"
-                      color={overviewData.avg_dividend_yield && overviewData.avg_dividend_yield > 0.8 ? "text-emerald-400" : "text-zinc-300"}
-                    />
-                    <KPICard
-                      label="Rentab. Média (mês)"
-                      value={overviewData.avg_rentabilidade != null ? overviewData.avg_rentabilidade.toFixed(2) : "—"}
-                      unit="%"
-                      color={overviewData.avg_rentabilidade && overviewData.avg_rentabilidade > 0 ? "text-emerald-400" : "text-red-400"}
-                    />
-                  </div>
+                {narrativeOverview && overviewData && !overviewLoading ? (
+                  <NarrativeSection
+                    accent="#EC4899"
+                    prose={
+                      <>
+                        Mercado de FIIs em regime{" "}
+                        <span className={narrativeOverview.regime.color}>
+                          {narrativeOverview.regime.label.toLowerCase()}
+                        </span>
+                        : DY anualizado médio{" "}
+                        <span className="text-zinc-200">
+                          {narrativeOverview.dyAnnualized.toFixed(2)}%
+                        </span>{" "}
+                        vs CDI{" "}
+                        <span className="text-zinc-200">
+                          {narrativeOverview.cdiAnnual.toFixed(2)}%
+                        </span>{" "}
+                        (<span
+                          className={
+                            narrativeOverview.dySpread > 0
+                              ? "text-emerald-400"
+                              : "text-red-400"
+                          }
+                        >
+                          prêmio de {narrativeOverview.dySpread > 0 ? "+" : ""}
+                          {narrativeOverview.dySpread.toFixed(2)}pp
+                        </span>). Rentabilidade efetiva mensal{" "}
+                        <span className={narrativeOverview.spreadColor}>
+                          {narrativeOverview.avgRentab.toFixed(2)}%
+                        </span>{" "}
+                        ({narrativeOverview.spreadSentiment} do CDI). Concentração por
+                        segmento <span className={narrativeOverview.hhiColor}>HHI {narrativeOverview.hhiPct}</span> —
+                        líder <span className="text-zinc-200">{narrativeOverview.topSegment}</span> com{" "}
+                        <span className="text-zinc-200">{narrativeOverview.topShare.toFixed(1)}%</span>.
+                      </>
+                    }
+                    miniStats={overviewMiniStats}
+                  >
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <KPICard
+                        label="Total FIIs"
+                        value={String(overviewData.total_fiis)}
+                        color="text-zinc-300"
+                      />
+                      <KPICard
+                        label="PL Agregado"
+                        value={formatPL(overviewData.total_pl)}
+                        color="text-[#EC4899]"
+                      />
+                      <KPICard
+                        label="DY Médio (mês)"
+                        value={overviewData.avg_dividend_yield != null ? overviewData.avg_dividend_yield.toFixed(2) : "—"}
+                        unit="%"
+                        color={overviewData.avg_dividend_yield && overviewData.avg_dividend_yield > 0.8 ? "text-emerald-400" : "text-zinc-300"}
+                      />
+                      <KPICard
+                        label="Rentab. Média (mês)"
+                        value={overviewData.avg_rentabilidade != null ? overviewData.avg_rentabilidade.toFixed(2) : "—"}
+                        unit="%"
+                        color={overviewData.avg_rentabilidade && overviewData.avg_rentabilidade > 0 ? "text-emerald-400" : "text-red-400"}
+                      />
+                    </div>
+                  </NarrativeSection>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
                       <SkeletonKPI key={i} />
                     ))}
-                  </div>
-                )}
-
-                {/* Benchmark vs CDI Narrative */}
-                {benchmarkNarrative && (
-                  <div className="bg-[#0a0a0a] border-l-2 border-[#EC4899]/40 pl-4 py-3 text-[9px] text-zinc-400 leading-relaxed">
-                    <p>
-                      Rentabilidade média dos FIIs no mês: <span className="font-semibold text-zinc-300">{benchmarkNarrative.avgRentab}%</span>. CDI acumulado no período: <span className="font-semibold text-zinc-300">~{benchmarkNarrative.cdiMonthly}%</span>. Spread médio vs CDI: <span className={`font-semibold ${benchmarkNarrative.color}`}>{parseFloat(benchmarkNarrative.spread) > 0 ? '+' : ''}{benchmarkNarrative.spread}pp</span> — rentabilidade {benchmarkNarrative.sentiment} do benchmark.
-                    </p>
                   </div>
                 )}
 

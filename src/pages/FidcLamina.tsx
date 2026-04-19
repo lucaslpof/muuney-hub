@@ -25,6 +25,7 @@ import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -320,6 +321,124 @@ export default function FidcLamina() {
     return signals;
   }, [totalSubord, totalInadim, latest, vsCDIMetric]);
 
+  // Narrative mini-stats (P§5 storytelling — derived KPIs + regime)
+  const resumoNarrative = useMemo(() => {
+    // Regime FIDC (per-fund)
+    const regime =
+      totalInadim != null && totalSubord != null
+        ? totalInadim > 5 && totalSubord < 10
+          ? { label: "Stress", color: "text-red-400" }
+          : totalInadim > 5
+          ? { label: "Risco Elevado", color: "text-red-400" }
+          : totalSubord < 10
+          ? { label: "Subord Baixa", color: "text-amber-400" }
+          : { label: "Equilibrado", color: "text-emerald-400" }
+        : { label: "—", color: "text-zinc-500" };
+    const cushion =
+      totalSubord != null && totalInadim != null && totalInadim > 0
+        ? totalSubord / totalInadim
+        : null;
+    const plDeltaPct =
+      monthly.length >= 2 &&
+      monthly[0]?.vl_pl_total &&
+      monthly[monthly.length - 1]?.vl_pl_total
+        ? ((monthly[monthly.length - 1].vl_pl_total! -
+            monthly[0].vl_pl_total!) /
+            monthly[0].vl_pl_total!) *
+          100
+        : null;
+    return { regime, cushion, plDeltaPct };
+  }, [totalInadim, totalSubord, monthly]);
+
+  const resumoMiniStats = useMemo<MiniStat[]>(() => {
+    const stats: MiniStat[] = [];
+    stats.push({
+      label: "Regime Fundo",
+      value: resumoNarrative.regime.label,
+      sublabel:
+        totalSubord != null && totalInadim != null
+          ? `Sub ${totalSubord.toFixed(1)}% / Inadim ${totalInadim.toFixed(1)}%`
+          : undefined,
+      color: resumoNarrative.regime.color,
+    });
+    if (resumoNarrative.cushion != null) {
+      stats.push({
+        label: "Cushion Sub/Inadim",
+        value: `${resumoNarrative.cushion.toFixed(1)}×`,
+        sublabel:
+          resumoNarrative.cushion > 3
+            ? "Proteção robusta"
+            : resumoNarrative.cushion > 1.5
+            ? "Proteção adequada"
+            : "Proteção frágil",
+        color:
+          resumoNarrative.cushion > 3
+            ? "text-emerald-400"
+            : resumoNarrative.cushion > 1.5
+            ? "text-amber-400"
+            : "text-red-400",
+      });
+    }
+    if (vsCDIMetric) {
+      stats.push({
+        label: "Alpha vs CDI",
+        value: `${vsCDIMetric.excess >= 0 ? "+" : ""}${vsCDIMetric.excess.toFixed(2)}pp`,
+        sublabel: `Fundo ${vsCDIMetric.fundReturn.toFixed(1)}% / CDI ${vsCDIMetric.cdiReturn.toFixed(1)}%`,
+        color:
+          vsCDIMetric.excess > 1
+            ? "text-emerald-400"
+            : vsCDIMetric.excess > -1
+            ? "text-zinc-300"
+            : "text-red-400",
+      });
+    }
+    if (riskMetrics) {
+      if (riskMetrics.sharpe != null) {
+        stats.push({
+          label: "Sharpe",
+          value: riskMetrics.sharpe.toFixed(2),
+          sublabel:
+            riskMetrics.sharpe > 1
+              ? "Retorno/risco forte"
+              : riskMetrics.sharpe > 0
+              ? "Aceitável"
+              : "Abaixo do risk-free",
+          color:
+            riskMetrics.sharpe > 1
+              ? "text-emerald-400"
+              : riskMetrics.sharpe > 0
+              ? "text-zinc-300"
+              : "text-red-400",
+        });
+      }
+      if (riskMetrics.max_drawdown != null) {
+        stats.push({
+          label: "Max Drawdown",
+          value: `${riskMetrics.max_drawdown.toFixed(2)}%`,
+          sublabel: "Pior queda do período",
+          color:
+            Math.abs(riskMetrics.max_drawdown) > 5
+              ? "text-red-400"
+              : "text-zinc-300",
+        });
+      }
+    }
+    if (resumoNarrative.plDeltaPct != null) {
+      stats.push({
+        label: "PL Δ Período",
+        value: `${resumoNarrative.plDeltaPct >= 0 ? "+" : ""}${resumoNarrative.plDeltaPct.toFixed(1)}%`,
+        sublabel: `${monthly.length} meses observados`,
+        color:
+          resumoNarrative.plDeltaPct > 2
+            ? "text-emerald-400"
+            : resumoNarrative.plDeltaPct < -2
+            ? "text-red-400"
+            : "text-zinc-300",
+      });
+    }
+    return stats;
+  }, [resumoNarrative, totalSubord, totalInadim, vsCDIMetric, riskMetrics, monthly.length]);
+
   if (fidcLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] p-6">
@@ -392,10 +511,62 @@ export default function FidcLamina() {
         <SectionErrorBoundary sectionName="Resumo">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-4 h-4 text-[#0B6C3E]" />
+              <BarChart3 className="w-4 h-4 text-[#F97316]" />
               <h2 className="text-sm font-semibold text-zinc-300">Resumo</h2>
             </div>
 
+            <NarrativeSection
+              accent="#F97316"
+              prose={
+                <>
+                  FIDC em regime{" "}
+                  <span className={resumoNarrative.regime.color}>
+                    {resumoNarrative.regime.label.toLowerCase()}
+                  </span>
+                  : subordinação{" "}
+                  <span className="text-zinc-200">
+                    {totalSubord != null ? `${totalSubord.toFixed(2)}%` : "—"}
+                  </span>{" "}
+                  protege contra inadimplência de{" "}
+                  <span className="text-zinc-200">
+                    {totalInadim != null ? `${totalInadim.toFixed(2)}%` : "—"}
+                  </span>
+                  {resumoNarrative.cushion != null && (
+                    <>
+                      {" "}— razão de cobertura{" "}
+                      <span
+                        className={
+                          resumoNarrative.cushion > 3
+                            ? "text-emerald-400"
+                            : resumoNarrative.cushion > 1.5
+                            ? "text-amber-400"
+                            : "text-red-400"
+                        }
+                      >
+                        {resumoNarrative.cushion.toFixed(1)}×
+                      </span>
+                    </>
+                  )}
+                  {vsCDIMetric && (
+                    <>
+                      . Retorno acumulado vs CDI:{" "}
+                      <span
+                        className={
+                          vsCDIMetric.excess > 0
+                            ? "text-emerald-400"
+                            : "text-red-400"
+                        }
+                      >
+                        {vsCDIMetric.excess >= 0 ? "+" : ""}
+                        {vsCDIMetric.excess.toFixed(2)}pp
+                      </span>
+                    </>
+                  )}
+                  .
+                </>
+              }
+              miniStats={resumoMiniStats}
+            >
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
@@ -461,6 +632,7 @@ export default function FidcLamina() {
                 })}
               </div>
             )}
+            </NarrativeSection>
           </motion.div>
         </SectionErrorBoundary>
 

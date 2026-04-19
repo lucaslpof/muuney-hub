@@ -21,6 +21,7 @@ import { SkeletonKPI, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
@@ -65,7 +66,7 @@ export default function FidcHub() {
   const [rankingPage, setRankingPage] = useState<number>(0);
 
   /* ─── Data: Overview ─── */
-  const { data: overviewData, isLoading: overviewLoading } = useFidcV4Overview();
+  const { data: overviewData } = useFidcV4Overview();
 
   /* ─── Data: Segments ─── */
   const { data: segmentsData } = useFidcSegments();
@@ -127,24 +128,129 @@ export default function FidcHub() {
     );
   }, [rankingsFunds]);
 
-  /* ─── Benchmark vs CDI Narrative ─── */
-  const benchmarkNarrative = useMemo(() => {
-    if (!overviewData?.avg_rentab_senior) return null;
+  /* ─── Narrative Analytics (regime + derived KPIs) ─── */
+  const narrativeOverview = useMemo(() => {
+    if (!overviewData) return null;
 
-    const avgRentab = overviewData.avg_rentab_senior; // monthly %
-    // Compound monthly CDI from annual Selic (accurate vs naive 1.1%)
+    // Benchmark CDI (compound monthly from Selic)
     const SELIC_ANNUAL = 14.15;
     const cdiMonthly = (Math.pow(1 + SELIC_ANNUAL / 100, 1 / 12) - 1) * 100;
-    const spreadNum = avgRentab - cdiMonthly;
+    const avgRentab = overviewData.avg_rentab_senior ?? 0;
+    const spread = avgRentab - cdiMonthly;
+
+    // Concentration: HHI on PL share by lastro
+    const byLastro = overviewData.by_lastro ?? [];
+    const totalPl = overviewData.total_pl ?? 0;
+    const shares = byLastro
+      .map((s) => (totalPl > 0 ? s.pl / totalPl : 0))
+      .filter((x) => x > 0);
+    const hhi = shares.reduce((acc, s) => acc + s * s, 0);
+    const hhiPct = (hhi * 10000).toFixed(0); // 0-10000 scale
+    const topSegment = byLastro.length
+      ? [...byLastro].sort((a, b) => b.pl - a.pl)[0]
+      : null;
+    const topShare = topSegment && totalPl > 0 ? (topSegment.pl / totalPl) * 100 : 0;
+
+    // Risk regime (subordinação vs inadimplência)
+    const subordAvg = overviewData.avg_subordinacao ?? 0;
+    const inadimAvg = overviewData.avg_inadimplencia ?? 0;
+    const regime =
+      inadimAvg > 5 && subordAvg < 10
+        ? { label: "Stress Sistêmico", color: "text-red-400" }
+        : inadimAvg > 5
+        ? { label: "Risco Elevado", color: "text-red-400" }
+        : subordAvg < 10
+        ? { label: "Subordinação Baixa", color: "text-amber-400" }
+        : { label: "Equilibrado", color: "text-emerald-400" };
+
+    // Cushion ratio (subord vs inadim) — margin de segurança
+    const cushion = inadimAvg > 0 ? subordAvg / inadimAvg : null;
 
     return {
-      avgRentab: avgRentab.toFixed(2),
-      cdiMonthly: cdiMonthly.toFixed(2),
-      spread: spreadNum.toFixed(2),
-      color: spreadNum > 0 ? "text-emerald-400" : "text-red-400",
-      sentiment: spreadNum > 0.5 ? "acima" : spreadNum > 0 ? "alinhada" : "abaixo",
+      avgRentab,
+      cdiMonthly,
+      spread,
+      spreadColor:
+        spread > 0.5
+          ? "text-emerald-400"
+          : spread > 0
+          ? "text-zinc-300"
+          : "text-red-400",
+      spreadSentiment:
+        spread > 0.5 ? "acima" : spread > 0 ? "alinhada" : "abaixo",
+      hhi,
+      hhiPct,
+      hhiColor:
+        hhi > 0.25
+          ? "text-red-400"
+          : hhi > 0.15
+          ? "text-amber-400"
+          : "text-emerald-400",
+      topSegment: topSegment?.lastro ?? "—",
+      topShare,
+      regime,
+      cushion,
     };
   }, [overviewData]);
+
+  const overviewMiniStats = useMemo<MiniStat[]>(() => {
+    if (!narrativeOverview || !overviewData) return [];
+    return [
+      {
+        label: "Regime FIDC",
+        value: narrativeOverview.regime.label,
+        sublabel: `${narrativeOverview.avgRentab.toFixed(2)}% rentab senior`,
+        color: narrativeOverview.regime.color,
+        tooltip: "Regime inferido de subordinação × inadimplência média do mercado",
+      },
+      {
+        label: "Spread vs CDI",
+        value: `${narrativeOverview.spread > 0 ? "+" : ""}${narrativeOverview.spread.toFixed(2)}pp`,
+        sublabel: `CDI ~${narrativeOverview.cdiMonthly.toFixed(2)}%`,
+        color: narrativeOverview.spreadColor,
+      },
+      {
+        label: "Concentração (HHI)",
+        value: narrativeOverview.hhiPct,
+        sublabel:
+          narrativeOverview.hhi > 0.25
+            ? "Alta"
+            : narrativeOverview.hhi > 0.15
+            ? "Moderada"
+            : "Dispersa",
+        color: narrativeOverview.hhiColor,
+        tooltip: "Herfindahl-Hirschman Index sobre PL por lastro (0-10000)",
+      },
+      {
+        label: "Lastro Líder",
+        value: narrativeOverview.topSegment,
+        sublabel: `${narrativeOverview.topShare.toFixed(1)}% do PL agregado`,
+        color: "text-zinc-200",
+      },
+      {
+        label: "Cushion Subord/Inadim",
+        value:
+          narrativeOverview.cushion != null
+            ? `${narrativeOverview.cushion.toFixed(1)}×`
+            : "—",
+        sublabel:
+          narrativeOverview.cushion != null && narrativeOverview.cushion < 2
+            ? "Colchão curto"
+            : "Colchão confortável",
+        color:
+          narrativeOverview.cushion != null && narrativeOverview.cushion < 2
+            ? "text-red-400"
+            : "text-emerald-400",
+        tooltip: "Subordinação média ÷ Inadimplência média (quanto maior, melhor)",
+      },
+      {
+        label: "Segmentos Ativos",
+        value: String(overviewData.by_lastro?.length ?? 0),
+        sublabel: `${overviewData.total_fidcs} FIDCs mapeados`,
+        color: "text-zinc-200",
+      },
+    ];
+  }, [narrativeOverview, overviewData]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] w-full">
@@ -201,46 +307,63 @@ export default function FidcHub() {
                 onViewportEnter={() => setVisitedSections((s) => new Set(s).add("overview"))}
                 className="space-y-6"
               >
-                {/* KPI Cards */}
-                {overviewData && !overviewLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <KPICard
-                      label="Total FIDCs"
-                      value={String(overviewData.total_fidcs)}
-                      color="text-zinc-300"
-                    />
-                    <KPICard
-                      label="PL Agregado"
-                      value={formatPL(overviewData.total_pl)}
-                      color="text-[#0B6C3E]"
-                    />
-                    <KPICard
-                      label="Subordinação Média"
-                      value={overviewData.avg_subordinacao?.toFixed(2) || "—"}
-                      unit="%"
-                      color={overviewData.avg_subordinacao && overviewData.avg_subordinacao < 10 ? "text-red-400" : "text-emerald-400"}
-                    />
-                    <KPICard
-                      label="Inadimplência Média"
-                      value={overviewData.avg_inadimplencia?.toFixed(2) || "—"}
-                      unit="%"
-                      color={overviewData.avg_inadimplencia && overviewData.avg_inadimplencia > 5 ? "text-red-400" : "text-emerald-400"}
-                    />
-                  </div>
+                {narrativeOverview && overviewData ? (
+                  <NarrativeSection
+                    accent="#F97316"
+                    prose={
+                      <>
+                        Mercado de FIDCs em regime{" "}
+                        <span className={narrativeOverview.regime.color}>
+                          {narrativeOverview.regime.label.toLowerCase()}
+                        </span>
+                        : rentabilidade média senior de{" "}
+                        <span className="text-zinc-200">
+                          {narrativeOverview.avgRentab.toFixed(2)}%
+                        </span>{" "}
+                        no mês, spread{" "}
+                        <span className={narrativeOverview.spreadColor}>
+                          {narrativeOverview.spread > 0 ? "+" : ""}
+                          {narrativeOverview.spread.toFixed(2)}pp vs CDI
+                        </span>{" "}
+                        ({narrativeOverview.spreadSentiment} do benchmark). Concentração por
+                        lastro <span className={narrativeOverview.hhiColor}>HHI {narrativeOverview.hhiPct}</span> —
+                        lastro líder <span className="text-zinc-200">{narrativeOverview.topSegment}</span> com{" "}
+                        <span className="text-zinc-200">{narrativeOverview.topShare.toFixed(1)}%</span> do PL agregado.
+                      </>
+                    }
+                    miniStats={overviewMiniStats}
+                  >
+                    {/* KPIs principais */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <KPICard
+                        label="Total FIDCs"
+                        value={String(overviewData.total_fidcs)}
+                        color="text-zinc-300"
+                      />
+                      <KPICard
+                        label="PL Agregado"
+                        value={formatPL(overviewData.total_pl)}
+                        color="text-[#F97316]"
+                      />
+                      <KPICard
+                        label="Subordinação Média"
+                        value={overviewData.avg_subordinacao?.toFixed(2) || "—"}
+                        unit="%"
+                        color={overviewData.avg_subordinacao && overviewData.avg_subordinacao < 10 ? "text-red-400" : "text-emerald-400"}
+                      />
+                      <KPICard
+                        label="Inadimplência Média"
+                        value={overviewData.avg_inadimplencia?.toFixed(2) || "—"}
+                        unit="%"
+                        color={overviewData.avg_inadimplencia && overviewData.avg_inadimplencia > 5 ? "text-red-400" : "text-emerald-400"}
+                      />
+                    </div>
+                  </NarrativeSection>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
                       <SkeletonKPI key={i} />
                     ))}
-                  </div>
-                )}
-
-                {/* Benchmark vs CDI Narrative */}
-                {benchmarkNarrative && (
-                  <div className="bg-[#0a0a0a] border-l-2 border-[#0B6C3E]/40 pl-4 py-3 text-[9px] text-zinc-400 leading-relaxed">
-                    <p>
-                      Rentabilidade média (senior) dos FIDCs no mês: <span className="font-semibold text-zinc-300">{benchmarkNarrative.avgRentab}%</span>. CDI acumulado no período: <span className="font-semibold text-zinc-300">~{benchmarkNarrative.cdiMonthly}%</span>. Spread médio vs CDI: <span className={`font-semibold ${benchmarkNarrative.color}`}>{parseFloat(benchmarkNarrative.spread) > 0 ? '+' : ''}{benchmarkNarrative.spread}pp</span> — rentabilidade {benchmarkNarrative.sentiment} do benchmark.
-                    </p>
                   </div>
                 )}
 

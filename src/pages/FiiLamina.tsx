@@ -26,6 +26,9 @@ import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
 import { PrintFooter } from "@/components/hub/PrintFooter";
 import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+
+const SELIC_ANNUAL = 14.15;
 
 // FII rentabilidade can be corrupt at edges (e.g. funds in liquidation);
 // cap at ±95%/mês same as FIDC.
@@ -227,6 +230,93 @@ export default function FiiLamina() {
     return signals;
   }, [dyMes, rentabMes, latest]);
 
+  // Narrative regime + opener (FII)
+  const resumoNarrative = useMemo(() => {
+    if (!meta) return null;
+    const cdiMonthly = (Math.pow(1 + SELIC_ANNUAL / 100, 1 / 12) - 1) * 100;
+    const dyAnnual = dyMes != null ? dyMes * 12 : null;
+    const dySpread = dyAnnual != null ? dyAnnual - SELIC_ANNUAL : null;
+    const rentabSpread = rentabMes != null ? rentabMes - cdiMonthly : null;
+
+    // Regime: Prêmio Atrativo / Alinhado CDI / Reprecificando / Yield Trap
+    let regimeLabel = "Alinhado CDI";
+    let regimeColor = "text-zinc-300";
+    if (rentabMes != null && rentabMes < 0 && dyMes != null && dyMes > 0) {
+      regimeLabel = "Yield Trap";
+      regimeColor = "text-red-400";
+    } else if (dySpread != null && dySpread > 2) {
+      regimeLabel = "Prêmio Atrativo";
+      regimeColor = "text-emerald-400";
+    } else if (dySpread != null && dySpread < -2) {
+      regimeLabel = "Stress Imobiliário";
+      regimeColor = "text-red-400";
+    } else if (rentabMes != null && rentabMes < 0) {
+      regimeLabel = "Reprecificando";
+      regimeColor = "text-amber-400";
+    }
+
+    return { regimeLabel, regimeColor, cdiMonthly, dyAnnual, dySpread, rentabSpread };
+  }, [meta, dyMes, rentabMes]);
+
+  const resumoMiniStats = useMemo<MiniStat[]>(() => {
+    if (!resumoNarrative) return [];
+    const stats: MiniStat[] = [];
+
+    stats.push({
+      label: "Regime FII",
+      value: resumoNarrative.regimeLabel,
+      color: resumoNarrative.regimeColor,
+      tooltip: "Classificação baseada em DY anualizado vs Selic + rentabilidade efetiva.",
+    });
+
+    if (resumoNarrative.dyAnnual != null) {
+      stats.push({
+        label: "DY Anualizado",
+        value: `${resumoNarrative.dyAnnual.toFixed(2)}%`,
+        sublabel: "DY mês × 12",
+        color: resumoNarrative.dyAnnual > SELIC_ANNUAL ? "text-emerald-400" : "text-zinc-300",
+      });
+    }
+
+    if (resumoNarrative.dySpread != null) {
+      stats.push({
+        label: "Prêmio DY vs CDI",
+        value: `${resumoNarrative.dySpread >= 0 ? "+" : ""}${resumoNarrative.dySpread.toFixed(2)}pp`,
+        sublabel: `CDI ${SELIC_ANNUAL.toFixed(2)}%`,
+        color: resumoNarrative.dySpread > 0 ? "text-emerald-400" : "text-red-400",
+      });
+    }
+
+    if (riskMetrics?.sharpe != null) {
+      stats.push({
+        label: "Sharpe",
+        value: riskMetrics.sharpe.toFixed(2),
+        sublabel: "risco-retorno",
+        color: riskMetrics.sharpe > 1 ? "text-emerald-400" : riskMetrics.sharpe > 0 ? "text-zinc-300" : "text-red-400",
+      });
+    }
+
+    if (riskMetrics?.max_drawdown != null) {
+      stats.push({
+        label: "Max Drawdown",
+        value: `${riskMetrics.max_drawdown.toFixed(2)}%`,
+        sublabel: "pior queda",
+        color: "text-red-400",
+      });
+    }
+
+    if (latest?.nr_cotistas != null) {
+      stats.push({
+        label: "Cotistas",
+        value: latest.nr_cotistas.toLocaleString("pt-BR"),
+        sublabel: latest.nr_cotistas > 10000 ? "alta liquidez" : "base de investidores",
+        color: latest.nr_cotistas > 10000 ? "text-emerald-400" : "text-zinc-300",
+      });
+    }
+
+    return stats;
+  }, [resumoNarrative, riskMetrics, latest]);
+
   if (fiiLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] p-6">
@@ -312,6 +402,62 @@ export default function FiiLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Resumo</h2>
             </div>
 
+            <NarrativeSection
+              accent="#EC4899"
+              prose={
+                resumoNarrative ? (
+                  <>
+                    <span className={`font-semibold ${resumoNarrative.regimeColor}`}>
+                      {resumoNarrative.regimeLabel}
+                    </span>
+                    {dyMes != null && (
+                      <>
+                        {" · DY mensal "}
+                        <span className="text-zinc-200">{dyMes.toFixed(2)}%</span>
+                        {resumoNarrative.dyAnnual != null && (
+                          <>
+                            {" (anualizado "}
+                            <span className={resumoNarrative.dyAnnual > SELIC_ANNUAL ? "text-emerald-400" : "text-zinc-300"}>
+                              {resumoNarrative.dyAnnual.toFixed(2)}%
+                            </span>
+                            {")"}
+                          </>
+                        )}
+                      </>
+                    )}
+                    {resumoNarrative.dySpread != null && (
+                      <>
+                        {" vs CDI "}
+                        <span className="text-zinc-300">{SELIC_ANNUAL.toFixed(2)}%</span>
+                        {" → prêmio "}
+                        <span className={resumoNarrative.dySpread > 0 ? "text-emerald-400" : "text-red-400"}>
+                          {resumoNarrative.dySpread >= 0 ? "+" : ""}
+                          {resumoNarrative.dySpread.toFixed(2)}pp
+                        </span>
+                      </>
+                    )}
+                    {rentabMes != null && (
+                      <>
+                        {". Rentabilidade efetiva do mês "}
+                        <span className={rentabMes >= 0 ? "text-emerald-400" : "text-red-400"}>
+                          {rentabMes.toFixed(2)}%
+                        </span>
+                      </>
+                    )}
+                    {segmento !== "—" && (
+                      <>
+                        {" · segmento "}
+                        <span className="text-[#EC4899]">{segmento}</span>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  "Indicadores ainda não disponíveis para este FII."
+                )
+              }
+              miniStats={resumoMiniStats}
+            >
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <KPICard
@@ -380,6 +526,7 @@ export default function FiiLamina() {
                 })}
               </div>
             )}
+            </NarrativeSection>
           </motion.div>
         </SectionErrorBoundary>
 
