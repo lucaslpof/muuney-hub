@@ -21,6 +21,7 @@ import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
 import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
+import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -784,6 +785,15 @@ export default function FidcLamina() {
                 </div>
               </div>
             )}
+
+            {meta && (
+              <ManagerTenureTimeline
+                cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo}
+                dt_const={meta.dt_const}
+                gestor_nome={meta.gestor_nome}
+                accent="#F97316"
+              />
+            )}
           </motion.div>
         </SectionErrorBoundary>
 
@@ -796,31 +806,106 @@ export default function FidcLamina() {
         {fidcData?.similar && fidcData.similar.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <LineChartIcon className="w-4 h-4 text-[#0B6C3E]" />
+              <div className="flex items-center gap-2 mb-2">
+                <LineChartIcon className="w-4 h-4 text-[#F97316]" />
                 <h2 className="text-sm font-semibold text-zinc-300">FIDCs Similares</h2>
               </div>
+              <div className="text-[10px] font-mono text-zinc-500 mb-4">
+                Referência: {meta?.denom_social || "—"}
+                {latest?.indice_subordinacao != null &&
+                  ` · Subord ${latest.indice_subordinacao.toFixed(1)}%`}
+                {latest?.taxa_inadimplencia != null &&
+                  ` · Inadim ${latest.taxa_inadimplencia.toFixed(2)}%`}
+                {latest?.rentab_fundo != null &&
+                  cleanRentab(latest.rentab_fundo) != null &&
+                  ` · Rentab ${cleanRentab(latest.rentab_fundo)!.toFixed(2)}%`}
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {fidcData.similar.slice(0, 6).map((fund, idx) => (
-                  <Link
-                    key={idx}
-                    to={`/fundos/fidc/${fund.slug || fund.cnpj_fundo}`}
-                    className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#0B6C3E] truncate transition-colors">
-                          {fund.denom_social || `FIDC ${fund.cnpj_fundo}`}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {fidcData.similar.slice(0, 6).map((fund, idx) => {
+                  const peerSubord = fund.indice_subordinacao ?? null;
+                  const baseSubord = latest?.indice_subordinacao ?? null;
+                  const deltaSubord =
+                    peerSubord != null && baseSubord != null
+                      ? peerSubord - baseSubord
+                      : null;
+                  const peerRentab = cleanRentab(fund.rentab_fundo);
+                  const baseRentab = cleanRentab(latest?.rentab_fundo);
+                  const deltaRentab =
+                    peerRentab != null && baseRentab != null
+                      ? peerRentab - baseRentab
+                      : null;
+                  const peerInadim = fund.taxa_inadimplencia ?? null;
+
+                  return (
+                    <Link
+                      key={idx}
+                      to={`/fundos/fidc/${fund.slug || fund.cnpj_fundo}`}
+                      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#F97316]/30 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#F97316] truncate transition-colors">
+                            {fund.denom_social || `FIDC ${fund.cnpj_fundo}`}
+                          </div>
+                          {fund.tp_lastro_principal && (
+                            <div className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-[#F97316]/10 text-[#F97316] border border-[#F97316]/30">
+                              {fund.tp_lastro_principal}
+                            </div>
+                          )}
+                          {fund.gestor_nome && (
+                            <div className="text-[9px] font-mono text-zinc-600 mt-1.5 truncate">
+                              {fund.gestor_nome}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-[8px] text-zinc-700 mt-1">Gestor: {fund.gestor_nome?.split(" ")[0] || "—"}</div>
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-zinc-400">{formatPL(fund.vl_pl_total)}</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-[9px] font-mono text-zinc-400">{formatPL(fund.vl_pl_total)}</div>
+                      <div className="flex items-center gap-3 pt-2 border-t border-[#1a1a1a] text-[9px] font-mono flex-wrap">
+                        {peerRentab != null ? (
+                          <span className="text-zinc-600">
+                            Rentab{" "}
+                            <span className={peerRentab >= 0 ? "text-emerald-400" : "text-red-400"}>
+                              {peerRentab.toFixed(2)}%
+                            </span>
+                            {deltaRentab != null && (
+                              <span className={`ml-1 ${deltaRentab > 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                ({deltaRentab > 0 ? "+" : ""}
+                                {deltaRentab.toFixed(2)}pp)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700">Rentab —</span>
+                        )}
+                        {peerSubord != null ? (
+                          <span className="text-zinc-600">
+                            Subord{" "}
+                            <span className="text-zinc-400">{peerSubord.toFixed(1)}%</span>
+                            {deltaSubord != null && (
+                              <span className={`ml-1 ${deltaSubord > 0 ? "text-emerald-500" : "text-amber-500"}`}>
+                                ({deltaSubord > 0 ? "+" : ""}
+                                {deltaSubord.toFixed(1)}pp)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700">Subord —</span>
+                        )}
+                        {peerInadim != null && (
+                          <span className="text-zinc-600">
+                            Inadim{" "}
+                            <span className={peerInadim > 5 ? "text-red-400" : "text-zinc-400"}>
+                              {peerInadim.toFixed(2)}%
+                            </span>
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </motion.div>
           </SectionErrorBoundary>

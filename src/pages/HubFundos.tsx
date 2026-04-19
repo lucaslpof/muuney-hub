@@ -48,6 +48,7 @@ import { SkeletonTableRow, SkeletonSection, SkeletonPage } from "@/components/hu
 import { InlineEmpty, EmptyState } from "@/components/hub/EmptyState";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { FundsLandingHero } from "@/components/hub/FundsLandingHero";
+import { FundsRegimeSnapshot } from "@/components/hub/FundsRegimeSnapshot";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
@@ -1044,6 +1045,12 @@ const HubFundos = () => {
                 ? `${(stats.total_funds / 1000).toFixed(1)}k classes · RCVM 175`
                 : undefined
             }
+          />
+
+          {/* P1-8: Regime snapshot — at-a-glance read above KPIs */}
+          <FundsRegimeSnapshot
+            {...narrativeProps}
+            onJumpToAnalytics={() => scrollTo("analytics")}
           />
 
           {/* ════════════════════════════════════════════════

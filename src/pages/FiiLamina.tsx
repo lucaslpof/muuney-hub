@@ -20,6 +20,7 @@ import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
 import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
+import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 
 // FII rentabilidade can be corrupt at edges (e.g. funds in liquidation);
@@ -629,6 +630,15 @@ export default function FiiLamina() {
                 </div>
               </div>
             )}
+
+            {meta && (
+              <ManagerTenureTimeline
+                cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo}
+                dt_const={meta.dt_const}
+                gestor_nome={meta.gestor_nome}
+                accent="#EC4899"
+              />
+            )}
           </motion.div>
         </SectionErrorBoundary>
 
@@ -641,38 +651,108 @@ export default function FiiLamina() {
         {fiiData?.similar && fiiData.similar.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-2">
                 <LineChartIcon className="w-4 h-4 text-[#EC4899]" />
                 <h2 className="text-sm font-semibold text-zinc-300">FIIs Similares (mesmo segmento)</h2>
               </div>
+              <div className="text-[10px] font-mono text-zinc-500 mb-4">
+                Referência: {meta?.denom_social || "—"}
+                {latest?.dividend_yield_mes != null &&
+                  ` · DY ${Number(latest.dividend_yield_mes).toFixed(2)}%`}
+                {latest?.rentabilidade_efetiva_mes != null &&
+                  ` · Rentab ${Number(latest.rentabilidade_efetiva_mes).toFixed(2)}%`}
+                {latest?.segmento && ` · ${latest.segmento}`}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {fiiData.similar.slice(0, 6).map((fund, idx) => (
-                  <Link
-                    key={idx}
-                    to={`/fundos/fii/${fund.slug || fund.cnpj_fundo_classe || fund.cnpj_fundo}`}
-                    className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#EC4899]/30 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#EC4899] truncate transition-colors">
-                          {fund.denom_social || fund.nome_fundo || `FII ${fund.cnpj_fundo}`}
+                {fiiData.similar.slice(0, 6).map((fund, idx) => {
+                  const peerDY =
+                    fund.dividend_yield_mes != null ? Number(fund.dividend_yield_mes) : null;
+                  const baseDY =
+                    latest?.dividend_yield_mes != null ? Number(latest.dividend_yield_mes) : null;
+                  const deltaDY =
+                    peerDY != null && baseDY != null ? peerDY - baseDY : null;
+
+                  const peerRentab =
+                    fund.rentabilidade_efetiva_mes != null
+                      ? Number(fund.rentabilidade_efetiva_mes)
+                      : null;
+                  const baseRentab =
+                    latest?.rentabilidade_efetiva_mes != null
+                      ? Number(latest.rentabilidade_efetiva_mes)
+                      : null;
+                  const deltaRentab =
+                    peerRentab != null && baseRentab != null ? peerRentab - baseRentab : null;
+
+                  return (
+                    <Link
+                      key={idx}
+                      to={`/fundos/fii/${fund.slug || fund.cnpj_fundo_classe || fund.cnpj_fundo}`}
+                      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#EC4899]/30 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#EC4899] truncate transition-colors">
+                            {fund.denom_social || fund.nome_fundo || `FII ${fund.cnpj_fundo}`}
+                          </div>
+                          {fund.segmento && (
+                            <div className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-[#EC4899]/10 text-[#EC4899] border border-[#EC4899]/30 truncate max-w-full">
+                              {fund.segmento}
+                            </div>
+                          )}
+                          {fund.gestor_nome && (
+                            <div className="text-[9px] font-mono text-zinc-600 mt-1.5 truncate">
+                              {fund.gestor_nome}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-[8px] text-zinc-700 mt-1 truncate">
-                          {fund.segmento || "—"}
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-zinc-400">{formatPL(fund.patrimonio_liquido)}</div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[9px] font-mono text-zinc-400">{formatPL(fund.patrimonio_liquido)}</div>
-                        {fund.dividend_yield_mes != null && (
-                          <div className="text-[8px] font-mono text-emerald-400 mt-0.5">
-                            DY {Number(fund.dividend_yield_mes).toFixed(2)}%
-                          </div>
+                      <div className="flex items-center gap-3 pt-2 border-t border-[#1a1a1a] text-[9px] font-mono flex-wrap">
+                        {peerDY != null ? (
+                          <span className="text-zinc-600">
+                            DY{" "}
+                            <span className="text-emerald-400">{peerDY.toFixed(2)}%</span>
+                            {deltaDY != null && (
+                              <span className={`ml-1 ${deltaDY > 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                ({deltaDY > 0 ? "+" : ""}
+                                {deltaDY.toFixed(2)}pp)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700">DY —</span>
+                        )}
+                        {peerRentab != null ? (
+                          <span className="text-zinc-600">
+                            Rentab{" "}
+                            <span className={peerRentab >= 0 ? "text-emerald-400" : "text-red-400"}>
+                              {peerRentab.toFixed(2)}%
+                            </span>
+                            {deltaRentab != null && (
+                              <span className={`ml-1 ${deltaRentab > 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                ({deltaRentab > 0 ? "+" : ""}
+                                {deltaRentab.toFixed(2)}pp)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700">Rentab —</span>
+                        )}
+                        {fund.nr_cotistas != null && (
+                          <span className="text-zinc-600">
+                            Cotistas{" "}
+                            <span className="text-zinc-400">
+                              {fund.nr_cotistas.toLocaleString("pt-BR")}
+                            </span>
+                          </span>
                         )}
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </motion.div>
           </SectionErrorBoundary>

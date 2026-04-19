@@ -21,6 +21,7 @@ import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/Fund
 import { ClasseBadge, HierarquiaBadges } from "@/lib/rcvm175";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { FundScoreCard } from "@/components/hub/FundScoreCard";
+import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { FundInsightsSection } from "@/components/hub/InsightsFeed";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
@@ -738,6 +739,14 @@ export default function FundLamina() {
                     <div className="text-zinc-700 mt-1">{formatCnpj(meta.cnpj_admin || "")}</div>
                   </div>
                 </div>
+
+                {/* P1-6: Manager tenure timeline */}
+                <ManagerTenureTimeline
+                  cnpj={cnpj}
+                  dt_const={meta.dt_const}
+                  gestor_nome={meta.gestor_nome}
+                  accent="#0B6C3E"
+                />
               </>
             )}
           </motion.div>
@@ -752,31 +761,105 @@ export default function FundLamina() {
         {similarFunds.length > 0 && (
           <SectionErrorBoundary sectionName="Fundos Similares">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-2">
                 <LineChartIcon className="w-4 h-4 text-[#0B6C3E]" />
                 <h2 className="text-sm font-semibold text-zinc-300">Fundos Similares ({similarClasse})</h2>
               </div>
+              <div className="text-[10px] font-mono text-zinc-500 mb-4">
+                Referência: {fundDisplayName(meta!)} · PL {formatPL(meta?.vl_patrim_liq ?? null)}
+                {meta?.taxa_adm != null && ` · Tx. Adm ${Number(meta.taxa_adm).toFixed(2)}%`}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {similarFunds.map((fund) => (
-                  <Link
-                    key={fund.cnpj_fundo}
-                    to={`/fundos/${fund.slug || fund.cnpj_fundo_classe || fund.cnpj_fundo}`}
-                    className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#0B6C3E] truncate transition-colors">
-                          {fundDisplayName(fund)}
+                {similarFunds.map((fund) => {
+                  // Delta PL vs current fund (as %)
+                  const basePL = meta?.vl_patrim_liq ?? null;
+                  const peerPL = fund.vl_patrim_liq ?? null;
+                  const deltaPL =
+                    basePL && peerPL && basePL > 0
+                      ? ((peerPL - basePL) / basePL) * 100
+                      : null;
+                  const deltaColor =
+                    deltaPL == null
+                      ? "text-zinc-600"
+                      : Math.abs(deltaPL) < 20
+                      ? "text-zinc-400"
+                      : deltaPL > 0
+                      ? "text-amber-400"
+                      : "text-emerald-400";
+                  // Taxa adm delta (in pp)
+                  const baseTaxa = meta?.taxa_adm ?? null;
+                  const peerTaxa = fund.taxa_adm ?? null;
+                  const deltaTaxa =
+                    baseTaxa != null && peerTaxa != null
+                      ? peerTaxa - baseTaxa
+                      : null;
+                  const deltaTaxaColor =
+                    deltaTaxa == null
+                      ? "text-zinc-600"
+                      : deltaTaxa > 0.1
+                      ? "text-red-400"
+                      : deltaTaxa < -0.1
+                      ? "text-emerald-400"
+                      : "text-zinc-400";
+
+                  return (
+                    <Link
+                      key={fund.cnpj_fundo}
+                      to={`/fundos/${fund.slug || fund.cnpj_fundo_classe || fund.cnpj_fundo}`}
+                      className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-zinc-300 group-hover:text-[#0B6C3E] truncate transition-colors">
+                            {fundDisplayName(fund)}
+                          </div>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <ClasseBadge classe={fund.classe_rcvm175 || fund.classe} />
+                          </div>
+                          {fund.gestor_nome && (
+                            <div className="text-[9px] font-mono text-zinc-600 mt-1.5 truncate">
+                              {fund.gestor_nome}
+                            </div>
+                          )}
                         </div>
-                        <ClasseBadge classe={fund.classe_rcvm175 || fund.classe} size="sm" />
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-zinc-400">{formatPL(peerPL)}</div>
+                          {deltaPL != null && (
+                            <div className={`text-[9px] font-mono mt-0.5 ${deltaColor}`}>
+                              {deltaPL > 0 ? "+" : ""}
+                              {deltaPL.toFixed(0)}% PL
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-[9px] font-mono text-zinc-400">{formatPL(fund.vl_patrim_liq)}</div>
+                      <div className="flex items-center gap-3 pt-2 border-t border-[#1a1a1a] text-[9px] font-mono">
+                        {peerTaxa != null ? (
+                          <span className="text-zinc-600">
+                            Tx. Adm{" "}
+                            <span className="text-zinc-400">{peerTaxa.toFixed(2)}%</span>
+                            {deltaTaxa != null && (
+                              <span className={`ml-1 ${deltaTaxaColor}`}>
+                                ({deltaTaxa > 0 ? "+" : ""}
+                                {deltaTaxa.toFixed(2)}pp)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700">Tx. Adm —</span>
+                        )}
+                        {fund.nr_cotistas != null && (
+                          <span className="text-zinc-600">
+                            Cotistas{" "}
+                            <span className="text-zinc-400">
+                              {fund.nr_cotistas.toLocaleString("pt-BR")}
+                            </span>
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </motion.div>
           </SectionErrorBoundary>

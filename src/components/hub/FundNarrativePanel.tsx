@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 /* ─── Shared types ─── */
-interface RegimeBadge {
+export interface RegimeBadge {
   regime: string;
   color: string;
   icon: typeof Brain;
@@ -39,7 +39,7 @@ interface Signal {
 }
 
 /* ─── Market-scope props ─── */
-interface MarketScopeProps {
+export interface MarketScopeProps {
   scope?: "market";
   totalFunds?: number;
   totalPL?: number;
@@ -97,7 +97,7 @@ interface FundScopeProps {
 export type FundNarrativeProps = MarketScopeProps | FundScopeProps;
 
 /* ─── Market regime detection ─── */
-function detectFundMarketRegime(props: MarketScopeProps): RegimeBadge {
+export function detectFundMarketRegime(props: MarketScopeProps): RegimeBadge {
   const { avgRentab, netFlow, selicMeta = 14.15, fidcInadim, fiiAvgDY } = props;
 
   const strongInflows = netFlow != null && netFlow > 0;
