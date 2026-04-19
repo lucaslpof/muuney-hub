@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import {
   TrendingUp, TrendingDown, BarChart3, Landmark, Building2, GraduationCap,
-  ArrowRight, Zap, Radio, ScrollText, Banknote, Briefcase,
+  ArrowRight, Zap, Radio, ScrollText, Banknote, Briefcase, Bell,
 } from "lucide-react";
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
@@ -16,6 +16,12 @@ import {
   useHubLatest, useHubSeries,
   MACRO_SAMPLE, CREDITO_SAMPLE,
 } from "@/hooks/useHubData";
+import {
+  useInsightsFeed,
+  useOfertasStats,
+  INSIGHT_TYPE_LABELS,
+  INSIGHT_SEVERITY_COLORS,
+} from "@/hooks/useHubFundos";
 /* ─── Helpers ─── */
 const useHubPrefix = () => "";
 
@@ -80,26 +86,48 @@ const HubDashboard = () => {
   const { data: ipcaSeries } = useHubSeries("ipca", "1y", "macro");
   const { data: cambioSeries } = useHubSeries("cambio", "1y", "macro");
   const { data: inadSeries } = useHubSeries("inadimplencia", "1y", "credito");
+  const { data: spreadSeries } = useHubSeries("spread", "1y", "credito");
 
   const selic = selicSeries?.length ? selicSeries : [];
   const ipca = ipcaSeries?.length ? ipcaSeries : [];
   const cambio = cambioSeries?.length ? cambioSeries : [];
   const inadimplencia = inadSeries?.length ? inadSeries : [];
+  const spread = spreadSeries?.length ? spreadSeries : [];
 
-  /* Sparklines for KPI cards */
+  /* Sparklines for KPI cards — each series_code maps to its own true data */
   const sparkMap = useMemo(() => ({
     selic_meta: toSparkline(selic),
     ipca_mensal: toSparkline(ipca),
     ipca_12m: toSparkline(ipca),
     ptax_compra: toSparkline(cambio),
-    spread_pf: toSparkline(inadimplencia),
-    spread_pj: toSparkline(inadimplencia),
+    spread_pf: toSparkline(spread),
+    spread_pj: toSparkline(spread),
     inadimplencia_total: toSparkline(inadimplencia),
     inadimplencia_pf: toSparkline(inadimplencia),
-  }), [selic, ipca, cambio, inadimplencia]);
+  }), [selic, ipca, cambio, inadimplencia, spread]);
 
   /* Combined KPIs for alert evaluation */
   const allKPIs = useMemo(() => [...macro, ...credito], [macro, credito]);
+
+  /* AAI value-add: Insights + Ofertas Ativas */
+  const { data: insightsData } = useInsightsFeed({ days: 7, limit: 50 });
+  const insightsAll = insightsData?.insights ?? [];
+  const insightsCount = insightsData?.total ?? insightsAll.length;
+  const topInsights = useMemo(
+    () =>
+      [...insightsAll]
+        .sort((a, b) => {
+          const sevRank = (s: string) => (s === "critical" ? 0 : s === "warning" ? 1 : 2);
+          const sevDiff = sevRank(a.severidade) - sevRank(b.severidade);
+          if (sevDiff !== 0) return sevDiff;
+          return (b.detectado_em ?? "").localeCompare(a.detectado_em ?? "");
+        })
+        .slice(0, 3),
+    [insightsAll]
+  );
+
+  const { data: ofertasStats } = useOfertasStats();
+  const ofertasAtivasCount = ofertasStats?.em_distribuicao ?? 0;
 
   /* Full-page loading state */
   if (macroLoading && creditoLoading) {
@@ -303,48 +331,132 @@ const HubDashboard = () => {
               )}
             </div>
 
-            {/* CDI */}
-            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#8B5CF6]/30 rounded-lg p-3.5 transition-all duration-150">
-              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">CDI</p>
+            {/* Ofertas Ativas (em distribuição) */}
+            <button
+              type="button"
+              onClick={() => navigate("/ofertas")}
+              className="group text-left bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#F59E0B]/30 rounded-lg p-3.5 transition-all duration-150"
+              aria-label="Ver ofertas em distribuição"
+            >
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2 flex items-center gap-1">
+                <ScrollText className="w-2.5 h-2.5" />
+                Ofertas Ativas
+              </p>
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {macro.find(m => m.category === "taxa_ref")?.last_value.toFixed(2) ?? "—"}
+                    {ofertasAtivasCount.toLocaleString("pt-BR")}
                   </div>
-                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">% a.a.</p>
-                  {macro.find(m => m.category === "taxa_ref") && (
-                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
-                      {macro.find(m => m.category === "taxa_ref")?.last_date}
-                    </div>
-                  )}
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">em distribuição</p>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-1">CVM 160/476</p>
                 </div>
+                <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-[#F59E0B] transition-colors" />
               </div>
-            </div>
+            </button>
 
-            {/* Fundos Monitorados */}
-            <div className="group bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#06B6D4]/30 rounded-lg p-3.5 transition-all duration-150">
-              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2">Fundos CVM</p>
+            {/* Alertas Fundos (insights 7d) */}
+            <button
+              type="button"
+              onClick={() => navigate("/fundos?section=overview")}
+              className="group text-left bg-zinc-900/50 backdrop-blur border border-zinc-800/50 hover:border-[#06B6D4]/30 rounded-lg p-3.5 transition-all duration-150"
+              aria-label="Ver alertas de fundos"
+            >
+              <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-2 flex items-center gap-1">
+                <Bell className="w-2.5 h-2.5" />
+                Alertas Fundos
+              </p>
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold text-zinc-100 font-mono leading-none">
-                    {(macro.find(m => m.serie_code === "fund_count")?.last_value ?? macro.length + credito.length).toLocaleString("pt-BR")}
+                    {insightsCount.toLocaleString("pt-BR")}
                   </div>
-                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">indicadores ativos</p>
-                  {allKPIs.length > 0 && (
-                    <div className="text-[8px] text-zinc-700 font-mono mt-1">
-                      {allKPIs[0]?.last_date}
-                    </div>
-                  )}
+                  <p className="text-[8px] text-zinc-700 font-mono mt-0.5">últimos 7 dias</p>
+                  <p className="text-[8px] text-zinc-700 font-mono mt-1">PL · DD · Taxa · Fluxo</p>
                 </div>
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                {insightsData?.summary?.by_severity?.critical ? (
+                  <span className="flex items-center gap-0.5 text-[9px] bg-red-500/15 text-red-400 px-1.5 py-0.5 rounded font-mono">
+                    {insightsData.summary.by_severity.critical} crítico{insightsData.summary.by_severity.critical > 1 ? "s" : ""}
+                  </span>
+                ) : (
+                  <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-[#06B6D4] transition-colors" />
+                )}
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
 
       {/* ─── Cross-module Alerts ─── */}
       <AlertCard kpis={allKPIs} module="credito" />
+
+      {/* ─── Fund Insights Strip (AAI beta value-add) ─── */}
+      {topInsights.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 rounded-full bg-[#06B6D4]" />
+              <h2 className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
+                Alertas de Fundos
+              </h2>
+              <span className="text-[9px] bg-zinc-800/50 text-zinc-500 px-1.5 py-0.5 rounded font-mono">
+                {insightsCount} em 7d
+              </span>
+            </div>
+            <button
+              onClick={() => navigate("/fundos?section=overview")}
+              className="text-[10px] text-[#06B6D4] hover:text-[#06B6D4]/70 flex items-center gap-0.5 font-mono transition-colors"
+              aria-label="Ver todos os alertas de fundos"
+            >
+              Ver todos <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {topInsights.map((ins) => {
+              const color = INSIGHT_SEVERITY_COLORS[ins.severidade];
+              const destination = ins.slug
+                ? `/fundos/${ins.slug}`
+                : ins.classe_rcvm175 === "FIDC" && ins.slug
+                ? `/fundos/fidc/${ins.slug}`
+                : ins.classe_rcvm175 === "FII" && ins.slug
+                ? `/fundos/fii/${ins.slug}`
+                : "/fundos?section=overview";
+              return (
+                <button
+                  key={ins.id}
+                  type="button"
+                  onClick={() => navigate(destination)}
+                  className="text-left bg-[#111] border rounded-lg p-3 hover:bg-zinc-900/60 transition-all duration-150 group"
+                  style={{ borderColor: color.border }}
+                  aria-label={`${INSIGHT_TYPE_LABELS[ins.tipo]} — ${ins.denom_social ?? ""}`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span
+                      className="text-[8px] px-1.5 py-0.5 rounded font-mono uppercase"
+                      style={{ backgroundColor: color.bg, color: color.text }}
+                    >
+                      {ins.severidade}
+                    </span>
+                    <span className="text-[9px] text-zinc-500 font-mono">
+                      {INSIGHT_TYPE_LABELS[ins.tipo]}
+                    </span>
+                    {ins.classe_rcvm175 && (
+                      <span className="text-[8px] text-zinc-600 font-mono ml-auto">
+                        {ins.classe_rcvm175}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-200 font-medium leading-tight line-clamp-1">
+                    {ins.denom_social ?? "Fundo sem nome"}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed line-clamp-2">
+                    {ins.titulo}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ─── Top-line grid: Macro KPIs + Crédito KPIs ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
