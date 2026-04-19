@@ -139,3 +139,137 @@
     background-attachment: local, local, local, scroll, scroll;
   }
 }
+
+/* ==========================================================================
+   Print stylesheet — Lâmina PDF export (P1-1)
+   Triggers via window.print() from <ExportPdfButton />. Flips Tech-Noir dark
+   to a light-ink-friendly palette, hides chrome (.no-print), surfaces the
+   print footer (.print-only), and asks the browser to avoid ugly page cuts
+   inside cards/charts.
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  /* Hide chrome: sidebar, top bar, feedback widget, onboarding tour,
+     mobile nav, toaster, network banner — anything tagged .no-print */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Reveal .print-only elements (hidden during normal app use) */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Flip dark theme → light for ink economy and readability */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0a0a0a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  main,
+  section,
+  article,
+  header,
+  footer,
+  div[class*="bg-[#0a0a0a]"],
+  div[class*="bg-[#111111]"],
+  div[class*="bg-[#1a1a1a]"] {
+    background: #ffffff !important;
+    border-color: #d4d4d8 !important;
+    box-shadow: none !important;
+  }
+
+  /* Strip sticky/fixed positioning so nothing blocks content flow */
+  [class*="sticky"],
+  [class*="fixed"] {
+    position: static !important;
+  }
+
+  /* Remove Hub sidebar offset so content starts at page margin */
+  main[class*="md:ml-"] {
+    margin-left: 0 !important;
+  }
+
+  /* Lighten text colors (zinc-* → gray) for ink contrast */
+  [class*="text-zinc-100"],
+  [class*="text-zinc-200"],
+  [class*="text-zinc-300"],
+  [class*="text-white"] {
+    color: #0a0a0a !important;
+  }
+  [class*="text-zinc-400"],
+  [class*="text-zinc-500"] {
+    color: #3f3f46 !important;
+  }
+  [class*="text-zinc-600"],
+  [class*="text-zinc-700"],
+  [class*="text-zinc-800"] {
+    color: #71717a !important;
+  }
+
+  /* Charts & images — respect placement, don't split across pages when small */
+  .recharts-wrapper,
+  svg,
+  img,
+  canvas {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Cards/sections should also prefer not to split */
+  section,
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Explicit page break control (add to a wrapper div to force a new page) */
+  .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Tables legibility in print */
+  table {
+    border-collapse: collapse !important;
+  }
+  table,
+  th,
+  td {
+    border: 1px solid #d4d4d8 !important;
+  }
+  th,
+  td {
+    padding: 4px 6px !important;
+  }
+
+  /* Links shouldn't underline URLs next to their anchor in print */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  /* Print footer styling */
+  .print-footer {
+    display: block !important;
+    position: running(footer);
+    font-size: 9pt;
+    color: #3f3f46;
+    border-top: 1px solid #d4d4d8;
+    padding-top: 6px;
+    margin-top: 14pt;
+  }
+}
+
+/* Hide .print-only elements during normal app rendering */
+.print-only {
+  display: none;
+}

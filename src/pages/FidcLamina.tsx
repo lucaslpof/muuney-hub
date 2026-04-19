@@ -13,6 +13,8 @@ import {
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
+import { PrintFooter } from "@/components/hub/PrintFooter";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { computeMonthlyRiskMetrics } from "@/lib/monthlyRiskMetrics";
@@ -380,6 +382,7 @@ export default function FidcLamina() {
                 />
               </div>
             </div>
+            <ExportPdfButton title={fundName} accent="#F97316" />
           </div>
         </div>
       </div>
@@ -944,6 +947,13 @@ export default function FidcLamina() {
             </motion.div>
           </SectionErrorBoundary>
         )}
+
+        {/* Print-only footer (hidden in app, visible in PDF) */}
+        <PrintFooter
+          fundName={fundName}
+          dataAsOf={latest?.dt_comptc ?? null}
+          source="CVM Informe FIDC"
+        />
       </div>
     </div>
   );

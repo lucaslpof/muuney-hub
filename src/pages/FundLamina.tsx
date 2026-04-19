@@ -20,6 +20,8 @@ import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ClasseBadge, HierarquiaBadges } from "@/lib/rcvm175";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
+import { PrintFooter } from "@/components/hub/PrintFooter";
 import { FundScoreCard } from "@/components/hub/FundScoreCard";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
@@ -334,6 +336,10 @@ export default function FundLamina() {
             {score && <span className="text-sm font-semibold font-mono px-2 py-1 rounded bg-[#0B6C3E]/10 text-[#0B6C3E]">
               Score: {score.score.toFixed(0)}
             </span>}
+            <ExportPdfButton
+              title={fundDisplayName(meta)}
+              accent="#0B6C3E"
+            />
           </div>
         </div>
       </div>
@@ -864,6 +870,13 @@ export default function FundLamina() {
             </motion.div>
           </SectionErrorBoundary>
         )}
+
+        {/* Print-only footer (hidden in app, visible in PDF) */}
+        <PrintFooter
+          fundName={fundDisplayName(meta)}
+          dataAsOf={daily.length > 0 ? daily[daily.length - 1]?.dt_comptc ?? null : null}
+          source="CVM Cota Diária"
+        />
       </div>
     </div>
   );

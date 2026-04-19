@@ -49,7 +49,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     <SidebarContext.Provider value={{ collapsed, mobileOpen, setMobileOpen }}>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-zinc-800/50 z-40 transition-all duration-200 ${
+        className={`no-print hidden md:flex flex-col fixed left-0 top-0 h-screen bg-[#0a0a0a] border-r border-zinc-800/50 z-40 transition-all duration-200 ${
           collapsed ? "w-16" : "w-52"
         }`}
       >
@@ -65,14 +65,14 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          className="no-print fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-[#0a0a0a] border-r border-zinc-800/50 z-50 md:hidden flex flex-col transition-transform duration-200 ease-out ${
+        className={`no-print fixed left-0 top-0 h-screen w-64 bg-[#0a0a0a] border-r border-zinc-800/50 z-50 md:hidden flex flex-col transition-transform duration-200 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

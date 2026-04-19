@@ -88,7 +88,7 @@ const HubMain = () => {
       }`}
     >
       {/* Top bar — holds per-page section navigator */}
-      <header className="h-14 border-b border-zinc-800/50 flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
+      <header className="no-print h-14 border-b border-zinc-800/50 flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
         <MobileMenuButton />
 
         {/* Section navigator (replaces static "Fontes:" label) */}
@@ -131,19 +131,25 @@ const HubMain = () => {
       </div>
 
       {/* Footer — subtle sources attribution */}
-      <footer className="px-4 md:px-6 py-3 border-t border-zinc-900/70 text-[9px] text-zinc-700 font-mono flex items-center justify-between gap-2 flex-wrap">
+      <footer className="no-print px-4 md:px-6 py-3 border-t border-zinc-900/70 text-[9px] text-zinc-700 font-mono flex items-center justify-between gap-2 flex-wrap">
         <span>Fontes: BACEN SGS &middot; PTAX &middot; CVM</span>
         <span className="text-zinc-800">muuney.hub &middot; {new Date().getFullYear()}</span>
       </footer>
 
       {/* Beta feedback widget */}
-      <FeedbackWidget />
+      <div className="no-print">
+        <FeedbackWidget />
+      </div>
 
       {/* First-visit onboarding tour */}
-      <OnboardingTour />
+      <div className="no-print">
+        <OnboardingTour />
+      </div>
 
       {/* Mobile bottom navigation (hidden on md+) */}
-      <MobileNav />
+      <div className="no-print">
+        <MobileNav />
+      </div>
     </main>
   );
 };
@@ -159,13 +165,17 @@ export const HubLayout = () => {
         />
       </Helmet>
       <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
-        <NetworkStatus />
+        <div className="no-print">
+          <NetworkStatus />
+        </div>
         <SidebarProvider>
           <HubSectionsProvider>
             <HubMain />
           </HubSectionsProvider>
         </SidebarProvider>
-        <Toaster />
+        <div className="no-print">
+          <Toaster />
+        </div>
       </div>
     </>
   );

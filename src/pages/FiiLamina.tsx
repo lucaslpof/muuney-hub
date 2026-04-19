@@ -23,6 +23,8 @@ import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
+import { PrintFooter } from "@/components/hub/PrintFooter";
 import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
 
 // FII rentabilidade can be corrupt at edges (e.g. funds in liquidation);
@@ -296,6 +298,7 @@ export default function FiiLamina() {
                 />
               </div>
             </div>
+            <ExportPdfButton title={fundName} accent="#EC4899" />
           </div>
         </div>
       </div>
@@ -801,6 +804,13 @@ export default function FiiLamina() {
             </motion.div>
           </SectionErrorBoundary>
         )}
+
+        {/* Print-only footer (hidden in app, visible in PDF) */}
+        <PrintFooter
+          fundName={fundName}
+          dataAsOf={latest?.dt_comptc ?? null}
+          source="CVM Informe FII"
+        />
       </div>
     </div>
   );
