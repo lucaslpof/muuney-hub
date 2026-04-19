@@ -64,6 +64,82 @@ export const KPI_HINTS: Record<string, string> = {
     "Número de Cotistas: quantidade de investidores no fundo. Maior número indica diluição de risco de resgate.",
   hhi:
     "Índice Herfindahl-Hirschman: soma dos quadrados das participações de mercado. <1500 pulverizado, >2500 concentrado.",
+
+  // ── Crédito — Inadimplência (inadimplência genérica já definida acima) ──
+  "inadim. total":
+    "Inadimplência Total SFN: carteira em atraso >90d no Sistema Financeiro Nacional consolidado. Alerta >4%.",
+  "inadim. pf":
+    "Inadimplência PF: carteira de pessoa física em atraso >90 dias. Segue ciclo PNAD/desemprego com lag ~3m.",
+  "inadim. pj":
+    "Inadimplência PJ: carteira corporativa em atraso >90 dias. Correlaciona com PIB e concessões.",
+  "inadim. livres":
+    "Inadimplência em Recursos Livres: segmento mais sensível a ciclo monetário (excluindo crédito direcionado).",
+
+  // ── Crédito — Spreads ──
+  spread:
+    "Spread Bancário: diferença entre taxa de captação e taxa ao tomador. Mede margem + custos + inadimplência esperada.",
+  "spread pf":
+    "Spread PF: margem bancária no crédito pessoa física. Histórico ~30pp. Tende a expandir em ciclos de Selic alta.",
+  "spread pj":
+    "Spread PJ: margem bancária no crédito corporativo. Menor que PF (~12pp) por maior concorrência entre grandes bancos.",
+  "spread médio":
+    "Spread Médio SFN: média ponderada spread PF + PJ. Benchmark para custo do crédito na economia.",
+
+  // ── Crédito — Taxas ──
+  "taxa pf":
+    "Taxa Média PF: custo médio do crédito pessoa física (% a.a.). Divulgada mensalmente pelo BACEN.",
+  "taxa pj":
+    "Taxa Média PJ: custo médio do crédito pessoa jurídica (% a.a.). Referência para decisões de alavancagem.",
+  "taxa veículos":
+    "Taxa Veículos PF: custo CDC automóveis. Geralmente abaixo da taxa média PF por existência de garantia.",
+  "taxa micro":
+    "Taxa Microempresas: custo do crédito para PJ de pequeno porte. Tende a ser mais alta por maior risco percebido.",
+
+  // ── Crédito — Saldos ──
+  "saldo total":
+    "Saldo Total SFN: estoque de crédito concedido e não quitado. Mede profundidade do sistema financeiro.",
+  "saldo pf":
+    "Saldo PF: estoque de crédito a pessoas físicas. Sensível a ciclos de consumo e renda.",
+  "saldo pj":
+    "Saldo PJ: estoque de crédito corporativo. Reflete decisões de investimento e capital de giro.",
+  "saldo pj livres":
+    "Saldo PJ Livres: operações com taxa de mercado (exclui BNDES direcionado, rural subsidiado, etc.).",
+  "saldo pme":
+    "Saldo PME: crédito para pequenas e médias empresas. Segmento considerado estratégico para política pública.",
+
+  // ── Crédito — Concessões ──
+  concessões:
+    "Concessões: volume de novas operações contratadas no período. Indicador antecedente de atividade econômica.",
+  "concessões pf":
+    "Concessões PF: fluxo mensal de novo crédito a pessoas físicas. Lidera IBC-Br em ~2 meses.",
+  "concessões pj":
+    "Concessões PJ: fluxo mensal de novo crédito corporativo. Reflete apetite por investimento.",
+  consignado:
+    "Crédito Consignado: desconto em folha, menor risco de inadimplência. Teto de taxa regulado (INSS ≈ 1,84%/mês).",
+
+  // ── Crédito — Macro ──
+  "crédito/pib":
+    "Relação Crédito/PIB: profundidade financeira. Brasil ~55%, EUA ~180%. >60% sinaliza risco sistêmico em emergentes.",
+  "cartões de crédito":
+    "Cartões Emitidos: estoque de cartões de crédito ativos. Proxy de bancarização e consumo.",
+  "cartão de crédito":
+    "Cartão de Crédito PF: saldo rotativo + parcelado. Segmento de maior taxa do sistema (~300% a.a. rotativo).",
+
+  // ── Monetária (referências) ──
+  selic:
+    "Taxa Selic Meta: instrumento de política monetária do COPOM. Define o custo do dinheiro na economia.",
+  tlp:
+    "TLP — Taxa de Longo Prazo: remuneração dos financiamentos BNDES. Substituiu TJLP em 2018. Referência: NTN-B 5 anos.",
+  tjlp:
+    "TJLP — Taxa de Juros de Longo Prazo: histórica, substituída pela TLP. Usada em contratos legados.",
+  tr:
+    "TR — Taxa Referencial: remuneração da poupança e FGTS. Calculada pelo BCB com base em LFTs.",
+
+  // ── Volatilidade / Risco (sinônimos) ──
+  volatilidade:
+    "Volatilidade: desvio-padrão dos retornos, indicador de risco. Anualizada pela √(252) para retornos diários.",
+  "desvio padrão":
+    "Desvio-padrão: dispersão dos retornos em torno da média. Base de Sharpe/Sortino/VaR.",
 };
 
 export function getKpiHint(label: string): string | undefined {

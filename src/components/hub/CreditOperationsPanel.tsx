@@ -6,64 +6,252 @@ import {
 import {
   Filter, Search, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, Banknote, Percent, ShieldAlert,
-  RotateCcw, Download, BarChart3,
+  RotateCcw, Download, BarChart3, Info,
 } from "lucide-react";
-import { useHubSeries, type SeriesDataPoint } from "@/hooks/useHubData";
-import { formatMonthShort } from "@/lib/format";
+import {
+  useHubSeriesBundle,
+  pickSeries,
+  type SeriesBundle,
+  type SeriesDataPoint,
+} from "@/hooks/useHubData";
+import { formatMonthShort, fmtNum } from "@/lib/format";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PAINEL DE OPERAÇÕES DE CRÉDITO — Interactive SGS Query Builder
-   Filters: Tipo Cliente · Recurso · Modalidade · Indexador
-   Panels: Saldo · Taxa · Inadimplência (time series charts)
+   PAINEL DE OPERAÇÕES DE CRÉDITO — BACEN SGS Query Builder (REAL CODES)
+   Filters: Tipo Cliente · Recurso · Modalidade
+   Panels: Saldo · Taxa · Inadimplência (time series charts + CSV export)
+   Data policy: uses only real, ingested series. Modalidades sem cobertura via
+   SGS mostram badge "dado indisponível" e taxa/inadim fazem fallback para
+   o agregado por tipo+recurso (ex.: Livres PF) quando a série específica não
+   existe (limitação estrutural BACEN — muitas séries por modalidade são
+   descontinuadas ou não publicadas).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── Filter dimension types ─── */
 type TipoCliente = "PF" | "PJ" | "Total";
 type Recurso = "Livres" | "Direcionados" | "Total";
+
+interface SeriesRef {
+  cat: "saldo_credito" | "saldo_pf_modal" | "saldo_pj_modal" | "taxa" | "inadim_detalhe" | "inadimplencia";
+  code: number;
+  /** true when this code represents the PF/PJ/Recurso aggregate (not the specific modality). */
+  aggregate?: boolean;
+}
+
 interface Modalidade {
   id: string;
   label: string;
-  tipo: TipoCliente[];
+  tipo: TipoCliente;
   recurso: Recurso;
-  sgs_saldo: number;
-  sgs_taxa: number;
-  sgs_inadim: number;
+  saldo: SeriesRef;
+  taxa: SeriesRef;
+  inadim: SeriesRef;
 }
 
-/* ─── BACEN SGS Operations Catalog ─── */
+/* ─── BACEN SGS Operations Catalog — REAL ingested codes only ─── */
+/* Verified against hub_macro_series_meta em 19/04/2026: todas as séries
+ * listadas aqui existem no meta e (salvo quando explicitamente marcado)
+ * possuem last_date dentro dos últimos 45 dias. Modalidades sem taxa/inadim
+ * específica caem no agregado por tipo+recurso (flag aggregate=true).         */
 const MODALIDADES: Modalidade[] = [
-  // PF — Livres
-  { id: "pf_pessoal_nc", label: "Pessoal Não Consignado", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20570, sgs_taxa: 20742, sgs_inadim: 21095 },
-  { id: "pf_consignado", label: "Consignado", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20571, sgs_taxa: 20743, sgs_inadim: 21096 },
-  { id: "pf_veiculos", label: "Veículos", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20581, sgs_taxa: 20749, sgs_inadim: 21101 },
-  { id: "pf_cartao", label: "Cartão de Crédito", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20590, sgs_taxa: 20750, sgs_inadim: 21110 },
-  { id: "pf_cheque_esp", label: "Cheque Especial", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20569, sgs_taxa: 20741, sgs_inadim: 21094 },
-  { id: "pf_desc_receb", label: "Desconto de Recebíveis", tipo: ["PF"], recurso: "Livres", sgs_saldo: 20574, sgs_taxa: 20744, sgs_inadim: 21098 },
-  // PF — Direcionados
-  { id: "pf_habitacional", label: "Habitacional", tipo: ["PF"], recurso: "Direcionados", sgs_saldo: 20599, sgs_taxa: 20760, sgs_inadim: 21116 },
-  { id: "pf_rural", label: "Rural", tipo: ["PF"], recurso: "Direcionados", sgs_saldo: 20593, sgs_taxa: 20754, sgs_inadim: 21113 },
-  { id: "pf_bndes", label: "BNDES Repasses", tipo: ["PF"], recurso: "Direcionados", sgs_saldo: 20606, sgs_taxa: 20763, sgs_inadim: 0 },
-  // PJ — Livres
-  { id: "pj_capital_giro", label: "Capital de Giro", tipo: ["PJ"], recurso: "Livres", sgs_saldo: 20551, sgs_taxa: 20730, sgs_inadim: 21085 },
-  { id: "pj_duplicatas", label: "Desconto de Duplicatas", tipo: ["PJ"], recurso: "Livres", sgs_saldo: 20553, sgs_taxa: 20731, sgs_inadim: 21087 },
-  { id: "pj_conta_garantida", label: "Conta Garantida", tipo: ["PJ"], recurso: "Livres", sgs_saldo: 20556, sgs_taxa: 20734, sgs_inadim: 21088 },
-  { id: "pj_acc_ace", label: "ACC / ACE", tipo: ["PJ"], recurso: "Livres", sgs_saldo: 20560, sgs_taxa: 20738, sgs_inadim: 21092 },
-  { id: "pj_export", label: "Financ. Exportações", tipo: ["PJ"], recurso: "Livres", sgs_saldo: 20564, sgs_taxa: 20739, sgs_inadim: 21093 },
-  // PJ — Direcionados
-  { id: "pj_rural", label: "Rural PJ", tipo: ["PJ"], recurso: "Direcionados", sgs_saldo: 20611, sgs_taxa: 20765, sgs_inadim: 21118 },
-  { id: "pj_habitacional", label: "Habitacional PJ", tipo: ["PJ"], recurso: "Direcionados", sgs_saldo: 20614, sgs_taxa: 20767, sgs_inadim: 21120 },
-  { id: "pj_bndes", label: "BNDES Repasses PJ", tipo: ["PJ"], recurso: "Direcionados", sgs_saldo: 20622, sgs_taxa: 20770, sgs_inadim: 21122 },
-  // Agregados
-  { id: "total_livres", label: "Total Livres", tipo: ["Total"], recurso: "Livres", sgs_saldo: 20543, sgs_taxa: 20714, sgs_inadim: 21082 },
-  { id: "total_direcionados", label: "Total Direcionados", tipo: ["Total"], recurso: "Direcionados", sgs_saldo: 20544, sgs_taxa: 20715, sgs_inadim: 21083 },
-  { id: "total_geral", label: "Total SFN", tipo: ["Total"], recurso: "Total", sgs_saldo: 20540, sgs_taxa: 20714, sgs_inadim: 21082 },
+  // ── PF Livres ──
+  {
+    id: "pf_pessoal_nc",
+    label: "Pessoal Não Consignado",
+    tipo: "PF",
+    recurso: "Livres",
+    saldo: { cat: "saldo_pf_modal", code: 20570 },
+    taxa: { cat: "taxa", code: 20740, aggregate: true }, // PF Livres agg
+    inadim: { cat: "inadim_detalhe", code: 21087, aggregate: true }, // PF Livres agg
+  },
+  {
+    id: "pf_consignado_inss",
+    label: "Consignado INSS",
+    tipo: "PF",
+    recurso: "Livres",
+    saldo: { cat: "saldo_pf_modal", code: 20572 },
+    taxa: { cat: "taxa", code: 20740, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21087, aggregate: true },
+  },
+  {
+    id: "pf_veiculos",
+    label: "Veículos",
+    tipo: "PF",
+    recurso: "Livres",
+    saldo: { cat: "saldo_credito", code: 20581 },
+    taxa: { cat: "taxa", code: 20749 }, // taxa específica veículos PF
+    inadim: { cat: "inadim_detalhe", code: 21087, aggregate: true },
+  },
+  {
+    id: "pf_cartao",
+    label: "Cartão de Crédito",
+    tipo: "PF",
+    recurso: "Livres",
+    saldo: { cat: "saldo_credito", code: 20590 },
+    taxa: { cat: "taxa", code: 20740, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21087, aggregate: true },
+  },
+  // ── PF Direcionados ──
+  {
+    id: "pf_rural",
+    label: "Rural PF",
+    tipo: "PF",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pf_modal", code: 20593 },
+    taxa: { cat: "taxa", code: 20760, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21089, aggregate: true },
+  },
+  {
+    id: "pf_habitacional",
+    label: "Habitacional PF",
+    tipo: "PF",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pf_modal", code: 20599 },
+    taxa: { cat: "taxa", code: 20760, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21089, aggregate: true },
+  },
+  {
+    id: "pf_bndes",
+    label: "BNDES Repasses PF",
+    tipo: "PF",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pf_modal", code: 20606 },
+    taxa: { cat: "taxa", code: 20760, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21089, aggregate: true },
+  },
+  // ── PJ Livres ──
+  {
+    id: "pj_capital_giro",
+    label: "Capital de Giro",
+    tipo: "PJ",
+    recurso: "Livres",
+    saldo: { cat: "saldo_pj_modal", code: 20551 },
+    taxa: { cat: "taxa", code: 20751, aggregate: true }, // PJ Livres agg
+    inadim: { cat: "inadim_detalhe", code: 21088, aggregate: true }, // PJ Livres agg
+  },
+  {
+    id: "pj_cartao_rotativo",
+    label: "Cartão Rotativo PJ",
+    tipo: "PJ",
+    recurso: "Livres",
+    saldo: { cat: "saldo_credito", code: 20561 },
+    taxa: { cat: "taxa", code: 20751, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21088, aggregate: true },
+  },
+  // ── PJ Direcionados ──
+  {
+    id: "pj_rural",
+    label: "Rural PJ",
+    tipo: "PJ",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pj_modal", code: 20611 },
+    taxa: { cat: "taxa", code: 20763, aggregate: true }, // PJ Direc agg
+    inadim: { cat: "inadim_detalhe", code: 21090, aggregate: true }, // PJ Direc agg
+  },
+  {
+    id: "pj_habitacional",
+    label: "Habitacional PJ",
+    tipo: "PJ",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pj_modal", code: 20614 },
+    taxa: { cat: "taxa", code: 20763, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21090, aggregate: true },
+  },
+  {
+    id: "pj_bndes",
+    label: "BNDES Repasses PJ",
+    tipo: "PJ",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_pj_modal", code: 20622 },
+    taxa: { cat: "taxa", code: 20763, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21090, aggregate: true },
+  },
+  {
+    id: "pj_direcionado_finan",
+    label: "Financ. Direcionado PJ",
+    tipo: "PJ",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_credito", code: 20602 },
+    taxa: { cat: "taxa", code: 20763, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21090, aggregate: true },
+  },
+  // ── Agregados ──
+  {
+    id: "total_pf",
+    label: "Total PF",
+    tipo: "PF",
+    recurso: "Total",
+    saldo: { cat: "saldo_credito", code: 20541 },
+    taxa: { cat: "taxa", code: 20714 },
+    inadim: { cat: "inadimplencia", code: 21082 },
+  },
+  {
+    id: "total_pj",
+    label: "Total PJ",
+    tipo: "PJ",
+    recurso: "Total",
+    saldo: { cat: "saldo_credito", code: 20542 },
+    taxa: { cat: "taxa", code: 20715 },
+    inadim: { cat: "inadimplencia", code: 21083 },
+  },
+  {
+    id: "total_livres",
+    label: "Total Livres SFN",
+    tipo: "Total",
+    recurso: "Livres",
+    saldo: { cat: "saldo_credito", code: 20543 },
+    taxa: { cat: "taxa", code: 20714, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21085 },
+  },
+  {
+    id: "total_direcionados",
+    label: "Total Direcionados SFN",
+    tipo: "Total",
+    recurso: "Direcionados",
+    saldo: { cat: "saldo_credito", code: 20544 },
+    taxa: { cat: "taxa", code: 20714, aggregate: true },
+    inadim: { cat: "inadim_detalhe", code: 21086 }, // stale (2021-02), handled downstream
+  },
+  {
+    id: "total_sfn",
+    label: "Total SFN",
+    tipo: "Total",
+    recurso: "Total",
+    saldo: { cat: "saldo_credito", code: 20540 },
+    taxa: { cat: "taxa", code: 20714, aggregate: true },
+    inadim: { cat: "inadimplencia", code: 21084 },
+  },
 ];
 
 /* ─── Period options ─── */
 const PERIODS = ["6m", "1y", "2y", "5y", "10y"] as const;
 
-/* ─── Colors ─── */
+/* ─── Colors (Tech-Noir palette — 8 series max) ─── */
 const COLORS = ["#10B981", "#6366F1", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
+
+/* ─── Unit normalization ──────────────────────────────────────────────
+ * hub_macro_series_meta mistura unidades em saldo_credito: algumas séries
+ * em "R$ milhões" (ex.: 20540, 20541) e outras em "R$ bi" (ex.: 20543).
+ * Normalizamos tudo para R$ bi para os gráficos de Saldo.
+ * ──────────────────────────────────────────────────────────────────── */
+function normalizeToBi(points: SeriesDataPoint[], unit: string | undefined): SeriesDataPoint[] {
+  const u = (unit ?? "").toLowerCase();
+  if (u.includes("bi") || u.includes("bilh")) return points;
+  if (u.includes("milh") || u.includes("mi")) {
+    return points.map((p) => ({ date: p.date, value: p.value / 1_000 }));
+  }
+  return points;
+}
+
+/* ─── Format helpers ─── */
+function fmtSaldoBi(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (Math.abs(v) >= 1_000) return `R$ ${fmtNum(v / 1_000, 2)} T`;
+  if (Math.abs(v) >= 1) return `R$ ${fmtNum(v, 1)} bi`;
+  return `R$ ${fmtNum(v * 1_000, 0)} mi`;
+}
 
 /* ─── Tooltip ─── */
 interface TooltipPayload {
@@ -72,17 +260,28 @@ interface TooltipPayload {
   color: string;
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+  unit,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+  unit: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2.5 shadow-xl">
-      <div className="text-[9px] text-zinc-500 font-mono mb-1.5">{label}</div>
+    <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-lg p-2.5 shadow-xl backdrop-blur">
+      <div className="text-[9px] text-zinc-500 font-mono mb-1.5 uppercase tracking-wider">{label}</div>
       {payload.map((p, i) => (
         <div key={i} className="flex items-center gap-2 text-[10px] font-mono">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-zinc-400">{p.name}:</span>
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+          <span className="text-zinc-400 truncate max-w-[160px]">{p.name}:</span>
           <span className="text-zinc-100 font-bold">
-            {typeof p.value === "number" ? p.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : p.value}
+            {typeof p.value === "number" ? fmtNum(p.value, 2) : p.value}
+            {unit !== "R$ bi" ? ` ${unit}` : ""}
           </span>
         </div>
       ))}
@@ -91,10 +290,24 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 /* ─── FilterPill ─── */
-function FilterPill({ label, active, onClick, count }: { label: string; active: boolean; onClick: () => void; count?: number }) {
+function FilterPill({
+  label,
+  active,
+  onClick,
+  count,
+  title,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  count?: number;
+  title?: string;
+}) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      title={title}
       className={`px-2.5 py-1 text-[10px] font-mono rounded-md transition-all whitespace-nowrap ${
         active
           ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
@@ -108,92 +321,152 @@ function FilterPill({ label, active, onClick, count }: { label: string; active: 
 }
 
 /* ─── OperationCard — summary card for a selected modalidade ─── */
-function OperationCard({ mod, color, saldoData, taxaData, inadimData }: {
+function OperationCard({
+  mod,
+  color,
+  saldoData,
+  taxaData,
+  inadimData,
+  hasSaldo,
+}: {
   mod: Modalidade;
   color: string;
   saldoData: SeriesDataPoint[];
   taxaData: SeriesDataPoint[];
   inadimData: SeriesDataPoint[];
+  hasSaldo: boolean;
 }) {
   const lastSaldo = saldoData.length ? saldoData[saldoData.length - 1].value : 0;
   const prevSaldo = saldoData.length >= 2 ? saldoData[saldoData.length - 2].value : lastSaldo;
   const saldoChg = prevSaldo ? ((lastSaldo - prevSaldo) / prevSaldo) * 100 : 0;
 
-  const lastTaxa = taxaData.length ? taxaData[taxaData.length - 1].value : 0;
-  const lastInad = inadimData.length ? inadimData[inadimData.length - 1].value : 0;
+  const lastTaxa = taxaData.length ? taxaData[taxaData.length - 1].value : null;
+  const lastInad = inadimData.length ? inadimData[inadimData.length - 1].value : null;
 
   return (
     <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-3 hover:border-zinc-700 transition-colors">
       <div className="flex items-center gap-2 mb-2">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-[11px] font-mono text-zinc-200 font-bold">{mod.label}</span>
-        <span className="text-[8px] text-zinc-600 ml-auto font-mono">{mod.tipo.join("/")} · {mod.recurso}</span>
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+        <span className="text-[11px] font-mono text-zinc-200 font-bold truncate">{mod.label}</span>
+        <span className="text-[8px] text-zinc-600 ml-auto font-mono flex-shrink-0">
+          {mod.tipo} · {mod.recurso}
+        </span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <div className="text-[8px] text-zinc-600 font-mono">Saldo</div>
-          <div className="text-[11px] text-zinc-100 font-bold font-mono">
-            R$ {lastSaldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bi
+      {!hasSaldo ? (
+        <div className="text-[9px] font-mono text-amber-400/70 py-2 flex items-center gap-1">
+          <AlertTriangle className="w-2.5 h-2.5" />
+          Série indisponível via BACEN SGS
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <div className="text-[8px] text-zinc-600 font-mono">Saldo</div>
+            <div className="text-[11px] text-zinc-100 font-bold font-mono">{fmtSaldoBi(lastSaldo)}</div>
+            <div
+              className={`text-[9px] font-mono flex items-center gap-0.5 ${
+                saldoChg >= 0 ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {saldoChg >= 0 ? (
+                <TrendingUp className="w-2.5 h-2.5" />
+              ) : (
+                <TrendingDown className="w-2.5 h-2.5" />
+              )}
+              {saldoChg >= 0 ? "+" : ""}
+              {fmtNum(saldoChg, 1)}%
+            </div>
           </div>
-          <div className={`text-[9px] font-mono flex items-center gap-0.5 ${saldoChg >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {saldoChg >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-            {saldoChg >= 0 ? "+" : ""}{saldoChg.toFixed(1)}%
+          <div>
+            <div className="text-[8px] text-zinc-600 font-mono flex items-center gap-0.5">
+              Taxa
+              {mod.taxa.aggregate && (
+                <span title="Taxa agregada (tipo+recurso) — BACEN SGS não publica taxa específica por modalidade">
+                  <Info className="w-2 h-2 text-zinc-700" />
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-zinc-100 font-bold font-mono">
+              {lastTaxa != null ? `${fmtNum(lastTaxa, 1)}%` : "—"}
+            </div>
+            <div className="text-[8px] text-zinc-700 font-mono">a.a.</div>
+          </div>
+          <div>
+            <div className="text-[8px] text-zinc-600 font-mono flex items-center gap-0.5">
+              Inadim.
+              {mod.inadim.aggregate && (
+                <span title="Inadimplência agregada (tipo+recurso) — série específica não publicada pelo BACEN">
+                  <Info className="w-2 h-2 text-zinc-700" />
+                </span>
+              )}
+            </div>
+            <div
+              className={`text-[11px] font-bold font-mono ${
+                lastInad == null
+                  ? "text-zinc-500"
+                  : lastInad > 5
+                    ? "text-red-400"
+                    : lastInad > 3
+                      ? "text-amber-400"
+                      : "text-emerald-400"
+              }`}
+            >
+              {lastInad != null ? `${fmtNum(lastInad, 2)}%` : "—"}
+            </div>
           </div>
         </div>
-        <div>
-          <div className="text-[8px] text-zinc-600 font-mono">Taxa</div>
-          <div className="text-[11px] text-zinc-100 font-bold font-mono">{lastTaxa.toFixed(1)}% a.a.</div>
-        </div>
-        <div>
-          <div className="text-[8px] text-zinc-600 font-mono">Inadim.</div>
-          <div className={`text-[11px] font-bold font-mono ${lastInad > 5 ? "text-red-400" : lastInad > 3 ? "text-amber-400" : "text-emerald-400"}`}>
-            {lastInad.toFixed(2)}%
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
 /* ─── ChartPanel — Reusable time-series chart section ─── */
-function ChartPanel({ title, icon, series, unit, chartType = "line" }: {
+function ChartPanel({
+  title,
+  icon,
+  series,
+  unit,
+  chartType = "line",
+  exportTag,
+}: {
   title: string;
   icon: React.ReactNode;
-  series: { label: string; data: SeriesDataPoint[]; color: string }[];
+  series: { label: string; data: SeriesDataPoint[]; color: string; modId: string }[];
   unit: string;
   chartType?: "line" | "area" | "bar";
+  exportTag: string;
 }) {
   const [expanded, setExpanded] = useState(true);
 
-  // Merge all series into a single dataset for recharts
+  // Merge all series into a single dataset for recharts (outer join por data).
   const chartData = useMemo(() => {
-    if (!series.length || !series[0].data.length) return [];
-    const baseData = series[0].data;
-    return baseData.map((d, i) => {
-      const point: Record<string, string | number> = {
-        date: d.date,
-        dateLabel: formatMonthShort(d.date),
-      };
-      series.forEach((s) => {
-        point[s.label] = s.data[i]?.value ?? 0;
+    const dateMap = new Map<string, Record<string, number | string>>();
+    series.forEach((s) => {
+      s.data.forEach((d) => {
+        if (!dateMap.has(d.date)) {
+          dateMap.set(d.date, { date: d.date, dateLabel: formatMonthShort(d.date) });
+        }
+        dateMap.get(d.date)![s.label] = d.value;
       });
-      return point;
     });
+    return Array.from(dateMap.values()).sort((a, b) =>
+      String(a.date).localeCompare(String(b.date)),
+    );
   }, [series]);
 
+  const hasData = series.some((s) => s.data.length > 0);
+
   const downloadCSV = useCallback(() => {
-    if (!chartData.length) return;
-    const headers = ["data", ...series.map((s) => s.label)];
-    const rows = chartData.map((d) => [d.date, ...series.map((s) => d[s.label])].join(","));
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `operacoes_${title.replace(/\s/g, "_").toLowerCase()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [chartData, series, title]);
+    if (!hasData) return;
+    type Row = Record<string, number | string>;
+    const columns: CsvColumn<Row>[] = [
+      { header: "data", accessor: (r) => String(r.date ?? "") },
+      ...series.map((s) => ({
+        header: s.label,
+        accessor: (r: Row) => (typeof r[s.label] === "number" ? (r[s.label] as number) : ""),
+      })),
+    ];
+    exportCsv(chartData as Row[], columns, csvFilename("credito_operacoes", exportTag));
+  }, [chartData, series, hasData, exportTag]);
 
   if (!series.length) return null;
 
@@ -202,23 +475,36 @@ function ChartPanel({ title, icon, series, unit, chartType = "line" }: {
   return (
     <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
       <button
+        type="button"
         onClick={() => setExpanded((e) => !e)}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-900/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon}
           <span className="text-[11px] font-bold text-zinc-100 font-mono">{title}</span>
-          <span className="text-[9px] text-zinc-600 font-mono">{series.length} séries · {unit}</span>
+          <span className="text-[9px] text-zinc-600 font-mono">
+            {series.length} série{series.length !== 1 ? "s" : ""} · {unit}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={(e) => { e.stopPropagation(); downloadCSV(); }}
-            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-300 transition-colors"
-            title="Exportar CSV"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadCSV();
+            }}
+            disabled={!hasData}
+            className="p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            title={hasData ? "Exportar CSV (pt-BR, ;)" : "Sem dados para exportar"}
+            aria-label="Exportar CSV"
           >
             <Download className="w-3 h-3" />
           </button>
-          {expanded ? <ChevronUp className="w-3.5 h-3.5 text-zinc-600" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-600" />}
+          {expanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-zinc-600" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-600" />
+          )}
         </div>
       </button>
 
@@ -227,59 +513,80 @@ function ChartPanel({ title, icon, series, unit, chartType = "line" }: {
           {/* Legend */}
           <div className="flex flex-wrap gap-3 mb-3">
             {series.map((s) => (
-              <div key={s.label} className="flex items-center gap-1.5">
+              <div key={s.modId} className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                 <span className="text-[9px] text-zinc-500 font-mono">{s.label}</span>
+                {s.data.length === 0 && (
+                  <span className="text-[8px] text-amber-500/70 font-mono italic">(sem dados)</span>
+                )}
               </div>
             ))}
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <Chart data={chartData}>
-              <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="dateLabel"
-                tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
-                axisLine={{ stroke: "#1a1a1a" }}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
-                axisLine={false}
-                tickLine={false}
-                width={50}
-                tickFormatter={(v: number) => `${v.toLocaleString("pt-BR")}${unit === "%" || unit === "% a.a." || unit === "p.p." ? "" : ""}`}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              {series.map((s) =>
-                chartType === "area" ? (
-                  <Area
-                    key={s.label}
-                    type="monotone"
-                    dataKey={s.label}
-                    stroke={s.color}
-                    fill={s.color}
-                    fillOpacity={0.1}
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                ) : chartType === "bar" ? (
-                  <Bar key={s.label} dataKey={s.label} fill={s.color} fillOpacity={0.7} radius={[2, 2, 0, 0]} />
-                ) : (
-                  <Line
-                    key={s.label}
-                    type="monotone"
-                    dataKey={s.label}
-                    stroke={s.color}
-                    strokeWidth={1.5}
-                    dot={false}
-                    activeDot={{ r: 3, fill: s.color }}
-                  />
-                )
-              )}
-            </Chart>
-          </ResponsiveContainer>
+          {!hasData ? (
+            <div className="py-12 flex flex-col items-center gap-2 text-center">
+              <AlertTriangle className="w-5 h-5 text-amber-500/50" />
+              <span className="text-[10px] text-zinc-500 font-mono">
+                Série indisponível via BACEN SGS para as modalidades selecionadas
+              </span>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <Chart data={chartData}>
+                <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="dateLabel"
+                  tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
+                  axisLine={{ stroke: "#1a1a1a" }}
+                  tickLine={false}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
+                />
+                <YAxis
+                  tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={54}
+                  tickFormatter={(v: number) => fmtNum(v, v >= 100 ? 0 : 1)}
+                />
+                <Tooltip content={<CustomTooltip unit={unit} />} />
+                {series.map((s) =>
+                  chartType === "area" ? (
+                    <Area
+                      key={s.modId}
+                      type="monotone"
+                      dataKey={s.label}
+                      stroke={s.color}
+                      fill={s.color}
+                      fillOpacity={0.12}
+                      strokeWidth={1.5}
+                      dot={false}
+                      connectNulls
+                    />
+                  ) : chartType === "bar" ? (
+                    <Bar
+                      key={s.modId}
+                      dataKey={s.label}
+                      fill={s.color}
+                      fillOpacity={0.7}
+                      radius={[2, 2, 0, 0]}
+                    />
+                  ) : (
+                    <Line
+                      key={s.modId}
+                      type="monotone"
+                      dataKey={s.label}
+                      stroke={s.color}
+                      strokeWidth={1.5}
+                      dot={false}
+                      activeDot={{ r: 3, fill: s.color }}
+                      connectNulls
+                    />
+                  ),
+                )}
+              </Chart>
+            </ResponsiveContainer>
+          )}
         </div>
       )}
     </div>
@@ -287,39 +594,93 @@ function ChartPanel({ title, icon, series, unit, chartType = "line" }: {
 }
 
 /* ─── ComparisonTable ─── */
-function ComparisonTable({ mods, seriesMap }: {
+function ComparisonTable({
+  mods,
+  seriesMap,
+}: {
   mods: Modalidade[];
-  seriesMap: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[] }>;
+  seriesMap: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[]; hasSaldo: boolean }>;
 }) {
   const [sortKey, setSortKey] = useState<"label" | "saldo" | "taxa" | "inadim">("saldo");
   const [sortDesc, setSortDesc] = useState(true);
 
   const rows = useMemo(() => {
-    return mods.map((m) => {
-      const d = seriesMap[m.id] || { saldo: [], taxa: [], inadim: [] };
-      const lastSaldo = d.saldo.length ? d.saldo[d.saldo.length - 1].value : 0;
-      const lastTaxa = d.taxa.length ? d.taxa[d.taxa.length - 1].value : 0;
-      const lastInadim = d.inadim.length ? d.inadim[d.inadim.length - 1].value : 0;
-      const prevSaldo = d.saldo.length >= 2 ? d.saldo[d.saldo.length - 2].value : lastSaldo;
-      const saldoChg = prevSaldo ? ((lastSaldo - prevSaldo) / prevSaldo) * 100 : 0;
-      return { ...m, lastSaldo, lastTaxa, lastInadim, saldoChg };
-    }).sort((a, b) => {
-      const key = sortKey === "label" ? "label" : sortKey === "saldo" ? "lastSaldo" : sortKey === "taxa" ? "lastTaxa" : "lastInadim";
-      if (key === "label") return sortDesc ? b.label.localeCompare(a.label) : a.label.localeCompare(b.label);
-      return sortDesc ? (b[key] as number) - (a[key] as number) : (a[key] as number) - (b[key] as number);
-    });
+    return mods
+      .map((m) => {
+        const d = seriesMap[m.id] || { saldo: [], taxa: [], inadim: [], hasSaldo: false };
+        const lastSaldo = d.saldo.length ? d.saldo[d.saldo.length - 1].value : null;
+        const lastTaxa = d.taxa.length ? d.taxa[d.taxa.length - 1].value : null;
+        const lastInadim = d.inadim.length ? d.inadim[d.inadim.length - 1].value : null;
+        const prevSaldo = d.saldo.length >= 2 ? d.saldo[d.saldo.length - 2].value : lastSaldo;
+        const saldoChg =
+          lastSaldo != null && prevSaldo != null && prevSaldo !== 0
+            ? ((lastSaldo - prevSaldo) / prevSaldo) * 100
+            : null;
+        return { ...m, lastSaldo, lastTaxa, lastInadim, saldoChg, hasSaldo: d.hasSaldo };
+      })
+      .sort((a, b) => {
+        const valA =
+          sortKey === "label"
+            ? a.label
+            : sortKey === "saldo"
+              ? a.lastSaldo
+              : sortKey === "taxa"
+                ? a.lastTaxa
+                : a.lastInadim;
+        const valB =
+          sortKey === "label"
+            ? b.label
+            : sortKey === "saldo"
+              ? b.lastSaldo
+              : sortKey === "taxa"
+                ? b.lastTaxa
+                : b.lastInadim;
+        if (sortKey === "label") {
+          return sortDesc
+            ? String(valB).localeCompare(String(valA))
+            : String(valA).localeCompare(String(valB));
+        }
+        const nA = valA == null ? -Infinity : (valA as number);
+        const nB = valB == null ? -Infinity : (valB as number);
+        return sortDesc ? nB - nA : nA - nB;
+      });
   }, [mods, seriesMap, sortKey, sortDesc]);
 
   const handleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDesc((d) => !d);
-    else { setSortKey(key); setSortDesc(true); }
+    else {
+      setSortKey(key);
+      setSortDesc(true);
+    }
   };
 
   const SortIcon = ({ col }: { col: typeof sortKey }) => (
     <span className="ml-0.5 inline-flex">
-      {sortKey === col ? (sortDesc ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronUp className="w-2.5 h-2.5" />) : null}
+      {sortKey === col ? (
+        sortDesc ? (
+          <ChevronDown className="w-2.5 h-2.5" />
+        ) : (
+          <ChevronUp className="w-2.5 h-2.5" />
+        )
+      ) : null}
     </span>
   );
+
+  const handleExport = useCallback(() => {
+    const columns: CsvColumn<typeof rows[number]>[] = [
+      { header: "modalidade", accessor: (r) => r.label },
+      { header: "tipo", accessor: (r) => r.tipo },
+      { header: "recurso", accessor: (r) => r.recurso },
+      { header: "saldo_bi", accessor: (r) => (r.lastSaldo != null ? fmtNum(r.lastSaldo, 2) : "") },
+      { header: "var_mom_pct", accessor: (r) => (r.saldoChg != null ? fmtNum(r.saldoChg, 2) : "") },
+      { header: "taxa_aa_pct", accessor: (r) => (r.lastTaxa != null ? fmtNum(r.lastTaxa, 2) : "") },
+      { header: "inadim_pct", accessor: (r) => (r.lastInadim != null ? fmtNum(r.lastInadim, 2) : "") },
+      { header: "sgs_saldo", accessor: (r) => r.saldo.code },
+      { header: "sgs_taxa", accessor: (r) => r.taxa.code },
+      { header: "sgs_inadim", accessor: (r) => r.inadim.code },
+    ];
+    exportCsv(rows, columns, csvFilename("credito_operacoes", "comparativo"));
+  }, [rows]);
 
   return (
     <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg overflow-hidden">
@@ -327,49 +688,105 @@ function ComparisonTable({ mods, seriesMap }: {
         <BarChart3 className="w-3.5 h-3.5 text-[#10B981]" />
         <span className="text-[11px] font-bold text-zinc-100 font-mono">Comparativo de Modalidades</span>
         <span className="text-[9px] text-zinc-600 font-mono">{rows.length} modalidades</span>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={!rows.length}
+          className="ml-auto p-1 rounded hover:bg-zinc-800 text-zinc-600 hover:text-zinc-300 transition-colors disabled:opacity-30"
+          title="Exportar comparativo (CSV pt-BR)"
+          aria-label="Exportar CSV"
+        >
+          <Download className="w-3 h-3" />
+        </button>
       </div>
       <div className="overflow-x-auto scrollbar-none">
-        <table className="w-full min-w-[600px]">
+        <table className="w-full min-w-[640px]">
           <thead>
             <tr className="border-b border-zinc-800/30">
-              {([
-                ["label", "Modalidade"],
-                ["saldo", "Saldo (R$ bi)"],
-                ["taxa", "Taxa (% a.a.)"],
-                ["inadim", "Inadim. (%)"],
-              ] as [typeof sortKey, string][]).map(([key, lbl]) => (
+              {(
+                [
+                  ["label", "Modalidade"],
+                  ["saldo", "Saldo (R$ bi)"],
+                  ["taxa", "Taxa (% a.a.)"],
+                  ["inadim", "Inadim. (%)"],
+                ] as [typeof sortKey, string][]
+              ).map(([key, lbl]) => (
                 <th
                   key={key}
                   onClick={() => handleSort(key)}
-                  className="px-3 py-2 text-[9px] font-mono text-zinc-500 text-left cursor-pointer hover:text-zinc-300 transition-colors whitespace-nowrap"
+                  className="px-3 py-2 text-[9px] font-mono text-zinc-500 text-left cursor-pointer hover:text-zinc-300 transition-colors whitespace-nowrap uppercase tracking-wider"
                 >
-                  {lbl}<SortIcon col={key} />
+                  {lbl}
+                  <SortIcon col={key} />
                 </th>
               ))}
-              <th className="px-3 py-2 text-[9px] font-mono text-zinc-500 text-left">Var. MoM</th>
+              <th className="px-3 py-2 text-[9px] font-mono text-zinc-500 text-left uppercase tracking-wider">
+                Var. MoM
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.id} className={`border-b border-[#111] ${i % 2 === 0 ? "bg-[#0a0a0a]" : ""} hover:bg-zinc-900/50 transition-colors`}>
+              <tr
+                key={r.id}
+                className={`border-b border-[#111] ${i % 2 === 0 ? "bg-[#0a0a0a]" : ""} hover:bg-zinc-900/50 transition-colors`}
+              >
                 <td className="px-3 py-2 text-[10px] font-mono text-zinc-200">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    {r.label}
+                    <span
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                    />
+                    <span className="truncate">{r.label}</span>
+                    {!r.hasSaldo && (
+                      <span className="text-[8px] text-amber-500/70">⚠</span>
+                    )}
                   </div>
-                  <span className="text-[8px] text-zinc-600">{r.tipo.join("/")} · {r.recurso}</span>
+                  <span className="text-[8px] text-zinc-600">
+                    {r.tipo} · {r.recurso}
+                  </span>
                 </td>
                 <td className="px-3 py-2 text-[10px] font-mono text-zinc-100 font-bold">
-                  {r.lastSaldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
+                  {r.lastSaldo != null ? fmtNum(r.lastSaldo, 2) : "—"}
                 </td>
                 <td className="px-3 py-2 text-[10px] font-mono text-zinc-100">
-                  {r.lastTaxa.toFixed(1)}
+                  {r.lastTaxa != null ? fmtNum(r.lastTaxa, 1) : "—"}
+                  {r.taxa.aggregate && r.lastTaxa != null && (
+                    <span className="ml-0.5 text-[8px] text-zinc-700" title="Agregado">
+                      ⓘ
+                    </span>
+                  )}
                 </td>
-                <td className={`px-3 py-2 text-[10px] font-mono font-bold ${r.lastInadim > 5 ? "text-red-400" : r.lastInadim > 3 ? "text-amber-400" : "text-emerald-400"}`}>
-                  {r.lastInadim.toFixed(2)}
+                <td
+                  className={`px-3 py-2 text-[10px] font-mono font-bold ${
+                    r.lastInadim == null
+                      ? "text-zinc-500"
+                      : r.lastInadim > 5
+                        ? "text-red-400"
+                        : r.lastInadim > 3
+                          ? "text-amber-400"
+                          : "text-emerald-400"
+                  }`}
+                >
+                  {r.lastInadim != null ? fmtNum(r.lastInadim, 2) : "—"}
+                  {r.inadim.aggregate && r.lastInadim != null && (
+                    <span className="ml-0.5 text-[8px] text-zinc-700" title="Agregado">
+                      ⓘ
+                    </span>
+                  )}
                 </td>
-                <td className={`px-3 py-2 text-[10px] font-mono ${r.saldoChg >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {r.saldoChg >= 0 ? "+" : ""}{r.saldoChg.toFixed(1)}%
+                <td
+                  className={`px-3 py-2 text-[10px] font-mono ${
+                    r.saldoChg == null
+                      ? "text-zinc-500"
+                      : r.saldoChg >= 0
+                        ? "text-emerald-400"
+                        : "text-red-400"
+                  }`}
+                >
+                  {r.saldoChg == null
+                    ? "—"
+                    : `${r.saldoChg >= 0 ? "+" : ""}${fmtNum(r.saldoChg, 1)}%`}
                 </td>
               </tr>
             ))}
@@ -379,7 +796,6 @@ function ComparisonTable({ mods, seriesMap }: {
     </div>
   );
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -392,11 +808,27 @@ export function CreditOperationsPanel() {
   const [period, setPeriod] = useState<string>("2y");
   const [showTable, setShowTable] = useState(true);
 
+  /* ─── Fetch 5 category bundles (all credit operations live here) ─── */
+  const saldoCreditoBundle = useHubSeriesBundle("saldo_credito", period, "credito");
+  const saldoPFBundle = useHubSeriesBundle("saldo_pf_modal", period, "credito");
+  const saldoPJBundle = useHubSeriesBundle("saldo_pj_modal", period, "credito");
+  const taxaBundle = useHubSeriesBundle("taxa", period, "credito");
+  const inadimDetalheBundle = useHubSeriesBundle("inadim_detalhe", period, "credito");
+  const inadimplenciaBundle = useHubSeriesBundle("inadimplencia", period, "credito");
+
+  const isLoading =
+    saldoCreditoBundle.isLoading ||
+    saldoPFBundle.isLoading ||
+    saldoPJBundle.isLoading ||
+    taxaBundle.isLoading ||
+    inadimDetalheBundle.isLoading ||
+    inadimplenciaBundle.isLoading;
+
   /* ─── Filtered modalidades ─── */
   const filteredMods = useMemo(() => {
     return MODALIDADES.filter((m) => {
-      const matchTipo = tipoCliente === "Total" ? m.tipo.includes("Total") : m.tipo.includes(tipoCliente);
-      const matchRecurso = recurso === "Total" || m.recurso === recurso || m.recurso === "Total";
+      const matchTipo = tipoCliente === "Total" ? m.tipo === "Total" : m.tipo === tipoCliente;
+      const matchRecurso = recurso === "Total" ? m.recurso === "Total" : m.recurso === recurso;
       return matchTipo && matchRecurso;
     });
   }, [tipoCliente, recurso]);
@@ -418,97 +850,121 @@ export function CreditOperationsPanel() {
     });
   }, []);
 
-  /* ─── Fetch series data for each active modalidade ─── */
-  // We use category-based fetching through existing hooks — each mod maps to a unique SGS code
-  // For operations, we fetch the series by their SGS code through the hub API
-  const modObjects = useMemo(() => activeMods.map((id) => MODALIDADES.find((m) => m.id === id)!).filter(Boolean), [activeMods]);
+  const modObjects = useMemo(
+    () => activeMods.map((id) => MODALIDADES.find((m) => m.id === id)!).filter(Boolean),
+    [activeMods],
+  );
 
-  // Build series data using existing useHubSeries hook + fallback
-  // Since we can't call hooks in a loop, we fetch by mapped categories and use fallback data
-  const { data: saldoPFData } = useHubSeries("saldo_pf", period, "credito");
-  const { data: saldoPJData } = useHubSeries("saldo_pj_livres", period, "credito");
-  const { data: taxaPFData } = useHubSeries("taxa_pf", period, "credito");
-  const { data: taxaPJData } = useHubSeries("taxa_pj", period, "credito");
-  const { data: inadPFData } = useHubSeries("inadimplencia_pf", period, "credito");
-  const { data: inadPJData } = useHubSeries("inadimplencia_pj", period, "credito");
+  /* ─── Bundle resolver by category ─── */
+  const getBundle = useCallback(
+    (cat: SeriesRef["cat"]): SeriesBundle | undefined => {
+      switch (cat) {
+        case "saldo_credito":
+          return saldoCreditoBundle.data;
+        case "saldo_pf_modal":
+          return saldoPFBundle.data;
+        case "saldo_pj_modal":
+          return saldoPJBundle.data;
+        case "taxa":
+          return taxaBundle.data;
+        case "inadim_detalhe":
+          return inadimDetalheBundle.data;
+        case "inadimplencia":
+          return inadimplenciaBundle.data;
+      }
+    },
+    [
+      saldoCreditoBundle.data,
+      saldoPFBundle.data,
+      saldoPJBundle.data,
+      taxaBundle.data,
+      inadimDetalheBundle.data,
+      inadimplenciaBundle.data,
+    ],
+  );
 
-  /* Build per-modalidade series from fetched data + proportional fallbacks */
+  /* ─── Build per-modalidade series from REAL bundles ─── */
   const seriesMap = useMemo(() => {
-    const map: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[] }> = {};
-
-    const baseSaldoPF = saldoPFData?.length ? saldoPFData : [];
-    const baseSaldoPJ = saldoPJData?.length ? saldoPJData : [];
-    const baseTaxaPF = taxaPFData?.length ? taxaPFData : [];
-    const baseTaxaPJ = taxaPJData?.length ? taxaPJData : [];
-    const baseInadPF = inadPFData?.length ? inadPFData : [];
-    const baseInadPJ = inadPJData?.length ? inadPJData : [];
-
-    /* Proportional weights for each modalidade (approximate market share) */
-    const weights: Record<string, { saldo: number; taxa: number; inadim: number; base: "PF" | "PJ" }> = {
-      pf_pessoal_nc: { saldo: 0.12, taxa: 1.6, inadim: 1.4, base: "PF" },
-      pf_consignado: { saldo: 0.163, taxa: 0.45, inadim: 0.5, base: "PF" },
-      pf_veiculos: { saldo: 0.087, taxa: 0.5, inadim: 0.95, base: "PF" },
-      pf_cartao: { saldo: 0.153, taxa: 5.5, inadim: 1.8, base: "PF" },
-      pf_cheque_esp: { saldo: 0.01, taxa: 2.5, inadim: 3.5, base: "PF" },
-      pf_desc_receb: { saldo: 0.02, taxa: 0.65, inadim: 0.7, base: "PF" },
-      pf_habitacional: { saldo: 0.249, taxa: 0.19, inadim: 0.45, base: "PF" },
-      pf_rural: { saldo: 0.107, taxa: 0.15, inadim: 0.35, base: "PF" },
-      pf_bndes: { saldo: 0.012, taxa: 0.2, inadim: 0.3, base: "PF" },
-      pj_capital_giro: { saldo: 0.402, taxa: 0.9, inadim: 1.1, base: "PJ" },
-      pj_duplicatas: { saldo: 0.115, taxa: 0.6, inadim: 0.6, base: "PJ" },
-      pj_conta_garantida: { saldo: 0.044, taxa: 1.8, inadim: 2.0, base: "PJ" },
-      pj_acc_ace: { saldo: 0.091, taxa: 0.3, inadim: 0.2, base: "PJ" },
-      pj_export: { saldo: 0.056, taxa: 0.35, inadim: 0.25, base: "PJ" },
-      pj_rural: { saldo: 0.333, taxa: 0.35, inadim: 0.4, base: "PJ" },
-      pj_habitacional: { saldo: 0.079, taxa: 0.4, inadim: 0.35, base: "PJ" },
-      pj_bndes: { saldo: 0.25, taxa: 0.3, inadim: 0.3, base: "PJ" },
-      total_livres: { saldo: 1.0, taxa: 1.0, inadim: 1.0, base: "PF" },
-      total_direcionados: { saldo: 0.74, taxa: 0.4, inadim: 0.4, base: "PF" },
-      total_geral: { saldo: 1.71, taxa: 0.8, inadim: 0.8, base: "PF" },
-    };
-
+    const map: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[]; hasSaldo: boolean }> = {};
     MODALIDADES.forEach((m) => {
-      const w = weights[m.id] || { saldo: 0.1, taxa: 1.0, inadim: 1.0, base: "PF" };
-      const baseSaldo = w.base === "PF" ? baseSaldoPF : baseSaldoPJ;
-      const baseTaxa = w.base === "PF" ? baseTaxaPF : baseTaxaPJ;
-      const baseInad = w.base === "PF" ? baseInadPF : baseInadPJ;
+      const saldoBundle = getBundle(m.saldo.cat);
+      const taxaBundleResolved = getBundle(m.taxa.cat);
+      const inadimBundleResolved = getBundle(m.inadim.cat);
+
+      const saldoMeta = saldoBundle?.[String(m.saldo.code)];
+      const saldoRaw = pickSeries(saldoBundle, m.saldo.code);
+      const saldoBi = normalizeToBi(saldoRaw, saldoMeta?.unit);
 
       map[m.id] = {
-        saldo: baseSaldo.map((d) => ({ date: d.date, value: Math.round(d.value * w.saldo * 100) / 100 })),
-        taxa: baseTaxa.map((d) => ({ date: d.date, value: Math.round(d.value * w.taxa * 100) / 100 })),
-        inadim: baseInad.map((d) => ({ date: d.date, value: Math.round(d.value * w.inadim * 100) / 100 })),
+        saldo: saldoBi,
+        taxa: pickSeries(taxaBundleResolved, m.taxa.code),
+        inadim: pickSeries(inadimBundleResolved, m.inadim.code),
+        hasSaldo: saldoBi.length > 0,
       };
     });
-
     return map;
-  }, [saldoPFData, saldoPJData, taxaPFData, taxaPJData, inadPFData, inadPJData]);
+  }, [getBundle]);
+
+  /* ─── Latest reference date across all bundles (for DataAsOfStamp) ─── */
+  const latestDate = useMemo(() => {
+    const dates: string[] = [];
+    [
+      saldoCreditoBundle.data,
+      saldoPFBundle.data,
+      saldoPJBundle.data,
+      taxaBundle.data,
+      inadimDetalheBundle.data,
+      inadimplenciaBundle.data,
+    ].forEach((b) => {
+      if (!b) return;
+      Object.values(b).forEach((serie) => {
+        if (serie.data.length) dates.push(serie.data[serie.data.length - 1].date);
+      });
+    });
+    if (!dates.length) return null;
+    dates.sort();
+    return dates[dates.length - 1];
+  }, [
+    saldoCreditoBundle.data,
+    saldoPFBundle.data,
+    saldoPJBundle.data,
+    taxaBundle.data,
+    inadimDetalheBundle.data,
+    inadimplenciaBundle.data,
+  ]);
 
   /* ─── Chart series builders ─── */
-  const saldoSeries = useMemo(() =>
-    modObjects.map((m, i) => ({
-      label: m.label,
-      data: seriesMap[m.id]?.saldo || [],
-      color: COLORS[i % COLORS.length],
-    })),
-    [modObjects, seriesMap]
+  const saldoSeries = useMemo(
+    () =>
+      modObjects.map((m, i) => ({
+        label: m.label,
+        modId: m.id,
+        data: seriesMap[m.id]?.saldo || [],
+        color: COLORS[i % COLORS.length],
+      })),
+    [modObjects, seriesMap],
   );
 
-  const taxaSeries = useMemo(() =>
-    modObjects.map((m, i) => ({
-      label: m.label,
-      data: seriesMap[m.id]?.taxa || [],
-      color: COLORS[i % COLORS.length],
-    })),
-    [modObjects, seriesMap]
+  const taxaSeries = useMemo(
+    () =>
+      modObjects.map((m, i) => ({
+        label: m.label,
+        modId: m.id,
+        data: seriesMap[m.id]?.taxa || [],
+        color: COLORS[i % COLORS.length],
+      })),
+    [modObjects, seriesMap],
   );
 
-  const inadimSeries = useMemo(() =>
-    modObjects.map((m, i) => ({
-      label: m.label,
-      data: seriesMap[m.id]?.inadim || [],
-      color: COLORS[i % COLORS.length],
-    })),
-    [modObjects, seriesMap]
+  const inadimSeries = useMemo(
+    () =>
+      modObjects.map((m, i) => ({
+        label: m.label,
+        modId: m.id,
+        data: seriesMap[m.id]?.inadim || [],
+        color: COLORS[i % COLORS.length],
+      })),
+    [modObjects, seriesMap],
   );
 
   const resetFilters = useCallback(() => {
@@ -518,17 +974,28 @@ export function CreditOperationsPanel() {
     setPeriod("2y");
   }, []);
 
+  /* ─── Count helpers for filter pill badges ─── */
+  const tipoCounts = useMemo(() => {
+    const counts: Record<TipoCliente, number> = { PF: 0, PJ: 0, Total: 0 };
+    MODALIDADES.forEach((m) => (counts[m.tipo] += 1));
+    return counts;
+  }, []);
+
   return (
     <div className="space-y-4">
       {/* ─── Header ─── */}
       <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-[#10B981]" />
-            <h2 className="text-sm font-bold text-zinc-100 font-mono">Painel de Operações de Crédito</h2>
+            <h2 className="text-sm font-bold text-zinc-100 font-mono">
+              Painel de Operações de Crédito
+            </h2>
+            <DataAsOfStamp date={latestDate} cadence="monthly" source="BACEN SGS" compact />
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={resetFilters}
               className="flex items-center gap-1 px-2 py-1 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 border border-zinc-800/50 rounded hover:border-zinc-700 transition-colors"
             >
@@ -539,6 +1006,7 @@ export function CreditOperationsPanel() {
               {PERIODS.map((p) => (
                 <button
                   key={p}
+                  type="button"
                   onClick={() => setPeriod(p)}
                   className={`px-2 py-0.5 text-[9px] font-mono rounded transition-colors ${
                     period === p ? "bg-[#10B981] text-white" : "text-zinc-600 hover:text-zinc-300"
@@ -562,8 +1030,11 @@ export function CreditOperationsPanel() {
                   key={t}
                   label={t === "PF" ? "Pessoa Física" : t === "PJ" ? "Pessoa Jurídica" : "Total SFN"}
                   active={tipoCliente === t}
-                  onClick={() => { setTipoCliente(t); setSelectedMods([]); }}
-                  count={MODALIDADES.filter((m) => t === "Total" ? m.tipo.includes("Total") : m.tipo.includes(t)).length}
+                  onClick={() => {
+                    setTipoCliente(t);
+                    setSelectedMods([]);
+                  }}
+                  count={tipoCounts[t]}
                 />
               ))}
             </div>
@@ -578,7 +1049,10 @@ export function CreditOperationsPanel() {
                   key={r}
                   label={r}
                   active={recurso === r}
-                  onClick={() => { setRecurso(r); setSelectedMods([]); }}
+                  onClick={() => {
+                    setRecurso(r);
+                    setSelectedMods([]);
+                  }}
                 />
               ))}
             </div>
@@ -588,16 +1062,26 @@ export function CreditOperationsPanel() {
           <div className="flex items-start gap-2">
             <span className="text-[9px] text-zinc-600 font-mono w-24 shrink-0 pt-1">Modalidade</span>
             <div className="flex gap-1 flex-wrap">
-              {filteredMods.map((m) => (
-                <FilterPill
-                  key={m.id}
-                  label={m.label}
-                  active={activeMods.includes(m.id)}
-                  onClick={() => toggleMod(m.id)}
-                />
-              ))}
+              {filteredMods.map((m) => {
+                const has = seriesMap[m.id]?.hasSaldo ?? true;
+                return (
+                  <FilterPill
+                    key={m.id}
+                    label={m.label}
+                    active={activeMods.includes(m.id)}
+                    onClick={() => toggleMod(m.id)}
+                    title={
+                      has
+                        ? `SGS saldo ${m.saldo.code} · taxa ${m.taxa.code}${m.taxa.aggregate ? " (agg)" : ""} · inadim ${m.inadim.code}${m.inadim.aggregate ? " (agg)" : ""}`
+                        : "Série indisponível via BACEN SGS"
+                    }
+                  />
+                );
+              })}
               {filteredMods.length === 0 && (
-                <span className="text-[9px] text-zinc-600 font-mono italic">Nenhuma modalidade disponível para essa combinação</span>
+                <span className="text-[9px] text-zinc-600 font-mono italic">
+                  Nenhuma modalidade disponível para essa combinação
+                </span>
               )}
             </div>
           </div>
@@ -605,9 +1089,25 @@ export function CreditOperationsPanel() {
 
         <div className="mt-3 flex items-center gap-2 text-[8px] text-zinc-700 font-mono">
           <Search className="w-2.5 h-2.5" />
-          <span>{activeMods.length} modalidades selecionadas · Máx. 6 simultâneas · SGS BACEN séries {modObjects.map((m) => m.sgs_saldo).join(", ")}</span>
+          <span>
+            {activeMods.length} selecionadas · Máx. 6 simultâneas · SGS:{" "}
+            {modObjects.map((m) => m.saldo.code).join(", ") || "—"}
+          </span>
+          {modObjects.some((m) => m.taxa.aggregate || m.inadim.aggregate) && (
+            <span className="text-zinc-600 italic">
+              · ⓘ taxa/inadim agregada quando série específica não publicada
+            </span>
+          )}
         </div>
       </div>
+
+      {/* ─── Loading state ─── */}
+      {isLoading && !modObjects.length && (
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-8 text-center">
+          <div className="inline-block w-4 h-4 border-2 border-zinc-700 border-t-[#10B981] rounded-full animate-spin mb-2" />
+          <p className="text-[10px] text-zinc-500 font-mono">Carregando séries BACEN SGS…</p>
+        </div>
+      )}
 
       {/* ─── Summary Cards ─── */}
       {modObjects.length > 0 && (
@@ -620,6 +1120,7 @@ export function CreditOperationsPanel() {
               saldoData={seriesMap[m.id]?.saldo || []}
               taxaData={seriesMap[m.id]?.taxa || []}
               inadimData={seriesMap[m.id]?.inadim || []}
+              hasSaldo={seriesMap[m.id]?.hasSaldo ?? false}
             />
           ))}
         </div>
@@ -634,6 +1135,7 @@ export function CreditOperationsPanel() {
             series={saldoSeries}
             unit="R$ bi"
             chartType="area"
+            exportTag="saldo"
           />
           <ChartPanel
             title="Taxas de Juros"
@@ -641,6 +1143,7 @@ export function CreditOperationsPanel() {
             series={taxaSeries}
             unit="% a.a."
             chartType="line"
+            exportTag="taxas"
           />
           <ChartPanel
             title="Inadimplência (>90 dias)"
@@ -648,6 +1151,7 @@ export function CreditOperationsPanel() {
             series={inadimSeries}
             unit="%"
             chartType="line"
+            exportTag="inadimplencia"
           />
         </div>
       )}
@@ -656,29 +1160,39 @@ export function CreditOperationsPanel() {
       {filteredMods.length > 0 && (
         <div>
           <button
+            type="button"
             onClick={() => setShowTable((t) => !t)}
             className="flex items-center gap-1.5 mb-2 text-[10px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <BarChart3 className="w-3 h-3" />
             {showTable ? "Ocultar" : "Mostrar"} Tabela Comparativa
-            {showTable ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+            {showTable ? (
+              <ChevronUp className="w-2.5 h-2.5" />
+            ) : (
+              <ChevronDown className="w-2.5 h-2.5" />
+            )}
           </button>
           {showTable && <ComparisonTable mods={filteredMods} seriesMap={seriesMap} />}
         </div>
       )}
 
       {/* ─── Empty state ─── */}
-      {modObjects.length === 0 && (
+      {!isLoading && modObjects.length === 0 && (
         <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-8 text-center">
           <AlertTriangle className="w-6 h-6 text-amber-500/50 mx-auto mb-2" />
-          <p className="text-[11px] text-zinc-500 font-mono">Selecione ao menos uma modalidade para visualizar os dados</p>
+          <p className="text-[11px] text-zinc-500 font-mono">
+            Selecione ao menos uma modalidade para visualizar os dados
+          </p>
         </div>
       )}
 
       {/* ─── Footer ─── */}
       <div className="text-[8px] text-zinc-700 font-mono flex items-center justify-between pt-2 border-t border-zinc-800/30">
         <span>Fonte: BACEN SGS · Operações de crédito por modalidade</span>
-        <span>{MODALIDADES.length} modalidades catalogadas · Dados mensais</span>
+        <span>
+          {MODALIDADES.length} modalidades catalogadas · Dados mensais
+          {modObjects.some((m) => m.taxa.aggregate || m.inadim.aggregate) && " · ⓘ agregado"}
+        </span>
       </div>
     </div>
   );

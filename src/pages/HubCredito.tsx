@@ -8,6 +8,8 @@ import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { NarrativeSection, formatDelta, type MiniStat } from "@/components/hub/NarrativeSection";
 import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { InterestCalculator } from "@/components/hub/InterestCalculator";
@@ -170,6 +172,13 @@ const HubCredito = () => {
   const heroKPIs = useMemo(() => kpis.filter(k => HERO_CODES.includes(k.serie_code)), [kpis]);
   const secondaryKPIs = useMemo(() => kpis.filter(k => !HERO_CODES.includes(k.serie_code)), [kpis]);
 
+  /* ─── Latest data date (for DataAsOfStamp — most recent across KPIs) ─── */
+  const latestDate = useMemo(() => {
+    const dates = kpis.map(k => k.last_date).filter((d): d is string => !!d);
+    if (!dates.length) return undefined;
+    return dates.sort().reverse()[0];
+  }, [kpis]);
+
   /* ─── Shorthand series access ─── */
   const saldoTotal = pickSeries(saldoBundle, "20540");
   const saldoPF = pickSeries(saldoBundle, "28848");
@@ -203,6 +212,20 @@ const HubCredito = () => {
   /* ─── Derived analytics ─── */
   const concessoesMoM = useMemo(() => percentChange(concessaoPF), [concessaoPF]);
   const inadSMA = useMemo(() => sma(inadTotal, 3), [inadTotal]);
+
+  /* ─── Narrative helpers ─── */
+  const lastVal = (s: { value: number }[]) => (s.length ? s[s.length - 1].value : null);
+  const momDelta = (s: { value: number }[]) => {
+    if (s.length < 2) return null;
+    return s[s.length - 1].value - s[s.length - 2].value;
+  };
+  const yoyDelta = (s: { value: number }[]) => {
+    if (s.length < 13) return null;
+    const last = s[s.length - 1].value;
+    const prev = s[s.length - 13].value;
+    if (!prev) return null;
+    return ((last - prev) / prev) * 100;
+  };
 
   /* ─── KPI value helper ─── */
   const kpiVal = (code: string) => kpis.find(k => k.serie_code === code)?.last_value ?? 0;
@@ -271,13 +294,19 @@ const HubCredito = () => {
       {/* ─── Sticky header bar ─── */}
       <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-base font-bold text-zinc-100 tracking-tight">
               Módulo Crédito
             </h1>
             <span className="text-[9px] text-zinc-600 font-mono hidden sm:inline">
               {kpis.length} indicadores · 73 séries · BACEN SGS
             </span>
+            <DataAsOfStamp
+              date={latestDate}
+              cadence="monthly"
+              source="BACEN SGS"
+              compact
+            />
           </div>
 
           <div className="flex items-center gap-0.5 bg-[#111111] border border-[#1a1a1a] rounded-md p-0.5">
@@ -388,6 +417,67 @@ const HubCredito = () => {
                 <MacroInsightCard inputs={saldoInsights} />
               }
             >
+              {/* Narrativa de abertura — Volume */}
+              {(() => {
+                const saldoLast = lastVal(saldoTotal);
+                const saldoYoY = yoyDelta(saldoTotal);
+                const concessaoLast = lastVal(concessaoPF);
+                const concessoesMoMLast = lastVal(concessoesMoM);
+                const creditoPibLast = lastVal(creditoPib);
+                const consignadoLast = lastVal(consignado);
+
+                const saldoYoyFmt = formatDelta(saldoYoY, { suffix: "%", digits: 1 });
+                const concessoesMoMFmt = formatDelta(concessoesMoMLast, { suffix: "%", digits: 1 });
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Saldo Total",
+                    value: saldoLast ? `R$ ${saldoLast.toFixed(0)} bi` : "—",
+                    sublabel: saldoYoY != null ? `YoY ${saldoYoyFmt.text}` : undefined,
+                    color: "text-zinc-200",
+                    tooltip: "Estoque total de crédito no SFN. YoY compara ao mesmo mês do ano anterior.",
+                  },
+                  {
+                    label: "Concessões PF",
+                    value: concessaoLast ? `R$ ${concessaoLast.toFixed(0)} bi` : "—",
+                    sublabel: concessoesMoMLast != null ? `MoM ${concessoesMoMFmt.text}` : undefined,
+                    color: concessoesMoMFmt.color,
+                    tooltip: "Fluxo mensal de novo crédito a PF. MoM mede aceleração/desaceleração.",
+                  },
+                  {
+                    label: "Consignado PF",
+                    value: consignadoLast ? `R$ ${consignadoLast.toFixed(0)} bi` : "—",
+                    sublabel: "teto INSS ≈ 1,84% a.m.",
+                    color: "text-zinc-200",
+                    tooltip: "Modalidade com maior resiliência (desconto em folha). Menor inadimplência do sistema.",
+                  },
+                  {
+                    label: "Crédito / PIB",
+                    value: creditoPibLast != null ? `${creditoPibLast.toFixed(1)}%` : "—",
+                    sublabel: "alerta >60%",
+                    color: creditoPibLast != null && creditoPibLast > 55 ? "text-amber-400" : "text-emerald-400",
+                    tooltip: "Profundidade financeira. Brasil ~55% vs EUA ~180%. >60% = alerta sistêmico.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#10B981"
+                    prose={
+                      <>
+                        Saldo total do SFN em <strong className="text-zinc-200">R$ {saldoLast?.toFixed(0) ?? "—"} bi</strong>,{" "}
+                        <span className={saldoYoyFmt.color}>{saldoYoY != null ? `${saldoYoyFmt.text} YoY` : "sem comparativo anual"}</span>.
+                        Concessões PF registram{" "}
+                        <span className={concessoesMoMFmt.color}>{concessoesMoMLast != null ? `${concessoesMoMFmt.text} MoM` : "sem variação disponível"}</span>,
+                        sinal {concessoesMoMLast != null && concessoesMoMLast > 0 ? "de aceleração" : "de desaceleração"} do fluxo de novo crédito.
+                        Relação Crédito/PIB em <strong className="text-zinc-200">{creditoPibLast?.toFixed(1) ?? "—"}%</strong>,{" "}
+                        {creditoPibLast != null && creditoPibLast > 55 ? "próxima do teto histórico" : "abaixo do patamar de expansão"} (~55%).
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Saldos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <MacroChart
@@ -488,6 +578,67 @@ const HubCredito = () => {
                 <MacroInsightCard inputs={taxaInsights} />
               }
             >
+              {/* Narrativa de abertura — Taxas & Spreads */}
+              {(() => {
+                const taxaPFLast = lastVal(taxaPF);
+                const taxaPJLast = lastVal(taxaPJ);
+                const spreadPFLast = lastVal(spreadPF);
+                const spreadPFDelta = momDelta(spreadPF);
+                const selicRef = kpiVal("432") || 14.25;
+                const diffPFPJ = taxaPFLast != null && taxaPJLast != null ? taxaPFLast - taxaPJLast : null;
+                const spreadDeltaFmt = formatDelta(spreadPFDelta, { suffix: " p.p.", digits: 2, inverted: true });
+
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Taxa Média PF",
+                    value: taxaPFLast != null ? `${taxaPFLast.toFixed(1)}%` : "—",
+                    sublabel: "% a.a.",
+                    color: "text-zinc-200",
+                    tooltip: "Taxa média ao tomador PF. Inclui rotativo, consignado, veículos, habitacional.",
+                  },
+                  {
+                    label: "Spread PF",
+                    value: spreadPFLast != null ? `${spreadPFLast.toFixed(1)} p.p.` : "—",
+                    sublabel: spreadPFDelta != null ? `MoM ${spreadDeltaFmt.text}` : undefined,
+                    color: spreadDeltaFmt.color,
+                    tooltip: "Spread bancário PF = taxa cobrada − custo de captação. Benchmark histórico ~30 p.p.",
+                  },
+                  {
+                    label: "Diferencial PF × PJ",
+                    value: diffPFPJ != null ? `${diffPFPJ.toFixed(1)} p.p.` : "—",
+                    sublabel: "histórico ~18 p.p.",
+                    color: diffPFPJ != null && diffPFPJ > 20 ? "text-amber-400" : "text-zinc-200",
+                    tooltip: "Gap entre taxa PF e PJ. Reflete diferença de risco + concorrência bancária.",
+                  },
+                  {
+                    label: "Selic Ref",
+                    value: `${selicRef.toFixed(2)}%`,
+                    sublabel: "COPOM meta",
+                    color: "text-emerald-400",
+                    tooltip: "Taxa Selic meta. Custo de oportunidade para spreads e referência para o sistema.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#F59E0B"
+                    prose={
+                      <>
+                        Taxa média PF em <strong className="text-zinc-200">{taxaPFLast?.toFixed(1) ?? "—"}% a.a.</strong>{" "}
+                        (PJ em <strong className="text-zinc-200">{taxaPJLast?.toFixed(1) ?? "—"}%</strong>),
+                        com spread bancário PF <span className={spreadDeltaFmt.color}>
+                        {spreadPFDelta != null ? `${spreadDeltaFmt.text} MoM` : "estável"}</span>. Diferencial PF×PJ{" "}
+                        <strong className="text-zinc-200">{diffPFPJ?.toFixed(1) ?? "—"} p.p.</strong>{" "}
+                        {diffPFPJ != null && diffPFPJ > 20 ? "acima" : "em linha com"} a média histórica (~18 p.p.).
+                        Selic meta em <strong className="text-emerald-400">{selicRef.toFixed(2)}%</strong> — ciclo monetário{" "}
+                        {selicRef > 13 ? "restritivo" : selicRef < 10 ? "acomodatício" : "neutro"}.
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Taxas */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <MacroChart
@@ -599,6 +750,74 @@ const HubCredito = () => {
                 <MacroInsightCard inputs={riscoInsights} />
               }
             >
+              {/* Narrativa de abertura — Risco */}
+              {(() => {
+                const inadTotalLast = lastVal(inadTotal);
+                const inadPFLast = lastVal(inadPF);
+                const inadPJLast = lastVal(inadPJ);
+                const inadLivresLast = lastVal(inadLivres);
+                const inadTotalMoM = momDelta(inadTotal);
+                const inadDeltaFmt = formatDelta(inadTotalMoM, { suffix: " p.p.", digits: 2, inverted: true });
+                const diffPFPJ = inadPFLast != null && inadPJLast != null ? inadPFLast - inadPJLast : null;
+
+                let regime: { label: string; color: string };
+                if (inadTotalLast == null) regime = { label: "Sem dados", color: "text-zinc-500" };
+                else if (inadTotalLast > 4.5) regime = { label: "Stress", color: "text-red-400" };
+                else if (inadTotalLast > 3.5) regime = { label: "Alerta", color: "text-amber-400" };
+                else if (inadTotalLast > 2.8) regime = { label: "Neutro", color: "text-zinc-200" };
+                else regime = { label: "Saudável", color: "text-emerald-400" };
+
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Inadim. Total",
+                    value: inadTotalLast != null ? `${inadTotalLast.toFixed(2)}%` : "—",
+                    sublabel: inadTotalMoM != null ? `MoM ${inadDeltaFmt.text}` : undefined,
+                    color: inadDeltaFmt.color,
+                    tooltip: "Inadimplência do SFN (>90d). Patamar seguro <3%, alerta >4%, stress >5%.",
+                  },
+                  {
+                    label: "Inadim. Livres",
+                    value: inadLivresLast != null ? `${inadLivresLast.toFixed(2)}%` : "—",
+                    sublabel: "segmento cíclico",
+                    color: inadLivresLast != null && inadLivresLast > 5 ? "text-red-400" : "text-amber-400",
+                    tooltip: "Inadimplência em Recursos Livres — mais sensível ao ciclo monetário (exclui direcionados).",
+                  },
+                  {
+                    label: "Delta PF × PJ",
+                    value: diffPFPJ != null ? `${diffPFPJ.toFixed(2)} p.p.` : "—",
+                    sublabel: "PF tradicionalmente > PJ",
+                    color: "text-zinc-200",
+                    tooltip: "Gap inadimplência PF − PJ. PF historicamente mais alto por exposição ao consumo.",
+                  },
+                  {
+                    label: "Regime",
+                    value: regime.label,
+                    sublabel: "classificação interna",
+                    color: regime.color,
+                    tooltip: "Regime derivado do nível da Inad. Total: Saudável <2,8%, Neutro <3,5%, Alerta <4,5%, Stress ≥4,5%.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#EF4444"
+                    prose={
+                      <>
+                        Inadimplência SFN em <strong className="text-zinc-200">{inadTotalLast?.toFixed(2) ?? "—"}%</strong>{" "}
+                        (<span className={inadDeltaFmt.color}>{inadTotalMoM != null ? `${inadDeltaFmt.text} MoM` : "estável"}</span>),
+                        regime <span className={regime.color}>{regime.label.toLowerCase()}</span>. PF em{" "}
+                        <strong className="text-zinc-200">{inadPFLast?.toFixed(2) ?? "—"}%</strong>, PJ em{" "}
+                        <strong className="text-zinc-200">{inadPJLast?.toFixed(2) ?? "—"}%</strong> —
+                        diferencial <strong className="text-zinc-200">{diffPFPJ?.toFixed(2) ?? "—"} p.p.</strong>{" "}
+                        Recursos livres em <strong className="text-zinc-200">{inadLivresLast?.toFixed(2) ?? "—"}%</strong>,
+                        segmento mais sensível ao ciclo da Selic — {inadLivresLast != null && inadLivresLast > 5 ? "stress" : "controle"}.
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Inadimplência charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <MacroChart
