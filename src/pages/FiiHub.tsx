@@ -31,7 +31,7 @@ const SECTIONS = [
 
 /** FiiHub Component */
 export default function FiiHub() {
-  /* ─── Deep-linking: section from URL ─── */
+  /* ─── Deep-linking: section + filters/sort from URL (P2-8 URL persistence) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSection = searchParams.get("section") || "overview";
 
@@ -45,25 +45,54 @@ export default function FiiHub() {
 
   const sectionVisible = useCallback((id: string) => visitedSections.has(id), [visitedSections]);
 
-  /* ─── Sync section to URL ─── */
+  /* ─── Screener Filters (hydrated from URL) ─── */
+  const [selectedSegmento, setSelectedSegmento] = useState<string | null>(
+    () => searchParams.get("segmento") || null
+  );
+  const [selectedTipoGestao, setSelectedTipoGestao] = useState<string | null>(
+    () => searchParams.get("tipo_gestao") || null
+  );
+  const [minPl, setMinPl] = useState<number>(() => Number(searchParams.get("min_pl") || 0));
+  const [minDy, setMinDy] = useState<number>(() => Number(searchParams.get("min_dy") || 0));
+  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get("q") || "");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  /* ─── Rankings Sorting (hydrated from URL) ─── */
+  const [rankingOrderBy, setRankingOrderBy] = useState<string>(
+    () => searchParams.get("orderBy") || "patrimonio_liquido"
+  );
+  const [rankingOrder, setRankingOrder] = useState<string>(
+    () => searchParams.get("order") || "desc"
+  );
+  const [rankingPage, setRankingPage] = useState<number>(
+    () => Number(searchParams.get("page") || 0)
+  );
+
+  /* ─── Sync state → URL (replace, no-op for defaults) ─── */
   useEffect(() => {
     const next: Record<string, string> = {};
     if (activeSection !== "overview") next.section = activeSection;
+    if (rankingOrderBy !== "patrimonio_liquido") next.orderBy = rankingOrderBy;
+    if (rankingOrder !== "desc") next.order = rankingOrder;
+    if (rankingPage !== 0) next.page = String(rankingPage);
+    if (selectedSegmento) next.segmento = selectedSegmento;
+    if (selectedTipoGestao) next.tipo_gestao = selectedTipoGestao;
+    if (minPl > 0) next.min_pl = String(minPl);
+    if (minDy > 0) next.min_dy = String(minDy);
+    if (debouncedSearch) next.q = debouncedSearch;
     setSearchParams(next, { replace: true });
-  }, [activeSection, setSearchParams]);
-
-  /* ─── Screener Filters ─── */
-  const [selectedSegmento, setSelectedSegmento] = useState<string | null>(null);
-  const [selectedTipoGestao, setSelectedTipoGestao] = useState<string | null>(null);
-  const [minPl, setMinPl] = useState<number>(0);
-  const [minDy, setMinDy] = useState<number>(0);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const debouncedSearch = useDebouncedValue(searchQuery, 300);
-
-  /* ─── Rankings Sorting ─── */
-  const [rankingOrderBy, setRankingOrderBy] = useState<string>("patrimonio_liquido");
-  const [rankingOrder, setRankingOrder] = useState<string>("desc");
-  const [rankingPage, setRankingPage] = useState<number>(0);
+  }, [
+    activeSection,
+    rankingOrderBy,
+    rankingOrder,
+    rankingPage,
+    selectedSegmento,
+    selectedTipoGestao,
+    minPl,
+    minDy,
+    debouncedSearch,
+    setSearchParams,
+  ]);
 
   /* ─── Data: Overview ─── */
   const { data: overviewData, isLoading: overviewLoading } = useFiiV4Overview();
@@ -579,10 +608,12 @@ export default function FiiHub() {
                         className="flex-1 px-2 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#EC4899]/30 focus:outline-none focus:border-[#EC4899]"
                       >
                         <option value="patrimonio_liquido">PL</option>
-                        <option value="dividend_yield_mes">DY</option>
-                        <option value="rentabilidade_efetiva_mes">Rentab.</option>
+                        <option value="dividend_yield_mes">DY Mês</option>
+                        <option value="rentabilidade_efetiva_mes">Rentab. Efetiva</option>
+                        <option value="rentabilidade_patrimonial_mes">Rentab. Patrim.</option>
                         <option value="nr_cotistas">Cotistas</option>
                         <option value="valor_patrimonial_cota">VP/Cota</option>
+                        <option value="pct_despesas_adm">Despesas Adm.</option>
                       </select>
                       <button
                         onClick={() => setRankingOrder(rankingOrder === "desc" ? "asc" : "desc")}

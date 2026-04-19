@@ -31,7 +31,7 @@ const SECTIONS = [
 
 /** FidcHub Component */
 export default function FidcHub() {
-  /* ─── Deep-linking: section from URL ─── */
+  /* ─── Deep-linking: section + filters/sort from URL (P2-8 URL persistence) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSection = searchParams.get("section") || "overview";
 
@@ -45,25 +45,56 @@ export default function FidcHub() {
 
   const sectionVisible = useCallback((id: string) => visitedSections.has(id), [visitedSections]);
 
-  /* ─── Sync section to URL ─── */
+  /* ─── Screener Filters (hydrated from URL) ─── */
+  const [selectedLastro, setSelectedLastro] = useState<string | null>(
+    () => searchParams.get("lastro") || null
+  );
+  const [minPl, setMinPl] = useState<number>(() => Number(searchParams.get("min_pl") || 0));
+  const [maxInadim, setMaxInadim] = useState<number>(
+    () => Number(searchParams.get("max_inadim") || 100)
+  );
+  const [minSubord, setMinSubord] = useState<number>(
+    () => Number(searchParams.get("min_subord") || 0)
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get("q") || "");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  /* ─── Rankings Sorting (hydrated from URL) ─── */
+  const [rankingOrderBy, setRankingOrderBy] = useState<string>(
+    () => searchParams.get("orderBy") || "vl_pl_total"
+  );
+  const [rankingOrder, setRankingOrder] = useState<string>(
+    () => searchParams.get("order") || "desc"
+  );
+  const [rankingPage, setRankingPage] = useState<number>(
+    () => Number(searchParams.get("page") || 0)
+  );
+
+  /* ─── Sync state → URL (replace, no-op for defaults) ─── */
   useEffect(() => {
     const next: Record<string, string> = {};
     if (activeSection !== "overview") next.section = activeSection;
+    if (rankingOrderBy !== "vl_pl_total") next.orderBy = rankingOrderBy;
+    if (rankingOrder !== "desc") next.order = rankingOrder;
+    if (rankingPage !== 0) next.page = String(rankingPage);
+    if (selectedLastro) next.lastro = selectedLastro;
+    if (minPl > 0) next.min_pl = String(minPl);
+    if (maxInadim < 100) next.max_inadim = String(maxInadim);
+    if (minSubord > 0) next.min_subord = String(minSubord);
+    if (debouncedSearch) next.q = debouncedSearch;
     setSearchParams(next, { replace: true });
-  }, [activeSection, setSearchParams]);
-
-  /* ─── Screener Filters ─── */
-  const [selectedLastro, setSelectedLastro] = useState<string | null>(null);
-  const [minPl, setMinPl] = useState<number>(0);
-  const [maxInadim, setMaxInadim] = useState<number>(100);
-  const [minSubord, setMinSubord] = useState<number>(0);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const debouncedSearch = useDebouncedValue(searchQuery, 300);
-
-  /* ─── Rankings Sorting ─── */
-  const [rankingOrderBy, setRankingOrderBy] = useState<string>("vl_pl_total");
-  const [rankingOrder, setRankingOrder] = useState<string>("desc");
-  const [rankingPage, setRankingPage] = useState<number>(0);
+  }, [
+    activeSection,
+    rankingOrderBy,
+    rankingOrder,
+    rankingPage,
+    selectedLastro,
+    minPl,
+    maxInadim,
+    minSubord,
+    debouncedSearch,
+    setSearchParams,
+  ]);
 
   /* ─── Data: Overview ─── */
   const { data: overviewData } = useFidcV4Overview();
@@ -531,7 +562,10 @@ export default function FidcHub() {
                         <option value="vl_pl_total">PL</option>
                         <option value="indice_subordinacao">Subord.</option>
                         <option value="taxa_inadimplencia">Inadim.</option>
-                        <option value="rentab_senior">Rentab.</option>
+                        <option value="rentab_senior">Rentab. Senior</option>
+                        <option value="rentab_fundo">Rentab. Fundo</option>
+                        <option value="indice_pdd_cobertura">PDD Cobertura</option>
+                        <option value="nr_cedentes">Cedentes</option>
                       </select>
                       <button
                         onClick={() => setRankingOrder(rankingOrder === "desc" ? "asc" : "desc")}

@@ -20,6 +20,7 @@ import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
 import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
+import { FiiPvpPayoutPanel } from "@/components/hub/FiiPvpPayoutPanel";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -615,6 +616,11 @@ export default function FiiLamina() {
                   subtitle="Distribuições mensais (dividend_yield_mes) reportadas ao CVM. Soma anual ≈ yield on cost."
                   accent="#EC4899"
                 />
+              )}
+
+              {/* P2-10 — VP/cota histórico + payout proxy + despesas adm trend */}
+              {monthly.length > 1 && (
+                <FiiPvpPayoutPanel monthly={monthly} accent="#EC4899" />
               )}
 
               {/* Fund-scope narrative (regime + sinais específicos FII) */}

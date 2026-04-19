@@ -38,6 +38,37 @@ export const CompositionSummary = ({ cnpj }: { cnpj: string }) => {
 
   const chartData = useMemo(() => {
     if (!data?.summary) return [];
+    const all = data.summary
+      .filter((s) => s.vl_total > 0)
+      .map((s) => ({
+        name: BLOCO_LABELS[s.bloco] || s.bloco,
+        value: s.vl_total,
+        pct: s.pct_pl,
+        color: BLOCO_COLORS[s.bloco] || "#71717A",
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // P2-11: group into top 5 + "Outros" bucket for cleaner donut reading.
+    // Preserve full granularity in the legend table below via chartDataFull.
+    if (all.length <= 6) return all;
+    const top = all.slice(0, 5);
+    const rest = all.slice(5);
+    const outrosValue = rest.reduce((acc, r) => acc + r.value, 0);
+    const outrosPct = rest.reduce((acc, r) => acc + (r.pct ?? 0), 0);
+    return [
+      ...top,
+      {
+        name: `Outros (${rest.length})`,
+        value: outrosValue,
+        pct: outrosPct,
+        color: "#52525B",
+      },
+    ];
+  }, [data]);
+
+  // Keep the full per-bloco list for the legend/table (no grouping)
+  const chartDataFull = useMemo(() => {
+    if (!data?.summary) return [];
     return data.summary
       .filter((s) => s.vl_total > 0)
       .map((s) => ({
@@ -125,7 +156,7 @@ export const CompositionSummary = ({ cnpj }: { cnpj: string }) => {
               </tr>
             </thead>
             <tbody>
-              {chartData.map((d, i) => (
+              {chartDataFull.map((d, i) => (
                 <tr key={i} className="border-t border-zinc-800/50 hover:bg-[#0B6C3E]/5">
                   <td className="py-1.5 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />

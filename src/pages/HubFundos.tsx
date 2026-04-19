@@ -302,6 +302,69 @@ const ComparadorSection = ({ period }: { period: string }) => {
 
   const isLoading = fundDetails.some((f) => f.isLoading);
 
+  /* P2-7 — CSV export of comparador snapshot.
+   * One row per fund, columns include identification, structural fields,
+   * Fund Score™ pillars + total, and computed risk/return metrics. */
+  const handleExportComparador = () => {
+    const rows = fundDetails
+      .filter((f) => f.data?.meta)
+      .map((f) => {
+        const meta = f.data!.meta!;
+        const cnpj = primaryCnpj(meta);
+        const score = fundScores.find((s) => s.cnpj === cnpj)?.score;
+        const m = f.data?.daily && f.data.daily.length > 5 ? computeFundMetrics(f.data.daily) : null;
+        return {
+          name: fundDisplayName(meta),
+          cnpj: cnpj ? formatCnpj(cnpj) : "",
+          classe: meta.classe_rcvm175 || meta.classe || meta.tp_fundo || "",
+          pl: f.data?.metrics?.latest_pl ?? meta.vl_patrim_liq ?? null,
+          cotistas: meta.nr_cotistas ?? null,
+          taxa_adm: meta.taxa_adm ?? null,
+          taxa_perfm: meta.taxa_perfm ?? null,
+          gestor: meta.gestor_nome || "",
+          condom: meta.condom || "",
+          score_total: score?.score ?? null,
+          score_label: score?.label ?? "",
+          pilar_rentab: score?.pilares?.rentabilidade ?? null,
+          pilar_risco: score?.pilares?.risco ?? null,
+          pilar_liquidez: score?.pilares?.liquidez ?? null,
+          pilar_custos: score?.pilares?.custos ?? null,
+          retorno_anual_pct: m?.return_annualized ?? null,
+          vol_anual_pct: m?.volatility ?? null,
+          sharpe: m?.sharpe ?? null,
+          sortino: m?.sortino ?? null,
+          max_dd_pct: m?.max_drawdown ?? null,
+        };
+      });
+    if (!rows.length) return;
+    exportCsv(
+      rows,
+      [
+        { header: "Nome", accessor: (r) => r.name },
+        { header: "CNPJ", accessor: (r) => r.cnpj },
+        { header: "Classe", accessor: (r) => r.classe },
+        { header: "PL (R$)", accessor: (r) => r.pl ?? "" },
+        { header: "Cotistas", accessor: (r) => r.cotistas ?? "" },
+        { header: "Taxa Adm (%)", accessor: (r) => r.taxa_adm != null ? r.taxa_adm.toFixed(2) : "" },
+        { header: "Taxa Perfm (%)", accessor: (r) => r.taxa_perfm != null ? r.taxa_perfm.toFixed(2) : "" },
+        { header: "Gestor", accessor: (r) => r.gestor },
+        { header: "Condomínio", accessor: (r) => r.condom },
+        { header: "Fund Score", accessor: (r) => r.score_total != null ? r.score_total.toFixed(0) : "" },
+        { header: "Score Label", accessor: (r) => r.score_label },
+        { header: "Pilar Rentabilidade", accessor: (r) => r.pilar_rentab ?? "" },
+        { header: "Pilar Risco", accessor: (r) => r.pilar_risco ?? "" },
+        { header: "Pilar Liquidez", accessor: (r) => r.pilar_liquidez ?? "" },
+        { header: "Pilar Custos", accessor: (r) => r.pilar_custos ?? "" },
+        { header: "Retorno Anualizado (%)", accessor: (r) => r.retorno_anual_pct != null ? r.retorno_anual_pct.toFixed(2) : "" },
+        { header: "Volatilidade Anualizada (%)", accessor: (r) => r.vol_anual_pct != null ? r.vol_anual_pct.toFixed(2) : "" },
+        { header: "Sharpe", accessor: (r) => r.sharpe != null ? r.sharpe.toFixed(2) : "" },
+        { header: "Sortino", accessor: (r) => r.sortino != null ? r.sortino.toFixed(2) : "" },
+        { header: "Max Drawdown (%)", accessor: (r) => r.max_dd_pct != null ? r.max_dd_pct.toFixed(2) : "" },
+      ],
+      csvFilename("fundos", "comparador")
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Selection panel */}
@@ -310,11 +373,17 @@ const ComparadorSection = ({ period }: { period: string }) => {
           <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono">
             Selecione até {MAX_COMPARE} fundos <span className="text-zinc-700">(FIDC, FII, FIP ou regular)</span>
           </h3>
-          {selected.length > 0 && (
-            <button onClick={() => setSelected([])} className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono">
-              Limpar ({selected.length})
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <ExportButton
+              onClick={handleExportComparador}
+              disabled={fundDetails.filter((f) => f.data?.meta).length < 1}
+            />
+            {selected.length > 0 && (
+              <button onClick={() => setSelected([])} className="text-[9px] text-zinc-600 hover:text-zinc-400 font-mono">
+                Limpar ({selected.length})
+              </button>
+            )}
+          </div>
         </div>
         <div className="relative mb-2">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
@@ -612,23 +681,43 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
           {results && results.results.length === 0 && (
             <InlineEmpty text="Nenhum fundo encontrado para esta busca." />
           )}
-          {results?.results.map((f) => (
-            <button
-              key={f.cnpj_fundo}
-              onClick={() => { onSelectFund(f.cnpj_fundo_classe || f.cnpj_fundo); setOpen(false); setQuery(""); }}
-              className="w-full text-left px-3 py-2 hover:bg-[#0B6C3E]/5 border-b border-[#141414] last:border-0 transition-colors"
-            >
-              <div className="flex items-center gap-1.5">
-                <ClasseBadge classe={f.classe_rcvm175 || f.classe || f.tp_fundo} size="sm" />
-                <span className="text-[10px] text-zinc-300 font-mono truncate">{f.denom_social}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5 text-[8px] text-zinc-600 font-mono">
-                <span>{formatCnpj(f.cnpj_fundo_classe || f.cnpj_fundo)}</span>
-                {f.gestor_nome && <span className="truncate max-w-[120px]">{f.gestor_nome}</span>}
-                <span className="ml-auto">{formatPL(f.vl_patrim_liq)}</span>
-              </div>
-            </button>
-          ))}
+          {results?.results.map((f) => {
+            const classeLabel = (f.classe_rcvm175 || f.classe || f.tp_fundo || "").toUpperCase();
+            const isPremium = classeLabel.includes("FIDC") || classeLabel.includes("FII") || classeLabel === "FIP";
+            return (
+              <button
+                key={f.cnpj_fundo}
+                onClick={() => { onSelectFund(f.cnpj_fundo_classe || f.cnpj_fundo); setOpen(false); setQuery(""); }}
+                className="w-full text-left px-3 py-2 hover:bg-[#0B6C3E]/5 border-b border-[#141414] last:border-0 transition-colors"
+              >
+                {/* Row 1: badge + name + PL on the right */}
+                <div className="flex items-center gap-1.5">
+                  <ClasseBadge classe={f.classe_rcvm175 || f.classe || f.tp_fundo} size="sm" />
+                  <span className="text-[10px] text-zinc-200 font-mono truncate flex-1">{f.denom_social}</span>
+                  {isPremium && (
+                    <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20 uppercase">Pro</span>
+                  )}
+                  <span className="text-[10px] text-emerald-400/80 font-mono whitespace-nowrap">
+                    {formatPL(f.vl_patrim_liq)}
+                  </span>
+                </div>
+                {/* Row 2: CNPJ · Gestor · Admin */}
+                <div className="flex items-center gap-2 mt-0.5 text-[8px] text-zinc-600 font-mono">
+                  <span className="text-zinc-500">{formatCnpj(f.cnpj_fundo_classe || f.cnpj_fundo)}</span>
+                  {f.gestor_nome && (
+                    <span className="truncate max-w-[140px]" title={f.gestor_nome}>
+                      <span className="text-zinc-700">·</span> {f.gestor_nome}
+                    </span>
+                  )}
+                  {f.admin_nome && f.admin_nome !== f.gestor_nome && (
+                    <span className="truncate max-w-[120px] hidden sm:inline" title={f.admin_nome}>
+                      <span className="text-zinc-700">·</span> {f.admin_nome}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
