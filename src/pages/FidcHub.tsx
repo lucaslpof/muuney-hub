@@ -20,6 +20,7 @@ import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SkeletonKPI, SkeletonTableRow } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
+import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
@@ -528,47 +529,30 @@ export default function FidcHub() {
                 className="space-y-6"
               >
 
-                {/* Segment Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {segments.length > 0 ? (
-                    segments.map((seg, idx) => (
-                      <motion.div
+                {/* Segment Story Cards (P1-7) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {overviewData?.by_lastro && overviewData.by_lastro.length > 0 ? (
+                    overviewData.by_lastro.map((seg, idx) => (
+                      <SegmentStoryCard
                         key={seg.lastro}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all cursor-pointer"
-                        onClick={() => {
+                        variant="fidc"
+                        segmentKey={seg.lastro}
+                        count={seg.count}
+                        pl={seg.pl}
+                        avgMetric={seg.avg_inadim ?? null}
+                        color={COLORS[idx % COLORS.length]}
+                        accent="#0B6C3E"
+                        delayMs={idx * 50}
+                        onDrillDown={() => {
                           setSelectedLastro(seg.lastro);
                           setActiveSection("explorar");
                           setVisitedSections((s) => new Set(s).add("explorar"));
                           sectionRefs.current["explorar"]?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-semibold text-zinc-300">{seg.lastro}</h3>
-                          </div>
-                          <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: COLORS[segments.indexOf(seg) % COLORS.length] }}
-                          />
-                        </div>
-
-                        <div className="space-y-2 text-[9px] font-mono">
-                          <div className="flex justify-between">
-                            <span className="text-zinc-600">Fundos</span>
-                            <span className="text-zinc-300 font-semibold">{seg.count}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-zinc-600">PL Agregado</span>
-                            <span className="text-zinc-300 font-semibold">{formatPL(seg.pl)}</span>
-                          </div>
-                        </div>
-                      </motion.div>
+                      />
                     ))
                   ) : (
-                    <div className="col-span-3 text-center text-zinc-600 py-8">
+                    <div className="col-span-full text-center text-zinc-600 py-8">
                       Sem dados de segmentos
                     </div>
                   )}
