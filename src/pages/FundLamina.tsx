@@ -13,10 +13,17 @@ import {
 import { useHubSeries } from "@/hooks/useHubData";
 import { computeFundMetrics, fmtMetric, fmtMetricSigned, metricColor } from "@/lib/fundMetrics";
 import { computeFundScore } from "@/lib/fundScore";
+import { computeRollingReturnsFromDaily } from "@/lib/rollingReturns";
+import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
+import { computeMonthlyGridFromDaily, summarizeDrawdown } from "@/lib/drawdown";
+import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
+import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ClasseBadge, HierarquiaBadges } from "@/lib/rcvm175";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { FundScoreCard } from "@/components/hub/FundScoreCard";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { FundInsightsSection } from "@/components/hub/InsightsFeed";
+import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import {
   CompositionSummary, CompositionDetailTable,
 } from "@/components/hub/FundCompositionPanel";
@@ -70,24 +77,6 @@ function computeCDIIndex(cdiDaily: Array<{ date?: string; value?: number | null 
   return result;
 }
 
-/** KPI Card */
-const KPICard = ({
-  label, value, unit = "", color = "text-zinc-400",
-}: {
-  label: string; value: string | number; unit?: string; color?: string;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3"
-  >
-    <div className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-1">{label}</div>
-    <div className={`text-lg font-semibold font-mono ${color}`}>
-      {value}{unit && <span className="text-sm ml-0.5">{unit}</span>}
-    </div>
-  </motion.div>
-);
-
 /** Main Fund Lamina Page */
 export default function FundLamina() {
   const { slug } = useParams<{ slug: string }>();
@@ -131,6 +120,22 @@ export default function FundLamina() {
     try { return computeFundScore(meta, daily); } catch { return null; }
   }, [meta, daily]);
 
+  // Rolling returns across standard windows (1m, 3m, 6m, 12m, 24m, 36m)
+  const rollingRows = useMemo(() => {
+    if (!daily || daily.length < 5) return [];
+    try { return computeRollingReturnsFromDaily(daily); } catch { return []; }
+  }, [daily]);
+
+  // Drawdown calendar (monthly returns aggregated from daily quotas)
+  const drawdownCells = useMemo(() => {
+    if (!daily || daily.length < 20) return [];
+    try { return computeMonthlyGridFromDaily(daily); } catch { return []; }
+  }, [daily]);
+  const drawdownSummary = useMemo(() => {
+    if (!drawdownCells.length) return undefined;
+    try { return summarizeDrawdown(drawdownCells); } catch { return undefined; }
+  }, [drawdownCells]);
+
   // Index series for chart (fund + CDI benchmark)
   const indexSeries = useMemo(() => {
     const fundIndex = computeIndexSeries(daily);
@@ -161,6 +166,44 @@ export default function FundLamina() {
 
     return { fundReturn, cdiReturn, excess };
   }, [indexSeries]);
+
+  // Per-fund narrative context (regime + signals tailored to this fund)
+  const fundNarrativeContext = useMemo<FundScopeContext | null>(() => {
+    if (!meta) return null;
+    // Prefer 12m rolling row for annualized context, fallback to longest available
+    const twelveMonth = rollingRows.find((r) => r.months === 12 && r.returnPct != null);
+    const longest = [...rollingRows].reverse().find((r) => r.returnPct != null);
+    const ref = twelveMonth ?? longest;
+
+    // PL trend: compare first vs last daily PL
+    let plTrend: "up" | "down" | "flat" | null = null;
+    if (daily.length > 5) {
+      const firstPL = daily[0]?.vl_patrim_liq ?? null;
+      const lastPL = daily[daily.length - 1]?.vl_patrim_liq ?? null;
+      if (firstPL && lastPL) {
+        const delta = (lastPL - firstPL) / firstPL;
+        plTrend = delta > 0.02 ? "up" : delta < -0.02 ? "down" : "flat";
+      }
+    }
+
+    return {
+      classe: meta.classe_rcvm175 ?? null,
+      nome: fundDisplayName(meta),
+      returnPct: ref?.returnPct ?? metrics?.return_period ?? null,
+      annualizedPct: ref?.annualizedPct ?? metrics?.return_annualized ?? null,
+      cdiPct: ref?.cdiPct ?? null,
+      vsCdiPP: ref?.vsCdiPct ?? vsCDIMetric?.excess ?? null,
+      volAnnualPct: metrics?.volatility ?? null,
+      sharpe: metrics?.sharpe ?? null,
+      sortino: metrics?.sortino ?? null,
+      maxDrawdownPct: metrics?.max_drawdown ?? null,
+      plBRL: meta.vl_patrim_liq ?? null,
+      plTrend,
+      taxaAdmPct: meta.taxa_adm ?? null,
+      selicMeta: 14.15,
+      ipcaAccum: 5.0,
+    };
+  }, [meta, daily, metrics, rollingRows, vsCDIMetric]);
 
   // Net Flow Proxy: ΔPL - (rentab_dia × PL_anterior) — estimates net inflows/outflows
   const netFlowData = useMemo(() => {
@@ -279,6 +322,12 @@ export default function FundLamina() {
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <ClasseBadge classe={meta.classe_rcvm175 || meta.classe || meta.tp_fundo} size="md" />
                 <span className="text-[8px] text-zinc-700">{formatCnpj(primaryCnpj(meta))}</span>
+                <DataAsOfStamp
+                  date={daily.length > 0 ? daily[daily.length - 1]?.dt_comptc : null}
+                  cadence="daily"
+                  source="CVM Cota Diária"
+                  compact
+                />
               </div>
             </div>
             {score && <span className="text-sm font-semibold font-mono px-2 py-1 rounded bg-[#0B6C3E]/10 text-[#0B6C3E]">
@@ -334,36 +383,47 @@ export default function FundLamina() {
               <h2 className="text-sm font-semibold text-zinc-300">Resumo</h2>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {/* KPI Cards — Risco & Retorno */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <KPICard
-                label="Retorno"
+                label="Retorno (a.a.)"
                 value={metrics?.return_annualized != null ? fmtMetricSigned(metrics.return_annualized) : "—"}
                 unit="%"
                 color={metricColor(metrics?.return_annualized ?? null, true)}
+                sublabel="anualizado"
               />
               <KPICard
                 label="Volatilidade"
                 value={metrics?.volatility != null ? fmtMetric(metrics.volatility) : "—"}
                 unit="%"
                 color="text-orange-400"
+                sublabel="anualizada"
               />
               <KPICard
                 label="Sharpe"
                 value={metrics?.sharpe != null ? fmtMetric(metrics.sharpe, 2) : "—"}
                 color={metrics?.sharpe != null && metrics.sharpe >= 1.0 ? "text-emerald-400" : "text-orange-400"}
+                sublabel="vs CDI / vol"
+              />
+              <KPICard
+                label="Sortino"
+                value={metrics?.sortino != null ? fmtMetric(metrics.sortino, 2) : "—"}
+                color={metrics?.sortino != null && metrics.sortino >= 1.0 ? "text-emerald-400" : "text-orange-400"}
+                sublabel="vs risco baixista"
               />
               <KPICard
                 label="Max Drawdown"
                 value={metrics?.max_drawdown != null ? fmtMetric(metrics.max_drawdown) : "—"}
                 unit="%"
                 color="text-red-400"
+                sublabel="pior queda"
               />
               <KPICard
                 label="vs CDI"
                 value={vsCDIMetric?.excess != null ? fmtMetricSigned(vsCDIMetric.excess) : "—"}
                 unit="%"
                 color={vsCDIMetric?.excess != null && vsCDIMetric.excess >= 0 ? "text-emerald-400" : "text-red-400"}
+                sublabel="excesso período"
               />
             </div>
 
@@ -424,6 +484,28 @@ export default function FundLamina() {
               <TrendingUp className="w-4 h-4 text-[#0B6C3E]" />
               <h2 className="text-sm font-semibold text-zinc-300">Performance</h2>
             </div>
+
+            {/* Rolling Returns Grid — 1m/3m/6m/12m/24m/36m */}
+            <RollingReturnsGrid
+              rows={rollingRows}
+              subtitle="Retornos acumulados e anualizados para janelas de 1 a 36 meses."
+              accent="#0B6C3E"
+            />
+
+            {/* Drawdown Heatmap — calendário mensal ano × mês */}
+            {drawdownCells.length > 0 && (
+              <DrawdownHeatmap
+                cells={drawdownCells}
+                summary={drawdownSummary}
+                subtitle="Retorno mensal e drawdown corrente a partir da cota diária."
+                accent="#0B6C3E"
+              />
+            )}
+
+            {/* Fund-scope narrative (regime + sinais específicos) */}
+            {fundNarrativeContext && (
+              <FundNarrativePanel scope="fund" fundContext={fundNarrativeContext} />
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Metrics Table */}

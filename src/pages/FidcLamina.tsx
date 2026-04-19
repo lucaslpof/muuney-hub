@@ -12,8 +12,15 @@ import {
   type FidcMonthlyItem,
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
+import { computeMonthlyRiskMetrics } from "@/lib/monthlyRiskMetrics";
+import { computeRollingReturnsFromMonthly } from "@/lib/rollingReturns";
+import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
+import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
+import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
+import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -121,6 +128,103 @@ export default function FidcLamina() {
   const rentabilidadeSeries = useMemo(() => computeRentabilidadeSeries(monthly), [monthly]);
   const capitalSeries = useMemo(() => computeCapitalSeries(monthly), [monthly]);
   const subordinacaoSeries = useMemo(() => computeSubordinacaoSeries(monthly), [monthly]);
+
+  // Cleaned monthly fund rentabilidade (shared by risk metrics + rolling returns)
+  const cleanedMonthlyReturns = useMemo(
+    () =>
+      monthly
+        .map((m) => cleanRentab(m.rentab_fundo))
+        .filter((r): r is number => r != null),
+    [monthly],
+  );
+
+  // Risk metrics computed from cleaned monthly fund rentabilidade
+  const riskMetrics = useMemo(() => {
+    if (cleanedMonthlyReturns.length < 3) return null;
+    try {
+      return computeMonthlyRiskMetrics(cleanedMonthlyReturns);
+    } catch {
+      return null;
+    }
+  }, [cleanedMonthlyReturns]);
+
+  // Rolling returns across 1m/3m/6m/12m/24m/36m windows
+  const rollingRows = useMemo(() => {
+    if (cleanedMonthlyReturns.length < 1) return [];
+    try {
+      return computeRollingReturnsFromMonthly(cleanedMonthlyReturns);
+    } catch {
+      return [];
+    }
+  }, [cleanedMonthlyReturns]);
+
+  // Drawdown calendar (ano × mês) — from cleaned monthly rentab_fundo
+  const drawdownCells = useMemo(() => {
+    if (!monthly || monthly.length < 3) return [];
+    try {
+      const dated = monthly
+        .map((m) => {
+          const r = cleanRentab(m.rentab_fundo);
+          return m.dt_comptc ? { dt_comptc: m.dt_comptc, returnPct: r } : null;
+        })
+        .filter((x): x is { dt_comptc: string; returnPct: number | null } => x !== null);
+      return computeMonthlyGridFromMonthly(dated);
+    } catch {
+      return [];
+    }
+  }, [monthly]);
+  const drawdownSummary = useMemo(() => {
+    if (!drawdownCells.length) return undefined;
+    try { return summarizeDrawdown(drawdownCells); } catch { return undefined; }
+  }, [drawdownCells]);
+
+  // Per-fund narrative context (FIDC regime + signals)
+  const fundNarrativeContext = useMemo<FundScopeContext | null>(() => {
+    if (!meta) return null;
+    const twelveMonth = rollingRows.find((r) => r.months === 12 && r.returnPct != null);
+    const longest = [...rollingRows].reverse().find((r) => r.returnPct != null);
+    const ref = twelveMonth ?? longest;
+
+    // PL trend from monthly series (FIDC uses vl_pl_total)
+    let plTrend: "up" | "down" | "flat" | null = null;
+    let cotistasTrend: "up" | "down" | "flat" | null = null;
+    const sumCotistas = (m: FidcMonthlyItem) =>
+      (m.nr_cotistas_senior ?? 0) + (m.nr_cotistas_subordinada ?? 0);
+    if (monthly.length >= 2) {
+      const firstPL = monthly[0]?.vl_pl_total ?? null;
+      const lastPL = monthly[monthly.length - 1]?.vl_pl_total ?? null;
+      if (firstPL && lastPL) {
+        const d = (lastPL - firstPL) / firstPL;
+        plTrend = d > 0.02 ? "up" : d < -0.02 ? "down" : "flat";
+      }
+      const firstCot = sumCotistas(monthly[0]);
+      const lastCot = sumCotistas(monthly[monthly.length - 1]);
+      if (firstCot && lastCot) {
+        const d = (lastCot - firstCot) / firstCot;
+        cotistasTrend = d > 0.02 ? "up" : d < -0.02 ? "down" : "flat";
+      }
+    }
+
+    return {
+      classe: "FIDC",
+      nome: meta.denom_social ?? null,
+      returnPct: ref?.returnPct ?? null,
+      annualizedPct: ref?.annualizedPct ?? riskMetrics?.return_annualized ?? null,
+      cdiPct: ref?.cdiPct ?? null,
+      vsCdiPP: ref?.vsCdiPct ?? null,
+      volAnnualPct: riskMetrics?.volatility ?? null,
+      sharpe: riskMetrics?.sharpe ?? null,
+      sortino: riskMetrics?.sortino ?? null,
+      maxDrawdownPct: riskMetrics?.max_drawdown ?? null,
+      plBRL: latest?.vl_pl_total ?? null,
+      plTrend,
+      cotistasTrend,
+      fidcSubordPct: latest?.indice_subordinacao ?? null,
+      fidcInadimPct: latest?.taxa_inadimplencia ?? null,
+      selicMeta: 14.15,
+      ipcaAccum: 5.0,
+    };
+  }, [meta, monthly, latest, riskMetrics, rollingRows]);
 
   // Indexed chart series (fund + CDI benchmark)
   const indexedSeries = useMemo(() => {
@@ -245,6 +349,12 @@ export default function FidcLamina() {
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <ClasseBadge classe="FIDC" size="md" />
                 <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
+                <DataAsOfStamp
+                  date={latest?.dt_comptc}
+                  cadence="monthly"
+                  source="CVM Informe FIDC"
+                  compact
+                />
               </div>
             </div>
           </div>
@@ -491,6 +601,68 @@ export default function FidcLamina() {
                       />
                     </div>
                   )}
+
+                  {/* Risco & Retorno — derived from monthly rentabilidade */}
+                  {riskMetrics && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      <KPICard
+                        label="Retorno (a.a.)"
+                        value={riskMetrics.return_annualized != null ? riskMetrics.return_annualized.toFixed(2) : "—"}
+                        unit="%"
+                        color={riskMetrics.return_annualized != null && riskMetrics.return_annualized >= 0 ? "text-emerald-400" : "text-red-400"}
+                        sublabel="anualizado"
+                      />
+                      <KPICard
+                        label="Volatilidade"
+                        value={riskMetrics.volatility != null ? riskMetrics.volatility.toFixed(2) : "—"}
+                        unit="%"
+                        color="text-orange-400"
+                        sublabel="mensal → anual"
+                      />
+                      <KPICard
+                        label="Sharpe"
+                        value={riskMetrics.sharpe != null ? riskMetrics.sharpe.toFixed(2) : "—"}
+                        color={riskMetrics.sharpe != null && riskMetrics.sharpe >= 1.0 ? "text-emerald-400" : "text-orange-400"}
+                        sublabel="vs CDI / vol"
+                      />
+                      <KPICard
+                        label="Sortino"
+                        value={riskMetrics.sortino != null ? riskMetrics.sortino.toFixed(2) : "—"}
+                        color={riskMetrics.sortino != null && riskMetrics.sortino >= 1.0 ? "text-emerald-400" : "text-orange-400"}
+                        sublabel="vs risco baixista"
+                      />
+                      <KPICard
+                        label="Max DD"
+                        value={riskMetrics.max_drawdown != null ? riskMetrics.max_drawdown.toFixed(2) : "—"}
+                        unit="%"
+                        color="text-red-400"
+                        sublabel="pior queda"
+                      />
+                    </div>
+                  )}
+
+                  {/* Rolling Returns Grid — 1m/3m/6m/12m/24m/36m */}
+                  <RollingReturnsGrid
+                    rows={rollingRows}
+                    subtitle="Retornos acumulados e anualizados — base informes mensais CVM."
+                    accent="#F97316"
+                  />
+
+                  {/* Drawdown Heatmap — calendário mensal ano × mês */}
+                  {drawdownCells.length > 0 && (
+                    <DrawdownHeatmap
+                      cells={drawdownCells}
+                      summary={drawdownSummary}
+                      subtitle="Rentabilidade mensal do fundo e drawdown corrente a partir da cota."
+                      accent="#F97316"
+                    />
+                  )}
+
+                  {/* Fund-scope narrative (regime + sinais específicos FIDC) */}
+                  {fundNarrativeContext && (
+                    <FundNarrativePanel scope="fund" fundContext={fundNarrativeContext} />
+                  )}
+
                   <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
                     <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Rentabilidade Indexada (Base 100)</h3>
                     <ResponsiveContainer width="100%" height={280}>

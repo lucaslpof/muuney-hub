@@ -43,14 +43,15 @@ import { FIPNarrativePanel } from "@/components/hub/FIPNarrativePanel";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { InsightsFeed } from "@/components/hub/InsightsFeed";
-import { RequireTier, BlurredPreview } from "@/components/hub/RequireTier";
+import { RequireTier } from "@/components/hub/RequireTier";
 import { SkeletonTableRow, SkeletonSection, SkeletonPage } from "@/components/hub/SkeletonLoader";
 import { InlineEmpty, EmptyState } from "@/components/hub/EmptyState";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { FundsLandingHero } from "@/components/hub/FundsLandingHero";
 import {
   LayoutGrid, Trophy, Wallet, PieChart, GitCompareArrows,
   Brain, Search, X, BarChart3, Activity, Shield, Layers,
-  Building2, Landmark, Users, ArrowRight,
+  Building2, Landmark, Users, ArrowRight, ArrowUpRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -1027,17 +1028,23 @@ const HubFundos = () => {
         )}
       </AnimatePresence>
 
-      {/* ─── Main layout: Sidebar + Content ─── */}
-      <div className="flex gap-6">
-        {/* Sidebar */}
-        <MacroSidebar
-          items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
-          activeId={activeSection}
-          onNavigate={scrollTo}
-        />
+      {/* ─── Main layout: full-width (section nav in top bar via context) ─── */}
+      <MacroSidebar
+        items={SECTIONS.map(s => ({ id: s.id, label: s.label, icon: s.icon }))}
+        activeId={activeSection}
+        onNavigate={scrollTo}
+      />
+      <div>
+        <div className="min-w-0 space-y-8">
 
-        {/* Scrollable content */}
-        <div className="flex-1 min-w-0 space-y-8">
+          {/* Landing hero — atalhos para os 4 pilares do módulo Fundos */}
+          <FundsLandingHero
+            highlight={
+              stats?.total_funds
+                ? `${(stats.total_funds / 1000).toFixed(1)}k classes · RCVM 175`
+                : undefined
+            }
+          />
 
           {/* ════════════════════════════════════════════════
               SECTION 1: Visão Geral
@@ -1301,14 +1308,30 @@ const HubFundos = () => {
                     </div>
                   )}
 
-                  {/* Comparador (Pro — cross-class até 6 fundos) */}
+                  {/* Comparador cross-class (até 6 fundos) — desbloqueado, com chip Pro */}
                   <div>
-                    <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
-                      <GitCompareArrows className="w-3 h-3 text-[#0B6C3E]" /> Comparador de Fundos
-                    </h3>
-                    <BlurredPreview feature="o comparador cross-class">
-                      <ComparadorSection period={period} />
-                    </BlurredPreview>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <h3 className="text-[11px] text-zinc-400 uppercase tracking-wider font-mono flex items-center gap-2">
+                        <GitCompareArrows className="w-3 h-3 text-[#0B6C3E]" />
+                        Comparador de Fundos
+                        <span className="text-[8px] font-mono bg-[#0B6C3E]/10 text-[#0B6C3E] border border-[#0B6C3E]/30 rounded px-1.5 py-0.5 normal-case tracking-normal">
+                          PRO
+                        </span>
+                      </h3>
+                      <Link
+                        to="/upgrade"
+                        className="text-[9px] font-mono text-zinc-500 hover:text-[#0B6C3E] transition-colors flex items-center gap-1"
+                      >
+                        Conheça o plano Pro
+                        <ArrowUpRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 mb-3 max-w-2xl">
+                      Compare até <strong className="text-zinc-300">6 fundos</strong> de qualquer classe (RF, Multi, Ações, FIDC, FII, FIP) com Fund Score™
+                      lado a lado. Disponível para todos os assinantes Pro — convidados beta acessam
+                      sem restrição.
+                    </p>
+                    <ComparadorSection period={period} />
                   </div>
                 </div>
               ) : (

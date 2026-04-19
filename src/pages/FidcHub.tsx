@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useDebouncedValue } from "@/hooks/useDebounce";
-import { LayoutGrid, Zap, Search, TrendingUp, BarChart3 } from "lucide-react";
+import { LayoutGrid, Zap, Search, BarChart3 } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { HubSEO } from "@/lib/seo";
 import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
@@ -11,7 +12,7 @@ import { exportCsv, csvFilename } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
 
 import {
-  useFidcV4Overview, useFidcV4Rankings, useFidcSegments, useFidcSearch,
+  useFidcV4Overview, useFidcV4Rankings, useFidcSegments,
   formatPL,
 } from "@/hooks/useHubFundos";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
@@ -22,8 +23,7 @@ import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
-  { id: "rankings", label: "Rankings", icon: TrendingUp },
-  { id: "screener", label: "Screener", icon: Search },
+  { id: "explorar", label: "Explorar", icon: Search },
   { id: "segmentos", label: "Segmentos", icon: BarChart3 },
 ];
 
@@ -70,7 +70,7 @@ export default function FidcHub() {
   const { data: segmentsData } = useFidcSegments();
   const segments = segmentsData?.segments || [];
 
-  /* ─── Data: Rankings (lazy) ─── */
+  /* ─── Data: Rankings (lazy) — unified for Explorar section ─── */
   const { data: rankingsData, isLoading: rankingsLoading } = useFidcV4Rankings(
     {
       orderBy: rankingOrderBy,
@@ -82,17 +82,10 @@ export default function FidcHub() {
       maxInadim: maxInadim < 100 ? maxInadim : undefined,
       minSubord: minSubord > 0 ? minSubord : undefined,
       search: debouncedSearch || undefined,
-      enabled: sectionVisible("rankings") || sectionVisible("screener"),
+      enabled: sectionVisible("explorar"),
     }
   );
   const rankingsFunds = rankingsData?.funds || [];
-
-  /* ─── Data: Search ─── */
-  const { data: searchData } = useFidcSearch(debouncedSearch, {
-    limit: 10,
-    enabled: debouncedSearch.length >= 2 && sectionVisible("screener"),
-  });
-  const searchResults = searchData?.results || [];
 
   /* ─── Pie Chart Data ─── */
   const pieData = useMemo(() => {
@@ -172,7 +165,7 @@ export default function FidcHub() {
         }}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1a1a1a] px-4 md:px-8 py-4">
           <Breadcrumbs
@@ -186,7 +179,14 @@ export default function FidcHub() {
             <BarChart3 className="w-5 h-5 text-[#0B6C3E]" />
             Módulo FIDC
           </h1>
-          <p className="text-[9px] text-zinc-500 mt-2 font-mono">Crédito. Inovação. Inteligência.</p>
+          <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+            <p className="text-[9px] text-zinc-500 font-mono">Crédito. Inovação. Inteligência.</p>
+            <DataAsOfStamp
+              date={overviewData?.date}
+              cadence="monthly"
+              source="CVM Informe FIDC"
+            />
+          </div>
         </div>
 
         {/* Main Content */}
@@ -283,25 +283,35 @@ export default function FidcHub() {
             </SectionErrorBoundary>
           </MacroSection>
 
-          {/* === SECTION 2: Rankings === */}
-          <MacroSection ref={(el) => { sectionRefs.current["rankings"] = el; }} id="rankings" title="Rankings" icon={TrendingUp}>
-            <SectionErrorBoundary sectionName="Rankings">
+          {/* === SECTION 2: Explorar (Rankings + Screener unificados) === */}
+          <MacroSection ref={(el) => { sectionRefs.current["explorar"] = el; }} id="explorar" title="Explorar" icon={Search}>
+            <SectionErrorBoundary sectionName="Explorar FIDC">
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("rankings"))}
+                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("explorar"))}
                 className="space-y-6"
               >
-                {/* Export */}
-                <div className="flex justify-end mb-2">
+                {/* Top bar: result count + export */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="text-[9px] text-zinc-500 font-mono">
+                    {rankingsData?.count != null ? (
+                      <>
+                        <span className="text-zinc-300 font-semibold">{rankingsData.count}</span>{" "}
+                        {rankingsData.count === 1 ? "FIDC encontrado" : "FIDCs encontrados"}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
                   <ExportButton onClick={handleExportRankings} label="CSV" disabled={rankingsFunds.length === 0} />
                 </div>
 
-                {/* Segment Filter */}
-                <div className="flex gap-3 flex-wrap">
+                {/* Segment chips (lastro filter) */}
+                <div className="flex gap-2 flex-wrap">
                   <button
-                    onClick={() => setSelectedLastro(null)}
-                    className={`px-4 py-2 text-[9px] font-mono rounded border transition-all ${
+                    onClick={() => { setSelectedLastro(null); setRankingPage(0); }}
+                    className={`px-3 py-1.5 text-[9px] font-mono rounded border transition-all ${
                       selectedLastro === null
                         ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
                         : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
@@ -312,8 +322,8 @@ export default function FidcHub() {
                   {segments.map((seg) => (
                     <button
                       key={seg.lastro}
-                      onClick={() => setSelectedLastro(seg.lastro)}
-                      className={`px-4 py-2 text-[9px] font-mono rounded border transition-all ${
+                      onClick={() => { setSelectedLastro(seg.lastro); setRankingPage(0); }}
+                      className={`px-3 py-1.5 text-[9px] font-mono rounded border transition-all ${
                         selectedLastro === seg.lastro
                           ? "bg-[#0B6C3E] text-white border-[#0B6C3E]"
                           : "bg-[#111111] text-zinc-400 border-[#1a1a1a] hover:border-[#0B6C3E]/30"
@@ -324,30 +334,93 @@ export default function FidcHub() {
                   ))}
                 </div>
 
-                {/* Sorting Controls */}
-                <div className="flex gap-3 items-center">
-                  <select
-                    value={rankingOrderBy}
-                    onChange={(e) => {
-                      setRankingOrderBy(e.target.value);
-                      setRankingPage(0);
-                    }}
-                    className="px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 focus:outline-none focus:border-[#0B6C3E]"
-                  >
-                    <option value="vl_pl_total">PL Total</option>
-                    <option value="indice_subordinacao">Subordinação</option>
-                    <option value="taxa_inadimplencia">Inadimplência</option>
-                    <option value="rentab_senior">Rentab. Senior</option>
-                  </select>
-                  <button
-                    onClick={() => setRankingOrder(rankingOrder === "desc" ? "asc" : "desc")}
-                    className="px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 transition-colors"
-                  >
-                    {rankingOrder === "desc" ? "↓ DESC" : "↑ ASC"}
-                  </button>
+                {/* Unified filter grid: search + numeric filters + sort */}
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {/* Search (2 cols) */}
+                  <div className="col-span-2">
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-1.5 font-mono">
+                      Buscar por Nome
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); setRankingPage(0); }}
+                      placeholder="Digite o nome do FIDC..."
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Min PL */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-1.5 font-mono">
+                      PL Mín.
+                    </label>
+                    <input
+                      type="number"
+                      value={minPl}
+                      onChange={(e) => { setMinPl(Number(e.target.value)); setRankingPage(0); }}
+                      placeholder="mi"
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Max Inadimplência */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-1.5 font-mono">
+                      Max Inadim %
+                    </label>
+                    <input
+                      type="number"
+                      value={maxInadim}
+                      onChange={(e) => { setMaxInadim(Number(e.target.value)); setRankingPage(0); }}
+                      min={0}
+                      max={100}
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Min Subordinação */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-1.5 font-mono">
+                      Min Subord %
+                    </label>
+                    <input
+                      type="number"
+                      value={minSubord}
+                      onChange={(e) => { setMinSubord(Number(e.target.value)); setRankingPage(0); }}
+                      min={0}
+                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
+                    />
+                  </div>
+
+                  {/* Sort */}
+                  <div>
+                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-1.5 font-mono">
+                      Ordenar
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={rankingOrderBy}
+                        onChange={(e) => { setRankingOrderBy(e.target.value); setRankingPage(0); }}
+                        className="flex-1 px-2 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 focus:outline-none focus:border-[#0B6C3E]"
+                      >
+                        <option value="vl_pl_total">PL</option>
+                        <option value="indice_subordinacao">Subord.</option>
+                        <option value="taxa_inadimplencia">Inadim.</option>
+                        <option value="rentab_senior">Rentab.</option>
+                      </select>
+                      <button
+                        onClick={() => setRankingOrder(rankingOrder === "desc" ? "asc" : "desc")}
+                        className="px-2 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 hover:border-[#0B6C3E]/30 transition-colors"
+                        title={rankingOrder === "desc" ? "Descendente" : "Ascendente"}
+                      >
+                        {rankingOrder === "desc" ? "↓" : "↑"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Rankings Table */}
+                {/* Unified results table */}
                 <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-[9px] font-mono">
@@ -445,116 +518,6 @@ export default function FidcHub() {
             </SectionErrorBoundary>
           </MacroSection>
 
-          {/* === SECTION 3: Screener === */}
-          <MacroSection ref={(el) => { sectionRefs.current["screener"] = el; }} id="screener" title="Screener" icon={Search}>
-            <SectionErrorBoundary sectionName="Screener">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                onViewportEnter={() => setVisitedSections((s) => new Set(s).add("screener"))}
-                className="space-y-6"
-              >
-                {/* Filters */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* Search */}
-                  <div className="col-span-2">
-                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
-                      Buscar por Nome
-                    </label>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setRankingPage(0);
-                      }}
-                      placeholder="Digite o nome do FIDC..."
-                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
-                    />
-                  </div>
-
-                  {/* Min PL */}
-                  <div>
-                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
-                      PL Mínimo
-                    </label>
-                    <input
-                      type="number"
-                      value={minPl}
-                      onChange={(e) => {
-                        setMinPl(Number(e.target.value));
-                        setRankingPage(0);
-                      }}
-                      placeholder="em milhões"
-                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
-                    />
-                  </div>
-
-                  {/* Max Inadimplência */}
-                  <div>
-                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
-                      Max Inadimplência %
-                    </label>
-                    <input
-                      type="number"
-                      value={maxInadim}
-                      onChange={(e) => {
-                        setMaxInadim(Number(e.target.value));
-                        setRankingPage(0);
-                      }}
-                      min={0}
-                      max={100}
-                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
-                    />
-                  </div>
-
-                  {/* Min Subordinação */}
-                  <div>
-                    <label className="block text-[9px] text-zinc-600 uppercase tracking-wider mb-2 font-mono">
-                      Min Subordinação %
-                    </label>
-                    <input
-                      type="number"
-                      value={minSubord}
-                      onChange={(e) => {
-                        setMinSubord(Number(e.target.value));
-                        setRankingPage(0);
-                      }}
-                      min={0}
-                      className="w-full px-3 py-2 text-[9px] font-mono bg-[#111111] border border-[#1a1a1a] rounded text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-[#0B6C3E]"
-                    />
-                  </div>
-                </div>
-
-                {/* Search Results */}
-                {searchQuery.length >= 2 && searchResults.length > 0 && (
-                  <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 space-y-2">
-                    <h3 className="text-[9px] text-zinc-600 uppercase tracking-wider font-mono mb-3">Resultados da Busca</h3>
-                    {searchResults.map((result) => (
-                      <Link
-                        key={result.cnpj_fundo_classe}
-                        to={`/fundos/fidc/${result.slug || result.cnpj_fundo_classe}`}
-                        className="block px-3 py-2 bg-[#0a0a0a] rounded border border-[#1a1a1a] hover:border-[#0B6C3E]/30 transition-all group"
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[9px] font-semibold text-[#0B6C3E] group-hover:underline truncate">
-                              {result.denom_social}
-                            </div>
-                            <div className="text-[8px] text-zinc-600 mt-0.5">
-                              Gestor: {result.gestor_nome?.split(" ")[0] || "—"}
-                            </div>
-                          </div>
-                          <div className="text-[9px] font-mono text-zinc-500">{formatPL(result.vl_patrim_liq)}</div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            </SectionErrorBoundary>
-          </MacroSection>
-
           {/* === SECTION 4: Segmentos === */}
           <MacroSection ref={(el) => { sectionRefs.current["segmentos"] = el; }} id="segmentos" title="Segmentos" icon={Zap}>
             <SectionErrorBoundary sectionName="Segmentos">
@@ -577,8 +540,9 @@ export default function FidcHub() {
                         className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4 hover:border-[#0B6C3E]/30 transition-all cursor-pointer"
                         onClick={() => {
                           setSelectedLastro(seg.lastro);
-                          setActiveSection("rankings");
-                          sectionRefs.current["rankings"]?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          setActiveSection("explorar");
+                          setVisitedSections((s) => new Set(s).add("explorar"));
+                          sectionRefs.current["explorar"]?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
                       >
                         <div className="flex items-start justify-between gap-2 mb-3">

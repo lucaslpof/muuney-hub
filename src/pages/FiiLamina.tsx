@@ -14,6 +14,24 @@ import {
 import { ClasseBadge } from "@/lib/rcvm175";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
+import { computeMonthlyRiskMetrics } from "@/lib/monthlyRiskMetrics";
+import { computeRollingReturnsFromMonthly } from "@/lib/rollingReturns";
+import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
+import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
+import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
+import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+
+// FII rentabilidade can be corrupt at edges (e.g. funds in liquidation);
+// cap at ±95%/mês same as FIDC.
+const CORRUPT_RENTAB_THRESHOLD = 95;
+function cleanMonthlyReturn(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === "number" ? v : parseFloat(String(v));
+  if (!isFinite(n)) return null;
+  if (Math.abs(n) > CORRUPT_RENTAB_THRESHOLD) return null;
+  return n;
+}
 
 /** Compute monthly performance series (rentabilidade + DY) */
 function computePerformanceSeries(monthly: FiiMonthlyItem[]) {
@@ -61,8 +79,101 @@ export default function FiiLamina() {
   const plSeries = useMemo(() => computePlSeries(monthly), [monthly]);
   const cotistasSeries = useMemo(() => computeCotistasSeries(monthly), [monthly]);
 
+  // Cleaned monthly rentab. efetiva (shared by risk metrics + rolling returns)
+  const cleanedMonthlyReturns = useMemo(
+    () =>
+      monthly
+        .map((m) => cleanMonthlyReturn(m.rentabilidade_efetiva_mes))
+        .filter((r): r is number => r != null),
+    [monthly],
+  );
+
+  // Risk & return metrics from monthly rentab. efetiva series
+  const riskMetrics = useMemo(() => {
+    if (cleanedMonthlyReturns.length < 3) return null;
+    try {
+      return computeMonthlyRiskMetrics(cleanedMonthlyReturns);
+    } catch {
+      return null;
+    }
+  }, [cleanedMonthlyReturns]);
+
+  // Rolling returns grid (1m/3m/6m/12m/24m/36m)
+  const rollingRows = useMemo(() => {
+    if (cleanedMonthlyReturns.length < 1) return [];
+    try {
+      return computeRollingReturnsFromMonthly(cleanedMonthlyReturns);
+    } catch {
+      return [];
+    }
+  }, [cleanedMonthlyReturns]);
+
+  // Drawdown calendar (ano × mês) — from monthly rentab. efetiva FII
+  const drawdownCells = useMemo(() => {
+    if (!monthly || monthly.length < 3) return [];
+    try {
+      const dated = monthly
+        .map((m) => {
+          const r = cleanMonthlyReturn(m.rentabilidade_efetiva_mes);
+          return m.dt_comptc ? { dt_comptc: m.dt_comptc, returnPct: r } : null;
+        })
+        .filter((x): x is { dt_comptc: string; returnPct: number | null } => x !== null);
+      return computeMonthlyGridFromMonthly(dated);
+    } catch {
+      return [];
+    }
+  }, [monthly]);
+  const drawdownSummary = useMemo(() => {
+    if (!drawdownCells.length) return undefined;
+    try { return summarizeDrawdown(drawdownCells); } catch { return undefined; }
+  }, [drawdownCells]);
+
   const dyMes = latest?.dividend_yield_mes != null ? Number(latest.dividend_yield_mes) : null;
   const rentabMes = latest?.rentabilidade_efetiva_mes != null ? Number(latest.rentabilidade_efetiva_mes) : null;
+
+  // Per-fund narrative context (FII regime + signals)
+  const fundNarrativeContext = useMemo<FundScopeContext | null>(() => {
+    if (!meta) return null;
+    const twelveMonth = rollingRows.find((r) => r.months === 12 && r.returnPct != null);
+    const longest = [...rollingRows].reverse().find((r) => r.returnPct != null);
+    const ref = twelveMonth ?? longest;
+
+    let plTrend: "up" | "down" | "flat" | null = null;
+    let cotistasTrend: "up" | "down" | "flat" | null = null;
+    if (monthly.length >= 2) {
+      const firstPL = (monthly[0] as { patrimonio_liquido?: number | null })?.patrimonio_liquido ?? null;
+      const lastPL = (monthly[monthly.length - 1] as { patrimonio_liquido?: number | null })?.patrimonio_liquido ?? null;
+      if (firstPL && lastPL) {
+        const d = (lastPL - firstPL) / firstPL;
+        plTrend = d > 0.02 ? "up" : d < -0.02 ? "down" : "flat";
+      }
+      const firstCot = (monthly[0] as { nr_cotistas?: number | null })?.nr_cotistas ?? null;
+      const lastCot = (monthly[monthly.length - 1] as { nr_cotistas?: number | null })?.nr_cotistas ?? null;
+      if (firstCot && lastCot) {
+        const d = (lastCot - firstCot) / firstCot;
+        cotistasTrend = d > 0.02 ? "up" : d < -0.02 ? "down" : "flat";
+      }
+    }
+
+    return {
+      classe: "FII",
+      nome: meta.denom_social ?? null,
+      returnPct: ref?.returnPct ?? null,
+      annualizedPct: ref?.annualizedPct ?? riskMetrics?.return_annualized ?? null,
+      cdiPct: ref?.cdiPct ?? null,
+      vsCdiPP: ref?.vsCdiPct ?? null,
+      volAnnualPct: riskMetrics?.volatility ?? null,
+      sharpe: riskMetrics?.sharpe ?? null,
+      sortino: riskMetrics?.sortino ?? null,
+      maxDrawdownPct: riskMetrics?.max_drawdown ?? null,
+      plBRL: (latest as { patrimonio_liquido?: number | null })?.patrimonio_liquido ?? null,
+      plTrend,
+      cotistasTrend,
+      fiiDyMensal: dyMes,
+      selicMeta: 14.15,
+      ipcaAccum: 5.0,
+    };
+  }, [meta, monthly, latest, riskMetrics, rollingRows, dyMes]);
 
   // Auto-generated assessment
   const fiiAssessment = useMemo(() => {
@@ -154,6 +265,12 @@ export default function FiiLamina() {
                 {segmento !== "—" && (
                   <span className="text-[8px] text-zinc-500 font-mono">· {segmento}</span>
                 )}
+                <DataAsOfStamp
+                  date={latest?.dt_comptc}
+                  cadence="monthly"
+                  source="CVM Informe FII"
+                  compact
+                />
               </div>
             </div>
           </div>
@@ -248,6 +365,67 @@ export default function FiiLamina() {
                 <TrendingUp className="w-4 h-4 text-[#EC4899]" />
                 <h2 className="text-sm font-semibold text-zinc-300">Performance Histórica</h2>
               </div>
+
+              {/* Risco & Retorno (annualized from monthly rentab. efetiva) */}
+              {riskMetrics && riskMetrics.data_points >= 3 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <KPICard
+                    label="Retorno (a.a.)"
+                    value={riskMetrics.return_annualized != null ? riskMetrics.return_annualized.toFixed(2) : "—"}
+                    unit="%"
+                    color={riskMetrics.return_annualized != null && riskMetrics.return_annualized > 0 ? "text-emerald-400" : "text-red-400"}
+                    sublabel="anualizado"
+                  />
+                  <KPICard
+                    label="Volatilidade"
+                    value={riskMetrics.volatility != null ? riskMetrics.volatility.toFixed(2) : "—"}
+                    unit="%"
+                    color="text-amber-400"
+                    sublabel="anualizada"
+                  />
+                  <KPICard
+                    label="Sharpe"
+                    value={riskMetrics.sharpe != null ? riskMetrics.sharpe.toFixed(2) : "—"}
+                    color={riskMetrics.sharpe != null && riskMetrics.sharpe > 1 ? "text-emerald-400" : riskMetrics.sharpe != null && riskMetrics.sharpe > 0 ? "text-zinc-300" : "text-red-400"}
+                    sublabel="vs CDI / vol"
+                  />
+                  <KPICard
+                    label="Sortino"
+                    value={riskMetrics.sortino != null ? riskMetrics.sortino.toFixed(2) : "—"}
+                    color={riskMetrics.sortino != null && riskMetrics.sortino > 1 ? "text-emerald-400" : riskMetrics.sortino != null && riskMetrics.sortino > 0 ? "text-zinc-300" : "text-red-400"}
+                    sublabel="vs risco baixista"
+                  />
+                  <KPICard
+                    label="Max Drawdown"
+                    value={riskMetrics.max_drawdown != null ? riskMetrics.max_drawdown.toFixed(2) : "—"}
+                    unit="%"
+                    color="text-red-400"
+                    sublabel="pior queda"
+                  />
+                </div>
+              )}
+
+              {/* Rolling Returns Grid — 1m/3m/6m/12m/24m/36m */}
+              <RollingReturnsGrid
+                rows={rollingRows}
+                subtitle="Janelas calculadas sobre a rentabilidade efetiva mensal CVM."
+                accent="#EC4899"
+              />
+
+              {/* Drawdown Heatmap — calendário mensal ano × mês */}
+              {drawdownCells.length > 0 && (
+                <DrawdownHeatmap
+                  cells={drawdownCells}
+                  summary={drawdownSummary}
+                  subtitle="Rentabilidade efetiva mensal e drawdown corrente sobre a cota do FII."
+                  accent="#EC4899"
+                />
+              )}
+
+              {/* Fund-scope narrative (regime + sinais específicos FII) */}
+              {fundNarrativeContext && (
+                <FundNarrativePanel scope="fund" fundContext={fundNarrativeContext} />
+              )}
 
               {/* Rentabilidade + DY */}
               <div className="bg-[#111111] border border-[#1a1a1a] rounded-lg p-4">
