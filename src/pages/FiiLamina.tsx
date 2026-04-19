@@ -19,6 +19,7 @@ import { computeRollingReturnsFromMonthly } from "@/lib/rollingReturns";
 import { RollingReturnsGrid } from "@/components/hub/RollingReturnsGrid";
 import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown";
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
+import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -419,6 +420,15 @@ export default function FiiLamina() {
                   cells={drawdownCells}
                   summary={drawdownSummary}
                   subtitle="Rentabilidade efetiva mensal e drawdown corrente sobre a cota do FII."
+                  accent="#EC4899"
+                />
+              )}
+
+              {/* DY Calendar — ano × mês, intensidade magenta proporcional ao DY */}
+              {monthly.length > 0 && (
+                <DYCalendarFII
+                  monthly={monthly}
+                  subtitle="Distribuições mensais (dividend_yield_mes) reportadas ao CVM. Soma anual ≈ yield on cost."
                   accent="#EC4899"
                 />
               )}

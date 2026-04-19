@@ -1352,3 +1352,127 @@ export function useOfertasFilters() {
     retry: 2,
   });
 }
+
+/* ─── Oferta ↔ Fundo Cross-Reference (P1-10) ─── */
+
+export interface OfertaFundLink {
+  slug: string | null;
+  denom_social: string;
+  classe_rcvm175: string | null;
+  cnpj_fundo: string;
+  cnpj_fundo_classe: string | null;
+  /** Route target for the lâmina page. */
+  href: string;
+  /** How the match was made (exact CNPJ vs name-only). */
+  matchType: "cnpj" | "name";
+}
+
+/**
+ * Strip common prefixes/suffixes from an emissor_nome that would hurt
+ * the ilike name search (e.g. "FUNDO DE INVESTIMENTO EM DIREITOS CREDITÓRIOS",
+ * "FDO DE INV IMOB", "FIDC", "FII", "— ESPÉCIE XYZ"). Keeps the distinctive
+ * core noun(s) so the fund_search endpoint can find an overlap.
+ */
+function simplifyEmissorForSearch(name: string): string {
+  let s = name.toUpperCase();
+  // Drop parenthetical suffixes
+  s = s.replace(/\s*\([^)]*\)/g, " ");
+  // Drop series designators
+  s = s.replace(/\s+(SERIE|SÉRIE|COTA|ESPECIE|ESPÉCIE)\s+.+$/i, " ");
+  // Drop legal form anchors
+  const strip = [
+    "FUNDO DE INVESTIMENTO EM DIREITOS CREDITÓRIOS",
+    "FUNDO DE INVESTIMENTO IMOBILIÁRIO",
+    "FUNDO DE INVESTIMENTO IMOBILIARIO",
+    "FDO DE INV IMOB",
+    "FDO INV DIR CRED",
+    "FUNDO IMOBILIÁRIO",
+    "RESPONSABILIDADE LIMITADA",
+    "RESP LIMITADA",
+    "RESPONSABILIDADE LTDA",
+    "RESP LTDA",
+    "NAO PADRONIZADO",
+    "NÃO PADRONIZADO",
+    "MULTIMERCADO",
+  ];
+  for (const token of strip) {
+    s = s.split(token).join(" ");
+  }
+  // Drop standalone acronyms FIDC / FII / FIP / FIF
+  s = s.replace(/\b(FIDC|FII|FIP|FIF)\b/g, " ");
+  // Collapse whitespace
+  s = s.replace(/\s+/g, " ").trim();
+  // Cap to a reasonable query size for ilike
+  if (s.length > 60) s = s.slice(0, 60);
+  return s;
+}
+
+/**
+ * Given an Ofertas Públicas row, try to resolve a link into the Fundos catalog
+ * when the emissor is itself a FIDC or FII cadastrado.
+ *
+ * Strategy:
+ *   1. Only try to match FIDC / FII issuances (tipo_ativo).
+ *   2. Query fund_search with a simplified emissor_nome.
+ *   3. Pick the first result whose classe_rcvm175 matches the tipo_ativo.
+ *
+ * Returns a stable { link, isLoading } shape so the caller can render
+ * conditionally without juggling React Query states directly.
+ */
+export function useOfertaFundLink(
+  oferta: Pick<OfertaPublica, "tipo_ativo" | "emissor_nome" | "emissor_cnpj"> | null,
+): { link: OfertaFundLink | null; isLoading: boolean } {
+  const tipo = oferta?.tipo_ativo?.toUpperCase() ?? "";
+  const isResolvable =
+    !!oferta && (tipo.includes("FIDC") || tipo === "FII" || tipo.includes("IMOBILI"));
+
+  const cleanedName = oferta ? simplifyEmissorForSearch(oferta.emissor_nome) : "";
+
+  const q = useQuery<{ results: FundSearchResult[] }>({
+    queryKey: ["ofertas", "fund_link", tipo, cleanedName],
+    queryFn: () =>
+      fetchCvm("fund_search", { q: cleanedName, limit: "5" }) as Promise<{
+        results: FundSearchResult[];
+      }>,
+    staleTime: STALE_FREQUENT,
+    enabled: isResolvable && cleanedName.length >= 3,
+    retry: 1,
+  });
+
+  if (!isResolvable || !oferta) return { link: null, isLoading: false };
+
+  const results = q.data?.results ?? [];
+  const wantedClasse = tipo.includes("FIDC") ? "FIDC" : "FII";
+  // Prefer exact classe match; fall back to the first result.
+  const match =
+    results.find((r) => (r.classe_rcvm175 || "").toUpperCase() === wantedClasse) ||
+    results[0] ||
+    null;
+
+  if (!match) return { link: null, isLoading: q.isLoading };
+
+  // Only keep matches whose classe matches the offer's tipo_ativo to avoid
+  // linking an FII issuance to a regular Multimercado with a similar name.
+  const matchClasse = (match.classe_rcvm175 || "").toUpperCase();
+  if (matchClasse && matchClasse !== wantedClasse) {
+    return { link: null, isLoading: q.isLoading };
+  }
+
+  const base = wantedClasse === "FIDC" ? "/fundos/fidc" : "/fundos/fii";
+  const href = match.slug
+    ? `${base}/${match.slug}`
+    : `${base}`;
+
+  return {
+    link: {
+      slug: match.slug,
+      denom_social: match.denom_social,
+      classe_rcvm175: match.classe_rcvm175,
+      cnpj_fundo: match.cnpj_fundo,
+      cnpj_fundo_classe: match.cnpj_fundo_classe,
+      href,
+      matchType: "name",
+    },
+    isLoading: q.isLoading,
+  };
+}

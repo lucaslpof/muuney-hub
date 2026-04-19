@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   LayoutGrid,
   TrendingUp,
@@ -32,8 +32,10 @@ import {
   useOfertasTimeline,
   useOfertasList,
   useOfertasFilters,
+  useOfertaFundLink,
   type OfertaPublica,
 } from "@/hooks/useHubFundos";
+import { ClasseBadge } from "@/lib/rcvm175";
 import { MacroSection, MacroSidebar } from "@/components/hub/MacroSection";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { ChartTooltip } from "@/components/hub/ChartTooltip";
@@ -187,6 +189,7 @@ export default function OfertasRadar() {
 
   /* ─── Detail drawer ─── */
   const [selectedOferta, setSelectedOferta] = useState<OfertaPublica | null>(null);
+  const { link: ofertaFundLink } = useOfertaFundLink(selectedOferta);
 
   /* ─── Data ─── */
   const { data: stats, isLoading: statsLoading } = useOfertasStats();
@@ -1420,6 +1423,32 @@ export default function OfertasRadar() {
                   </div>
                 )}
               </div>
+
+              {/* Fundo cadastrado match (P1-10) */}
+              {ofertaFundLink && (
+                <Link
+                  to={ofertaFundLink.href}
+                  className="block bg-[#0a0a0a] border border-[#0B6C3E]/40 rounded-lg p-3 hover:border-[#0B6C3E] transition-colors group"
+                  aria-label={`Abrir lâmina do fundo ${ofertaFundLink.denom_social}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ClasseBadge classe={ofertaFundLink.classe_rcvm175} />
+                        <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-mono">
+                          Fundo cadastrado
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-200 font-mono truncate">
+                        {ofertaFundLink.denom_social}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-[#0B6C3E] font-mono group-hover:text-emerald-400 transition-colors shrink-0">
+                      Ver lâmina →
+                    </span>
+                  </div>
+                </Link>
+              )}
 
               {/* CNPJ + protocolo */}
               <div className="pt-2 border-t border-[#1a1a1a] space-y-1">
