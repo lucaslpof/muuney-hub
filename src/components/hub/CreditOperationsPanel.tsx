@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,7 +7,7 @@ import {
 import {
   Filter, Search, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, Banknote, Percent, ShieldAlert,
-  RotateCcw, Download, BarChart3, Info,
+  RotateCcw, Download, BarChart3, Info, X, ExternalLink,
 } from "lucide-react";
 import {
   useHubSeriesBundle,
@@ -597,9 +598,11 @@ function ChartPanel({
 function ComparisonTable({
   mods,
   seriesMap,
+  onDrillDown,
 }: {
   mods: Modalidade[];
   seriesMap: Record<string, { saldo: SeriesDataPoint[]; taxa: SeriesDataPoint[]; inadim: SeriesDataPoint[]; hasSaldo: boolean }>;
+  onDrillDown?: (modId: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<"label" | "saldo" | "taxa" | "inadim">("saldo");
   const [sortDesc, setSortDesc] = useState(true);
@@ -688,6 +691,11 @@ function ComparisonTable({
         <BarChart3 className="w-3.5 h-3.5 text-[#10B981]" />
         <span className="text-[11px] font-bold text-zinc-100 font-mono">Comparativo de Modalidades</span>
         <span className="text-[9px] text-zinc-600 font-mono">{rows.length} modalidades</span>
+        {onDrillDown && (
+          <span className="text-[8px] text-zinc-600 font-mono italic hidden sm:inline-block">
+            · clique para detalhar
+          </span>
+        )}
         <button
           type="button"
           onClick={handleExport}
@@ -729,7 +737,21 @@ function ComparisonTable({
             {rows.map((r, i) => (
               <tr
                 key={r.id}
-                className={`border-b border-[#111] ${i % 2 === 0 ? "bg-[#0a0a0a]" : ""} hover:bg-zinc-900/50 transition-colors`}
+                onClick={() => onDrillDown?.(r.id)}
+                onKeyDown={(e) => {
+                  if (onDrillDown && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onDrillDown(r.id);
+                  }
+                }}
+                role={onDrillDown ? "button" : undefined}
+                tabIndex={onDrillDown ? 0 : undefined}
+                aria-label={onDrillDown ? `Detalhar ${r.label}` : undefined}
+                className={`border-b border-[#111] ${i % 2 === 0 ? "bg-[#0a0a0a]" : ""} ${
+                  onDrillDown
+                    ? "cursor-pointer hover:bg-[#10B981]/8 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#10B981]/50"
+                    : "hover:bg-zinc-900/50"
+                } transition-colors`}
               >
                 <td className="px-3 py-2 text-[10px] font-mono text-zinc-200">
                   <div className="flex items-center gap-1.5">
@@ -740,6 +762,9 @@ function ComparisonTable({
                     <span className="truncate">{r.label}</span>
                     {!r.hasSaldo && (
                       <span className="text-[8px] text-amber-500/70">⚠</span>
+                    )}
+                    {onDrillDown && r.hasSaldo && (
+                      <ExternalLink className="w-2.5 h-2.5 text-zinc-700 flex-shrink-0 ml-auto" />
                     )}
                   </div>
                   <span className="text-[8px] text-zinc-600">
@@ -798,23 +823,533 @@ function ComparisonTable({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   ModalityDetailDrawer — drill-down modal por modalidade
+   - Série histórica (5y) de Saldo, Taxa e Inadimplência
+   - Benchmark peer: média das outras modalidades do mesmo tipo+recurso
+   - KPIs: nível atual vs peer médio, delta MoM, delta 12m
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+interface DrawerData {
+  saldo: SeriesDataPoint[];
+  taxa: SeriesDataPoint[];
+  inadim: SeriesDataPoint[];
+  hasSaldo: boolean;
+}
+
+function meanByDate(seriesList: SeriesDataPoint[][]): SeriesDataPoint[] {
+  // Build a per-date sum + count, then collapse to mean. O(N) where N is total points.
+  const acc = new Map<string, { sum: number; n: number }>();
+  for (const s of seriesList) {
+    for (const p of s) {
+      if (!Number.isFinite(p.value)) continue;
+      const cur = acc.get(p.date);
+      if (cur) {
+        cur.sum += p.value;
+        cur.n += 1;
+      } else {
+        acc.set(p.date, { sum: p.value, n: 1 });
+      }
+    }
+  }
+  const out: SeriesDataPoint[] = [];
+  for (const [date, { sum, n }] of acc) {
+    out.push({ date, value: sum / n });
+  }
+  out.sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
+function lastValue(s: SeriesDataPoint[]): number | null {
+  return s.length ? s[s.length - 1].value : null;
+}
+function valueAtIndex(s: SeriesDataPoint[], offsetFromEnd: number): number | null {
+  const idx = s.length - 1 - offsetFromEnd;
+  if (idx < 0) return null;
+  return s[idx].value;
+}
+
+function DrawerKPI({
+  label,
+  current,
+  peer,
+  unit,
+  digits = 2,
+  lowerIsBetter = false,
+}: {
+  label: string;
+  current: number | null;
+  peer: number | null;
+  unit: string;
+  digits?: number;
+  lowerIsBetter?: boolean;
+}) {
+  const fmt = (v: number | null) =>
+    v == null || !Number.isFinite(v) ? "—" : `${fmtNum(v, digits)}${unit}`;
+  const delta =
+    current != null && peer != null && Number.isFinite(current) && Number.isFinite(peer)
+      ? current - peer
+      : null;
+  const aboveBenchmark = delta != null && delta > 0;
+  const goodSign = delta == null ? null : lowerIsBetter ? !aboveBenchmark : aboveBenchmark;
+  return (
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-md p-3">
+      <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono mb-1">{label}</div>
+      <div className="flex items-baseline gap-2">
+        <div className="text-[15px] font-bold text-zinc-100 font-mono tabular-nums">
+          {fmt(current)}
+        </div>
+        {delta != null && (
+          <div
+            className={`text-[10px] font-mono ${
+              goodSign ? "text-emerald-400" : "text-red-400"
+            }`}
+            title={`Δ vs peer médio: ${delta > 0 ? "+" : ""}${fmtNum(delta, digits)}${unit}`}
+          >
+            {delta > 0 ? "+" : ""}
+            {fmtNum(delta, digits)}
+            {unit}
+          </div>
+        )}
+      </div>
+      <div className="text-[9px] text-zinc-600 font-mono mt-0.5">
+        Peer médio: {fmt(peer)}
+      </div>
+    </div>
+  );
+}
+
+function DrawerChart({
+  title,
+  unit,
+  modSeries,
+  peerSeries,
+  color,
+  chartType = "line",
+}: {
+  title: string;
+  unit: string;
+  modSeries: SeriesDataPoint[];
+  peerSeries: SeriesDataPoint[];
+  color: string;
+  chartType?: "line" | "area";
+}) {
+  const data = useMemo(() => {
+    const map = new Map<string, { date: string; dateLabel: string; mod?: number; peer?: number }>();
+    modSeries.forEach((p) => {
+      map.set(p.date, { date: p.date, dateLabel: formatMonthShort(p.date), mod: p.value });
+    });
+    peerSeries.forEach((p) => {
+      const cur = map.get(p.date);
+      if (cur) cur.peer = p.value;
+      else map.set(p.date, { date: p.date, dateLabel: formatMonthShort(p.date), peer: p.value });
+    });
+    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [modSeries, peerSeries]);
+
+  const Chart = chartType === "area" ? AreaChart : LineChart;
+  const hasData = modSeries.length > 0;
+
+  return (
+    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-md p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-mono font-bold text-zinc-200 uppercase tracking-wider">
+          {title}
+        </div>
+        <div className="flex items-center gap-3 text-[9px] font-mono">
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-zinc-400">Modalidade</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-px bg-zinc-500" style={{ borderTop: "1px dashed #71717a" }} />
+            <span className="text-zinc-500">Peer médio</span>
+          </div>
+        </div>
+      </div>
+      {!hasData ? (
+        <div className="py-10 text-center text-[10px] font-mono text-zinc-600">
+          Sem dados na janela.
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={180}>
+          <Chart data={data}>
+            <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="dateLabel"
+              tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
+              axisLine={{ stroke: "#1a1a1a" }}
+              tickLine={false}
+              interval="preserveStartEnd"
+              minTickGap={28}
+            />
+            <YAxis
+              tick={{ fill: "#52525b", fontSize: 9, fontFamily: "monospace" }}
+              axisLine={false}
+              tickLine={false}
+              width={48}
+              tickFormatter={(v: number) => fmtNum(v, v >= 100 ? 0 : 1)}
+            />
+            <Tooltip content={<CustomTooltip unit={unit} />} />
+            {chartType === "area" ? (
+              <>
+                <Area
+                  type="monotone"
+                  dataKey="mod"
+                  name="Modalidade"
+                  stroke={color}
+                  fill={color}
+                  fillOpacity={0.18}
+                  strokeWidth={1.6}
+                  dot={false}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="peer"
+                  name="Peer médio"
+                  stroke="#71717a"
+                  strokeDasharray="3 3"
+                  strokeWidth={1.2}
+                  dot={false}
+                  connectNulls
+                />
+              </>
+            ) : (
+              <>
+                <Line
+                  type="monotone"
+                  dataKey="mod"
+                  name="Modalidade"
+                  stroke={color}
+                  strokeWidth={1.6}
+                  dot={false}
+                  activeDot={{ r: 3, fill: color }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="peer"
+                  name="Peer médio"
+                  stroke="#71717a"
+                  strokeDasharray="3 3"
+                  strokeWidth={1.2}
+                  dot={false}
+                  connectNulls
+                />
+              </>
+            )}
+          </Chart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function ModalityDetailDrawer({
+  mod,
+  modData,
+  peerSaldoMean,
+  peerTaxaMean,
+  peerInadimMean,
+  peerCount,
+  onClose,
+}: {
+  mod: Modalidade;
+  modData: DrawerData;
+  peerSaldoMean: SeriesDataPoint[];
+  peerTaxaMean: SeriesDataPoint[];
+  peerInadimMean: SeriesDataPoint[];
+  peerCount: number;
+  onClose: () => void;
+}) {
+  // ESC closes the drawer.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    // lock body scroll while open
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handler);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const saldoNow = lastValue(modData.saldo);
+  const taxaNow = lastValue(modData.taxa);
+  const inadimNow = lastValue(modData.inadim);
+  const peerSaldoNow = lastValue(peerSaldoMean);
+  const peerTaxaNow = lastValue(peerTaxaMean);
+  const peerInadimNow = lastValue(peerInadimMean);
+
+  // 12m delta on the modality's own series.
+  const saldoDelta12m = useMemo(() => {
+    const cur = saldoNow;
+    const prev = valueAtIndex(modData.saldo, 12);
+    if (cur == null || prev == null || !prev) return null;
+    return ((cur - prev) / Math.abs(prev)) * 100;
+  }, [modData.saldo, saldoNow]);
+  const taxaDelta12m = useMemo(() => {
+    const cur = taxaNow;
+    const prev = valueAtIndex(modData.taxa, 12);
+    if (cur == null || prev == null) return null;
+    return cur - prev;
+  }, [modData.taxa, taxaNow]);
+  const inadimDelta12m = useMemo(() => {
+    const cur = inadimNow;
+    const prev = valueAtIndex(modData.inadim, 12);
+    if (cur == null || prev == null) return null;
+    return cur - prev;
+  }, [modData.inadim, inadimNow]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm no-print"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modality-drawer-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto bg-[#0a0a0a] border border-zinc-800/80 rounded-t-2xl sm:rounded-2xl shadow-2xl">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur border-b border-zinc-800/60 px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] font-mono uppercase tracking-wider text-[#10B981]">
+              Detalhamento de modalidade
+            </div>
+            <h3
+              id="modality-drawer-title"
+              className="text-sm font-bold text-zinc-100 font-mono truncate"
+            >
+              {mod.label}
+            </h3>
+            <div className="text-[9px] font-mono text-zinc-500 mt-0.5">
+              {mod.tipo} · {mod.recurso} · SGS saldo {mod.saldo.code} · taxa {mod.taxa.code}
+              {mod.taxa.aggregate ? " (agg)" : ""} · inadim {mod.inadim.code}
+              {mod.inadim.aggregate ? " (agg)" : ""}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200 transition-colors"
+            aria-label="Fechar detalhamento"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 space-y-4">
+          {/* Context strip */}
+          <div className="text-[10px] text-zinc-500 font-mono leading-relaxed">
+            Comparando esta modalidade contra a média de{" "}
+            <span className="text-zinc-300">{peerCount}</span>{" "}
+            modalidade{peerCount === 1 ? "" : "s"} peer{" "}
+            <span className="text-zinc-600">
+              ({mod.tipo === "Total" ? "totais SFN" : `${mod.tipo} ${mod.recurso}`})
+            </span>
+            . Janela: até 5 anos disponíveis no BACEN SGS.
+          </div>
+
+          {/* KPI strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <DrawerKPI
+              label="Saldo (R$ bi)"
+              current={saldoNow}
+              peer={peerSaldoNow}
+              unit=""
+              digits={2}
+              lowerIsBetter={false}
+            />
+            <DrawerKPI
+              label="Taxa a.a."
+              current={taxaNow}
+              peer={peerTaxaNow}
+              unit="%"
+              digits={2}
+              lowerIsBetter={true}
+            />
+            <DrawerKPI
+              label="Inadim. >90d"
+              current={inadimNow}
+              peer={peerInadimNow}
+              unit="%"
+              digits={2}
+              lowerIsBetter={true}
+            />
+          </div>
+
+          {/* 12m deltas strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-mono">
+            <div className="bg-zinc-900/30 border border-zinc-800/40 rounded-md px-3 py-2">
+              <span className="text-zinc-500">Δ Saldo 12m: </span>
+              <span
+                className={
+                  saldoDelta12m == null
+                    ? "text-zinc-500"
+                    : saldoDelta12m >= 0
+                      ? "text-emerald-400 font-bold"
+                      : "text-red-400 font-bold"
+                }
+              >
+                {saldoDelta12m == null
+                  ? "—"
+                  : `${saldoDelta12m >= 0 ? "+" : ""}${fmtNum(saldoDelta12m, 1)}%`}
+              </span>
+            </div>
+            <div className="bg-zinc-900/30 border border-zinc-800/40 rounded-md px-3 py-2">
+              <span className="text-zinc-500">Δ Taxa 12m: </span>
+              <span
+                className={
+                  taxaDelta12m == null
+                    ? "text-zinc-500"
+                    : taxaDelta12m <= 0
+                      ? "text-emerald-400 font-bold"
+                      : "text-red-400 font-bold"
+                }
+              >
+                {taxaDelta12m == null
+                  ? "—"
+                  : `${taxaDelta12m >= 0 ? "+" : ""}${fmtNum(taxaDelta12m, 2)} p.p.`}
+              </span>
+            </div>
+            <div className="bg-zinc-900/30 border border-zinc-800/40 rounded-md px-3 py-2">
+              <span className="text-zinc-500">Δ Inadim. 12m: </span>
+              <span
+                className={
+                  inadimDelta12m == null
+                    ? "text-zinc-500"
+                    : inadimDelta12m <= 0
+                      ? "text-emerald-400 font-bold"
+                      : "text-red-400 font-bold"
+                }
+              >
+                {inadimDelta12m == null
+                  ? "—"
+                  : `${inadimDelta12m >= 0 ? "+" : ""}${fmtNum(inadimDelta12m, 2)} p.p.`}
+              </span>
+            </div>
+          </div>
+
+          {/* Charts */}
+          <div className="space-y-3">
+            <DrawerChart
+              title="Saldo histórico vs peer"
+              unit="R$ bi"
+              modSeries={modData.saldo}
+              peerSeries={peerSaldoMean}
+              color="#10B981"
+              chartType="area"
+            />
+            <DrawerChart
+              title="Taxa histórica vs peer"
+              unit="%"
+              modSeries={modData.taxa}
+              peerSeries={peerTaxaMean}
+              color="#6366F1"
+            />
+            <DrawerChart
+              title="Inadimplência histórica vs peer"
+              unit="%"
+              modSeries={modData.inadim}
+              peerSeries={peerInadimMean}
+              color="#EF4444"
+            />
+          </div>
+
+          {/* Footer note */}
+          <div className="text-[8px] text-zinc-700 font-mono pt-2 border-t border-zinc-800/30">
+            Peer médio: média aritmética simples das séries das outras modalidades do mesmo
+            recorte (tipo + recurso). Use ESC ou clique fora para fechar.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════════════════ */
-export function CreditOperationsPanel() {
-  /* ─── State ─── */
-  const [tipoCliente, setTipoCliente] = useState<TipoCliente>("PF");
-  const [recurso, setRecurso] = useState<Recurso>("Livres");
-  const [selectedMods, setSelectedMods] = useState<string[]>([]);
-  const [period, setPeriod] = useState<string>("2y");
-  const [showTable, setShowTable] = useState(true);
+/**
+ * URL query param namespace for this panel's filters. Prefixed with `op_` to
+ * avoid colliding with HubCredito-level params (?section=, ?period=).
+ *   - op_tipo=PF|PJ|Total
+ *   - op_rec=Livres|Direcionados|Total
+ *   - op_period=1m|3m|6m|1y|2y|5y|all
+ *   - op_mods=id1,id2,id3  (comma-separated modalidade ids)
+ *   - op_table=0|1
+ */
+const VALID_TIPO = new Set(["PF", "PJ", "Total"]);
+const VALID_RECURSO = new Set(["Livres", "Direcionados", "Total"]);
+const VALID_PERIOD = new Set(["1m", "3m", "6m", "1y", "2y", "5y", "all"]);
 
-  /* ─── Fetch 5 category bundles (all credit operations live here) ─── */
+export function CreditOperationsPanel() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  /* ─── State (hydrated from URL on first render) ─── */
+  const [tipoCliente, setTipoCliente] = useState<TipoCliente>(() => {
+    const v = searchParams.get("op_tipo");
+    return v && VALID_TIPO.has(v) ? (v as TipoCliente) : "PF";
+  });
+  const [recurso, setRecurso] = useState<Recurso>(() => {
+    const v = searchParams.get("op_rec");
+    return v && VALID_RECURSO.has(v) ? (v as Recurso) : "Livres";
+  });
+  const [selectedMods, setSelectedMods] = useState<string[]>(() => {
+    const v = searchParams.get("op_mods");
+    if (!v) return [];
+    return v.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 6);
+  });
+  const [period, setPeriod] = useState<string>(() => {
+    const v = searchParams.get("op_period");
+    return v && VALID_PERIOD.has(v) ? v : "2y";
+  });
+  const [showTable, setShowTable] = useState(() => searchParams.get("op_table") !== "0");
+  const [detailModalityId, setDetailModalityId] = useState<string | null>(null);
+
+  /* ─── Sync state → URL (replace to preserve history navigation) ─── */
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const setOrDelete = (key: string, value: string, defaultValue: string) => {
+      if (value === defaultValue) next.delete(key);
+      else next.set(key, value);
+    };
+    setOrDelete("op_tipo", tipoCliente, "PF");
+    setOrDelete("op_rec", recurso, "Livres");
+    setOrDelete("op_period", period, "2y");
+    if (selectedMods.length === 0) next.delete("op_mods");
+    else next.set("op_mods", selectedMods.join(","));
+    if (showTable) next.delete("op_table");
+    else next.set("op_table", "0");
+    // avoid spurious updates if the string already matches
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoCliente, recurso, period, selectedMods, showTable]);
+
+  /* ─── Fetch 6 category bundles at page `period` (all credit operations live here) ─── */
   const saldoCreditoBundle = useHubSeriesBundle("saldo_credito", period, "credito");
   const saldoPFBundle = useHubSeriesBundle("saldo_pf_modal", period, "credito");
   const saldoPJBundle = useHubSeriesBundle("saldo_pj_modal", period, "credito");
   const taxaBundle = useHubSeriesBundle("taxa", period, "credito");
   const inadimDetalheBundle = useHubSeriesBundle("inadim_detalhe", period, "credito");
   const inadimplenciaBundle = useHubSeriesBundle("inadimplencia", period, "credito");
+
+  /* ─── Drill-down 5y bundles (lazy-enabled only when drawer is open) ─── */
+  const drillEnabled = detailModalityId != null;
+  const saldoCreditoBundle5y = useHubSeriesBundle("saldo_credito", "5y", "credito", drillEnabled);
+  const saldoPFBundle5y = useHubSeriesBundle("saldo_pf_modal", "5y", "credito", drillEnabled);
+  const saldoPJBundle5y = useHubSeriesBundle("saldo_pj_modal", "5y", "credito", drillEnabled);
+  const taxaBundle5y = useHubSeriesBundle("taxa", "5y", "credito", drillEnabled);
+  const inadimDetalheBundle5y = useHubSeriesBundle("inadim_detalhe", "5y", "credito", drillEnabled);
+  const inadimplenciaBundle5y = useHubSeriesBundle("inadimplencia", "5y", "credito", drillEnabled);
 
   const isLoading =
     saldoCreditoBundle.isLoading ||
@@ -823,6 +1358,15 @@ export function CreditOperationsPanel() {
     taxaBundle.isLoading ||
     inadimDetalheBundle.isLoading ||
     inadimplenciaBundle.isLoading;
+
+  const drillLoading =
+    drillEnabled &&
+    (saldoCreditoBundle5y.isLoading ||
+      saldoPFBundle5y.isLoading ||
+      saldoPJBundle5y.isLoading ||
+      taxaBundle5y.isLoading ||
+      inadimDetalheBundle5y.isLoading ||
+      inadimplenciaBundle5y.isLoading);
 
   /* ─── Filtered modalidades ─── */
   const filteredMods = useMemo(() => {
@@ -904,6 +1448,72 @@ export function CreditOperationsPanel() {
     });
     return map;
   }, [getBundle]);
+
+  /* ─── Drill-down series map (5y bundles) — only built while drawer open ─── */
+  const getBundle5y = useCallback(
+    (cat: SeriesRef["cat"]): SeriesBundle | undefined => {
+      switch (cat) {
+        case "saldo_credito":
+          return saldoCreditoBundle5y.data;
+        case "saldo_pf_modal":
+          return saldoPFBundle5y.data;
+        case "saldo_pj_modal":
+          return saldoPJBundle5y.data;
+        case "taxa":
+          return taxaBundle5y.data;
+        case "inadim_detalhe":
+          return inadimDetalheBundle5y.data;
+        case "inadimplencia":
+          return inadimplenciaBundle5y.data;
+      }
+    },
+    [
+      saldoCreditoBundle5y.data,
+      saldoPFBundle5y.data,
+      saldoPJBundle5y.data,
+      taxaBundle5y.data,
+      inadimDetalheBundle5y.data,
+      inadimplenciaBundle5y.data,
+    ],
+  );
+
+  const drillDetail = useMemo(() => {
+    if (!detailModalityId) return null;
+    const mod = MODALIDADES.find((m) => m.id === detailModalityId);
+    if (!mod) return null;
+
+    const buildSeries = (m: Modalidade) => {
+      const saldoB = getBundle5y(m.saldo.cat);
+      const taxaB = getBundle5y(m.taxa.cat);
+      const inadimB = getBundle5y(m.inadim.cat);
+      const saldoMeta = saldoB?.[String(m.saldo.code)];
+      const saldoRaw = pickSeries(saldoB, m.saldo.code);
+      const saldoBi = normalizeToBi(saldoRaw, saldoMeta?.unit);
+      return {
+        saldo: saldoBi,
+        taxa: pickSeries(taxaB, m.taxa.code),
+        inadim: pickSeries(inadimB, m.inadim.code),
+        hasSaldo: saldoBi.length > 0,
+      };
+    };
+
+    const target = buildSeries(mod);
+
+    // Peer set: same tipo+recurso, excluding the target itself.
+    const peers = MODALIDADES.filter(
+      (m) => m.id !== mod.id && m.tipo === mod.tipo && m.recurso === mod.recurso,
+    );
+    const peerSeries = peers.map(buildSeries);
+
+    return {
+      mod,
+      data: target,
+      peerSaldoMean: meanByDate(peerSeries.map((p) => p.saldo)),
+      peerTaxaMean: meanByDate(peerSeries.map((p) => p.taxa)),
+      peerInadimMean: meanByDate(peerSeries.map((p) => p.inadim)),
+      peerCount: peers.length,
+    };
+  }, [detailModalityId, getBundle5y]);
 
   /* ─── Latest reference date across all bundles (for DataAsOfStamp) ─── */
   const latestDate = useMemo(() => {
@@ -1172,7 +1782,13 @@ export function CreditOperationsPanel() {
               <ChevronDown className="w-2.5 h-2.5" />
             )}
           </button>
-          {showTable && <ComparisonTable mods={filteredMods} seriesMap={seriesMap} />}
+          {showTable && (
+            <ComparisonTable
+              mods={filteredMods}
+              seriesMap={seriesMap}
+              onDrillDown={setDetailModalityId}
+            />
+          )}
         </div>
       )}
 
@@ -1194,6 +1810,34 @@ export function CreditOperationsPanel() {
           {modObjects.some((m) => m.taxa.aggregate || m.inadim.aggregate) && " · ⓘ agregado"}
         </span>
       </div>
+
+      {/* ─── Drill-down Drawer ─── */}
+      {detailModalityId && drillLoading && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm no-print"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Carregando detalhamento"
+        >
+          <div className="bg-[#0a0a0a] border border-zinc-800/80 rounded-2xl px-6 py-5 flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-zinc-700 border-t-[#10B981] rounded-full animate-spin" />
+            <span className="text-[10px] font-mono text-zinc-400">
+              Carregando histórico 5y da BACEN SGS…
+            </span>
+          </div>
+        </div>
+      )}
+      {detailModalityId && !drillLoading && drillDetail && (
+        <ModalityDetailDrawer
+          mod={drillDetail.mod}
+          modData={drillDetail.data}
+          peerSaldoMean={drillDetail.peerSaldoMean}
+          peerTaxaMean={drillDetail.peerTaxaMean}
+          peerInadimMean={drillDetail.peerInadimMean}
+          peerCount={drillDetail.peerCount}
+          onClose={() => setDetailModalityId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
+import { PrintFooter } from "@/components/hub/PrintFooter";
 import { NarrativeSection, formatDelta, type MiniStat } from "@/components/hub/NarrativeSection";
 import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
@@ -20,13 +22,17 @@ import { CreditOverviewMensal } from "@/components/hub/CreditOverviewMensal";
 import { CreditProductPanel } from "@/components/hub/CreditProductPanel";
 import { CreditOperationsPanel } from "@/components/hub/CreditOperationsPanel";
 import { CreditNarrativePanel } from "@/components/hub/CreditNarrativePanel";
+import { CreditRollingGrid } from "@/components/hub/CreditRollingGrid";
+import { buildCreditRollingRow } from "@/lib/creditRollingDeltas";
 import {
   useHubLatest,
   useHubSeriesBundle,
   pickSeries,
+  useMonetaryEvents,
   CREDITO_SAMPLE,
   type SeriesBundle,
 } from "@/hooks/useHubData";
+import type { MacroChartEvent } from "@/components/hub/MacroChart";
 import { percentChange, sma } from "@/lib/statistics";
 import {
   LayoutGrid, Warehouse, Percent, ShieldAlert,
@@ -179,6 +185,21 @@ const HubCredito = () => {
     return dates.sort().reverse()[0];
   }, [kpis]);
 
+  /* ─── COPOM event overlay (hub_monetary_events) ─── */
+  const { data: monetaryEvents } = useMonetaryEvents("COPOM");
+  const copomEvents: MacroChartEvent[] = useMemo(() => {
+    if (!monetaryEvents) return [];
+    return monetaryEvents
+      .filter((e) => e.authority === "COPOM")
+      .map((e) => ({
+        date: e.event_date,
+        label: `COPOM ${e.bps_change && e.bps_change > 0 ? "+" : ""}${e.bps_change ?? 0}bps → ${e.rate_after}%`,
+        kind: e.decision,
+        authority: e.authority,
+        rationale: e.rationale || undefined,
+      }));
+  }, [monetaryEvents]);
+
   /* ─── Shorthand series access ─── */
   const saldoTotal = pickSeries(saldoBundle, "20540");
   const saldoPF = pickSeries(saldoBundle, "28848");
@@ -208,6 +229,57 @@ const HubCredito = () => {
 
   const cartoes = pickSeries(cartoesBundle, "25147");
   const creditoPib = pickSeries(saldoBundle, "20539");
+
+  /* ─── Focus expectations (macro module) for Analytics correlation ─── */
+  // Fetched only when Analytics section is visited to save bandwidth; shares
+  // React Query cache with HubMacro focus panel (same key).
+  const { data: focusBundle } = useHubSeriesBundle(
+    "focus",
+    period,
+    "macro",
+    sectionVisible("analytics"),
+  );
+  const focusIpca = pickSeries(focusBundle, 990001);
+  const focusSelic = pickSeries(focusBundle, 990002);
+  const focusPib = pickSeries(focusBundle, 990003);
+
+  /* ─── Rolling indicators: force 5y history to power 36m windows ─── */
+  // Cached separately from the page-level `period` bundles, so the Visão Geral
+  // grid always has enough history regardless of user's current view period.
+  const { data: inadBundle5y } = useHubSeriesBundle("inadimplencia", "5y", "credito");
+  const { data: spreadBundle5y } = useHubSeriesBundle("spread", "5y", "credito");
+  const { data: taxaBundle5y } = useHubSeriesBundle("taxa", "5y", "credito");
+  const { data: concessaoBundle5y } = useHubSeriesBundle("concessao", "5y", "credito");
+
+  const rollingRows = useMemo(
+    () => [
+      buildCreditRollingRow({
+        key: "inad_total",
+        label: "Inad. Total",
+        data: pickSeries(inadBundle5y, "21082"),
+        kind: "default",
+      }),
+      buildCreditRollingRow({
+        key: "spread_pf",
+        label: "Spread PF",
+        data: pickSeries(spreadBundle5y, "20783"),
+        kind: "spread",
+      }),
+      buildCreditRollingRow({
+        key: "taxa_pf",
+        label: "Taxa PF",
+        data: pickSeries(taxaBundle5y, "20714"),
+        kind: "rate",
+      }),
+      buildCreditRollingRow({
+        key: "concessao_pf",
+        label: "Concessões PF",
+        data: pickSeries(concessaoBundle5y, "20631"),
+        kind: "volume",
+      }),
+    ],
+    [inadBundle5y, spreadBundle5y, taxaBundle5y, concessaoBundle5y],
+  );
 
   /* ─── Derived analytics ─── */
   const concessoesMoM = useMemo(() => percentChange(concessaoPF), [concessaoPF]);
@@ -290,9 +362,9 @@ const HubCredito = () => {
         keywords="mercado de crédito, inadimplência Brasil, spread bancário, taxa de juros crédito, concessões BACEN, risco de crédito, crédito PF, crédito PJ"
         isProtected={true}
       />
-      <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4" />
+      <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4 no-print" />
       {/* ─── Sticky header bar ─── */}
-      <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
+      <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414] no-print">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-base font-bold text-zinc-100 tracking-tight">
@@ -309,20 +381,26 @@ const HubCredito = () => {
             />
           </div>
 
-          <div className="flex items-center gap-0.5 bg-[#111111] border border-[#1a1a1a] rounded-md p-0.5">
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-2 py-1 text-[10px] font-mono rounded transition-colors ${
-                  period === p
-                    ? "bg-[#10B981] text-white"
-                    : "text-zinc-600 hover:text-zinc-300"
-                }`}
-              >
-                {p.toUpperCase()}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <ExportPdfButton
+              title="Módulo Crédito"
+              accent="#10B981"
+            />
+            <div className="flex items-center gap-0.5 bg-[#111111] border border-[#1a1a1a] rounded-md p-0.5">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-2 py-1 text-[10px] font-mono rounded transition-colors ${
+                    period === p
+                      ? "bg-[#10B981] text-white"
+                      : "text-zinc-600 hover:text-zinc-300"
+                  }`}
+                >
+                  {p.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -396,6 +474,12 @@ const HubCredito = () => {
                   )}
                 </>
               )}
+
+              {/* Rolling indicators grid — trailing deltas 1m/3m/6m/12m/24m/36m */}
+              <CreditRollingGrid
+                rows={rollingRows}
+                subtitle="Δ vs janela · Inadimplência, Spread, Taxa PF e Concessões PF"
+              />
 
               {/* Overview Mensal */}
               <CreditOverviewMensal period={period} />
@@ -655,6 +739,7 @@ const HubCredito = () => {
                   unit="% a.a."
                   refValue={kpiVal("432") || 14.25}
                   refLabel="Selic"
+                  events={copomEvents}
                 />
                 <MacroChart
                   data={taxaVeiculos.map((d, i) => ({
@@ -668,6 +753,7 @@ const HubCredito = () => {
                   label="Veículos"
                   label2="Micro"
                   unit="% a.a."
+                  events={copomEvents}
                 />
               </div>
 
@@ -687,6 +773,7 @@ const HubCredito = () => {
                   color="#10B981"
                   label="Spread PF"
                   unit=" p.p."
+                  events={copomEvents}
                 />
                 <MacroChart
                   data={spreadPJ}
@@ -695,6 +782,7 @@ const HubCredito = () => {
                   color="#6366F1"
                   label="Spread PJ"
                   unit=" p.p."
+                  events={copomEvents}
                 />
               </div>
 
@@ -711,6 +799,7 @@ const HubCredito = () => {
                   label="Pós"
                   label2="Pré"
                   unit=" p.p."
+                  events={copomEvents}
                 />
                 <MacroChart
                   data={sma(spreadPF, 3)}
@@ -719,6 +808,7 @@ const HubCredito = () => {
                   color="#10B981"
                   label="SMA(3)"
                   unit=" p.p."
+                  events={copomEvents}
                 />
               </div>
 
@@ -944,7 +1034,7 @@ const HubCredito = () => {
                 ipca12m={3.81}
               />
 
-              {/* Correlation Panel */}
+              {/* Correlation Panel — credit indicators + Focus expectations */}
               <CreditCorrelationPanel
                 series={[
                   { label: "Inadim. Total", data: inadTotal },
@@ -953,6 +1043,9 @@ const HubCredito = () => {
                   { label: "Concessões PF", data: concessaoPF },
                   { label: "Saldo Total", data: saldoTotal },
                   { label: "Crédito/PIB", data: creditoPib },
+                  { label: "Focus IPCA", data: focusIpca, kind: "focus" },
+                  { label: "Focus Selic", data: focusSelic, kind: "focus" },
+                  { label: "Focus PIB", data: focusPib, kind: "focus" },
                 ]}
               />
 
@@ -1120,11 +1213,18 @@ const HubCredito = () => {
             </MacroSection>
           </SectionErrorBoundary>
 
-          {/* ─── Source footer ─── */}
-          <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
+          {/* ─── Source footer (apenas tela) ─── */}
+          <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono no-print">
             <span>Fonte: Banco Central do Brasil — SGS · 73 séries ativas</span>
             <span>Atualização: Mensal (último dia útil)</span>
           </div>
+
+          {/* ─── PrintFooter (apenas no PDF impresso) ─── */}
+          <PrintFooter
+            fundName="Módulo Crédito · muuney.hub"
+            dataAsOf={latestDate ?? undefined}
+            source="BACEN SGS"
+          />
         </div>
       </div>
     </div>

@@ -41,7 +41,7 @@ const STEPS: TourStep[] = [
   },
   {
     title: "Módulo de Crédito",
-    description: "Spreads, inadimplência, concessões por modalidade, heatmaps e análise de risco do SFN com 73 séries BACEN.",
+    description: "73 séries BACEN SGS organizadas em 6 narrativas (Visão Geral, Volume, Preço, Risco, Operações, Analytics). Query builder por modalidade, heatmaps PF/PJ, regime detection com cross-signals crédito×macro, calculadoras de juros Price/SAC e CSV export.",
     icon: <BarChart3 size={24} className="text-[#10B981]" />,
     route: "/credito",
     targetSelector: 'a[href="/credito"]',

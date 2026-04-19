@@ -5,6 +5,12 @@ import { pearsonCorrelation } from "@/lib/statistics";
 interface CreditSeries {
   label: string;
   data: { date: string; value: number }[];
+  /**
+   * Optional category tag. "focus" = BACEN Focus expectation (forward-looking,
+   * different cadence); used to visually separate from spot credit indicators
+   * and to enrich correlation insights.
+   */
+  kind?: "credit" | "focus";
 }
 
 interface CreditCorrelationPanelProps {
@@ -29,21 +35,51 @@ export const CreditCorrelationPanel = ({ series }: CreditCorrelationPanelProps) 
   const matrix = useMemo(() => {
     const n = series.length;
     const result: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+
+    // Build O(1) date → value lookup per series so we can date-align two
+    // series even when they have different cadences (BACEN credit = monthly,
+    // Focus = weekly). Index-aligned correlation was producing nonsense for
+    // mixed cadences.
+    const maps = series.map((s) => {
+      const m = new Map<string, number>();
+      for (const p of s.data) {
+        if (Number.isFinite(p.value)) m.set(p.date, p.value);
+      }
+      return m;
+    });
+
     for (let i = 0; i < n; i++) {
       for (let j = i; j < n; j++) {
         if (i === j) {
           result[i][j] = 1;
           continue;
         }
-        const aVals = series[i].data.map((d) => d.value);
-        const bVals = series[j].data.slice(0, aVals.length).map((d) => d.value);
-        const minLen = Math.min(aVals.length, bVals.length);
-        if (minLen < 3) {
+        // Build date-matched arrays
+        const a: number[] = [];
+        const b: number[] = [];
+        const aMap = maps[i];
+        const bMap = maps[j];
+        // Iterate the smaller map for efficiency
+        const [smallMap, otherMap, swap] =
+          aMap.size <= bMap.size ? [aMap, bMap, false] : [bMap, aMap, true];
+        for (const [date, v] of smallMap) {
+          const w = otherMap.get(date);
+          if (w !== undefined) {
+            if (swap) {
+              a.push(w);
+              b.push(v);
+            } else {
+              a.push(v);
+              b.push(w);
+            }
+          }
+        }
+        if (a.length < 3) {
           result[i][j] = 0;
           result[j][i] = 0;
           continue;
         }
-        const r = pearsonCorrelation(aVals.slice(0, minLen), bVals.slice(0, minLen));
+        const r = pearsonCorrelation(a, b);
         result[i][j] = r;
         result[j][i] = r;
       }
@@ -51,14 +87,35 @@ export const CreditCorrelationPanel = ({ series }: CreditCorrelationPanelProps) 
     return result;
   }, [series]);
 
-  // Generate insights from correlation patterns
+  // Generate insights from correlation patterns. Focus × Credit crossings
+  // get bespoke narrative — forward-looking consensus shifting alongside a
+  // spot credit indicator is a richer signal than two spot indicators moving
+  // together.
   const insights: Insight[] = useMemo(() => {
     const out: Insight[] = [];
     const labels = series.map((s) => s.label);
+    const kinds = series.map((s) => s.kind ?? "credit");
 
     for (let i = 0; i < matrix.length; i++) {
       for (let j = i + 1; j < matrix[i].length; j++) {
         const r = matrix[i][j];
+        const kindA = kinds[i];
+        const kindB = kinds[j];
+        const isFocusCross =
+          (kindA === "focus" && kindB === "credit") ||
+          (kindA === "credit" && kindB === "focus");
+
+        if (isFocusCross && Math.abs(r) >= 0.6) {
+          const sign = r > 0 ? "+" : "−";
+          const severity: Insight["severity"] = Math.abs(r) >= 0.8 ? "warning" : "info";
+          out.push({
+            label: `${labels[i]} ↔ ${labels[j]}`,
+            description: `Consenso Focus co-move ${sign} com indicador spot (r=${r.toFixed(2)}). Mudanças de expectativa antecipam pressão sobre crédito.`,
+            severity,
+          });
+          continue;
+        }
+
         if (r >= 0.8) {
           out.push({
             label: `${labels[i]} ↔ ${labels[j]}`,
@@ -101,7 +158,13 @@ export const CreditCorrelationPanel = ({ series }: CreditCorrelationPanelProps) 
             <tr>
               <th className="px-1.5 py-1 text-left text-zinc-600" />
               {series.map((s) => (
-                <th key={s.label} className="px-1.5 py-1 text-center text-zinc-500 max-w-[60px] truncate">
+                <th
+                  key={s.label}
+                  className={`px-1.5 py-1 text-center max-w-[60px] truncate ${
+                    s.kind === "focus" ? "text-indigo-400" : "text-zinc-500"
+                  }`}
+                  title={s.kind === "focus" ? "Focus — expectativa forward-looking" : undefined}
+                >
                   {s.label}
                 </th>
               ))}
@@ -110,7 +173,16 @@ export const CreditCorrelationPanel = ({ series }: CreditCorrelationPanelProps) 
           <tbody>
             {series.map((row, i) => (
               <tr key={row.label}>
-                <td className="px-1.5 py-1 text-zinc-400 whitespace-nowrap">{row.label}</td>
+                <td
+                  className={`px-1.5 py-1 whitespace-nowrap ${
+                    row.kind === "focus" ? "text-indigo-400" : "text-zinc-400"
+                  }`}
+                >
+                  {row.label}
+                  {row.kind === "focus" && (
+                    <span className="ml-1 text-[8px] text-indigo-500/80">FWD</span>
+                  )}
+                </td>
                 {matrix[i].map((r, j) => (
                   <td key={j} className="px-1 py-1 text-center">
                     <span className={`inline-block w-full px-1 py-0.5 rounded text-[9px] font-bold ${
