@@ -49,8 +49,8 @@ const STEPS: TourStep[] = [
   },
   {
     title: "Renda Fixa",
-    description: "Curva DI, NTN-B, Tesouro Direto, crédito privado — com simuladores de yield curve e calculadora de bonds.",
-    icon: <Banknote size={24} className="text-[#6366F1]" />,
+    description: "Módulo Renda Fixa — 30 indicadores BACEN SGS, curva DI 9 vértices, NTN-B 4 vencimentos, BEI 3 horizontes, calculadoras de bonds e carteira RF, simulador Tesouro Direto, Crédito Privado AA/A + CRA/CRI.",
+    icon: <Banknote size={24} className="text-[#10B981]" />,
     route: "/renda-fixa",
     targetSelector: 'a[href="/renda-fixa"]',
     placement: "right",

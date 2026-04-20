@@ -11,7 +11,7 @@ import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { MacroInsightCard, type InsightInput } from "@/components/hub/MacroInsightCard";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { SkeletonPage } from "@/components/hub/SkeletonLoader";
-import { EmptyState } from "@/components/hub/EmptyState";
+import { EmptyState, InlineEmpty } from "@/components/hub/EmptyState";
 import { FixedIncomeNarrativePanel } from "@/components/hub/FixedIncomeNarrativePanel";
 import { YieldCurveSimulator } from "@/components/hub/YieldCurveSimulator";
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
@@ -24,6 +24,7 @@ import { TesouroSimulator } from "@/components/hub/TesouroSimulator";
 import { RfPortfolioCalculator } from "@/components/hub/RfPortfolioCalculator";
 import { CreditoPrivadoDeepPanel } from "@/components/hub/CreditoPrivadoDeepPanel";
 import { buildRfRollingRow } from "@/lib/rfRollingDeltas";
+import { normalizeToBi } from "@/lib/unitNormalize";
 import {
   useHubLatest,
   useHubSeriesBundle,
@@ -147,21 +148,20 @@ const HubRendaFixa = () => {
   const { data: curvaDiBundle } = useHubSeriesBundle("curva_di", period, "macro", true);
   const { data: poupancaBundle } = useHubSeriesBundle("poupanca", period, "macro", true);
 
-  // Títulos Públicos (lazy)
-  const { data: ntnbBundle } = useHubSeriesBundle("ntnb", period, "macro", sectionVisible("titulos"));
-  const { data: breakevenBundle } = useHubSeriesBundle("breakeven", period, "macro", sectionVisible("titulos"));
-  const { data: tesouroBundle } = useHubSeriesBundle("tesouro", period, "macro", sectionVisible("titulos"));
+  // P2-4: Sparkline universal coverage — all bundles fetched eagerly so
+  // KPICards across sections have trend data populated on mount.
+  const { data: ntnbBundle } = useHubSeriesBundle("ntnb", period, "macro", true);
+  const { data: breakevenBundle } = useHubSeriesBundle("breakeven", period, "macro", true);
+  const { data: tesouroBundle } = useHubSeriesBundle("tesouro", period, "macro", true);
+  const { data: credprivBundle } = useHubSeriesBundle("credpriv", period, "macro", true);
 
-  // Crédito Privado (lazy)
-  const { data: credprivBundle } = useHubSeriesBundle("credpriv", period, "macro", sectionVisible("credpriv"));
-
-  // 5y bundles for rolling grids / calendar heatmap (reused across sections — always fetch)
+  // 5y bundles for rolling grids / calendar heatmap
   const { data: taxaRefBundle5y } = useHubSeriesBundle("taxa_ref", "5y", "macro", true);
   const { data: selicBundle5y } = useHubSeriesBundle("selic", "5y", "macro", true);
   const { data: curvaDi5y } = useHubSeriesBundle("curva_di", "5y", "macro", true);
-  const { data: ntnbBundle5y } = useHubSeriesBundle("ntnb", "5y", "macro", sectionVisible("titulos") || sectionVisible("analytics"));
-  const { data: breakevenBundle5y } = useHubSeriesBundle("breakeven", "5y", "macro", sectionVisible("titulos") || sectionVisible("analytics"));
-  const { data: credpriv5y } = useHubSeriesBundle("credpriv", "5y", "macro", sectionVisible("credpriv"));
+  const { data: ntnbBundle5y } = useHubSeriesBundle("ntnb", "5y", "macro", true);
+  const { data: breakevenBundle5y } = useHubSeriesBundle("breakeven", "5y", "macro", true);
+  const { data: credpriv5y } = useHubSeriesBundle("credpriv", "5y", "macro", true);
 
   /* ─── Extract individual series ─── */
   const selic = pickSeries(selicBundle, "432");        // Selic is in 'selic' category
@@ -183,12 +183,25 @@ const HubRendaFixa = () => {
   const bei3 = pickSeries(breakevenBundle, "990102");
   const bei5 = pickSeries(breakevenBundle, "990103");
 
-  const estoqueTD = pickSeries(tesouroBundle, "990201");
-  const vendasTD = pickSeries(tesouroBundle, "990202");
+  // P2-1: Unit consistency sweep — BACEN SGS pode publicar Estoque/Vendas
+  // TD e Emissões/CRI+CRA em "R$ milhões" ou "R$ bi" conforme série. Todos
+  // os charts R$ assumem bilhões; forçamos conversão usando meta.unit para
+  // garantir legenda + tooltip alinhados ao eixo Y.
+  const estoqueTD = normalizeToBi(
+    pickSeries(tesouroBundle, "990201"),
+    tesouroBundle?.["990201"]?.unit
+  );
+  const vendasTD = normalizeToBi(
+    pickSeries(tesouroBundle, "990202"),
+    tesouroBundle?.["990202"]?.unit
+  );
 
   const spreadAASeries = pickSeries(credprivBundle, "990301");
   const spreadASeries = pickSeries(credprivBundle, "990302");
-  const emissoesSeries = pickSeries(credprivBundle, "990303");
+  const emissoesSeries = normalizeToBi(
+    pickSeries(credprivBundle, "990303"),
+    credprivBundle?.["990303"]?.unit
+  );
 
   /* ─── Date-based merge helper for dual-series charts ─── */
   const mergeSeries = useCallback(
@@ -605,7 +618,17 @@ const HubRendaFixa = () => {
 
       {/* ─── Main content ─── */}
       <div className="min-w-0 space-y-4">
-        <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
+        <Breadcrumbs
+          items={
+            activeSection === "overview"
+              ? [{ label: "Renda Fixa" }]
+              : [
+                  { label: "Renda Fixa", to: "/renda-fixa" },
+                  { label: SECTIONS.find((s) => s.id === activeSection)?.label ?? "" },
+                ]
+          }
+          className="mb-4"
+        />
         {/* ─── Sticky header ─── */}
         <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414] no-print">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -850,16 +873,23 @@ const HubRendaFixa = () => {
             </div>
 
             {/* Yield Curve snapshot via MacroChart v2 */}
-            <MacroChart
-              data={yieldCurveChartData}
-              title="Curva DI — Swap Pré x DI (Snapshot)"
-              type="area"
-              color={ACCENT}
-              label="Taxa DI"
-              unit="% a.a."
-              refValue={kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25}
-              refLabel="Selic Meta"
-            />
+            {yieldCurveChartData.some((d) => d.value > 0) ? (
+              <MacroChart
+                data={yieldCurveChartData}
+                title="Curva DI — Swap Pré x DI (Snapshot)"
+                type="area"
+                color={ACCENT}
+                label="Taxa DI"
+                unit="% a.a."
+                refValue={kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25}
+                refLabel="Selic Meta"
+              />
+            ) : (
+              <div className="rounded border border-[#141414] bg-[#0d0d0d] p-3">
+                <div className="text-[11px] text-zinc-400 font-mono mb-2">Curva DI — Swap Pré x DI (Snapshot)</div>
+                <InlineEmpty text="Vértices DI sem dados na janela atual — aguarde ingestão BACEN SGS." />
+              </div>
+            )}
 
             {/* DI vertex evolution over time */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1029,14 +1059,21 @@ const HubRendaFixa = () => {
                 </div>
 
                 {/* NTN-B Term Structure via MacroChart v2 */}
-                <MacroChart
-                  data={ntnbTermStructure}
-                  title="Estrutura a Termo — NTN-B (IPCA+ Real)"
-                  type="area"
-                  color={INDIGO}
-                  label="IPCA+ Real"
-                  unit="% a.a."
-                />
+                {ntnbTermStructure.some((d) => d.value > 0) ? (
+                  <MacroChart
+                    data={ntnbTermStructure}
+                    title="Estrutura a Termo — NTN-B (IPCA+ Real)"
+                    type="area"
+                    color={INDIGO}
+                    label="IPCA+ Real"
+                    unit="% a.a."
+                  />
+                ) : (
+                  <div className="rounded border border-[#141414] bg-[#0d0d0d] p-3">
+                    <div className="text-[11px] text-zinc-400 font-mono mb-2">Estrutura a Termo — NTN-B (IPCA+ Real)</div>
+                    <InlineEmpty text="Sem cotações NTN-B disponíveis nos vencimentos monitorados — verifique janela temporal ou aguarde ANBIMA." />
+                  </div>
+                )}
 
                 {/* NTN-B 2035 calendar heatmap — sazonalidade MoM desvio */}
                 {ntnb2035_5y.length > 0 && (
