@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { HubSEO } from "@/lib/seo";
 
 type OtpType = "recovery" | "invite" | "magiclink" | "signup" | "email_change";
 
@@ -99,6 +100,13 @@ export default function HubResetPassword() {
   };
 
   return (
+    <>
+      <HubSEO
+        title="Redefinir senha"
+        description="Defina sua nova senha no Muuney Hub para retomar o acesso ao painel de inteligência de mercado."
+        path="/reset-password"
+        isProtected={true}
+      />
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#0B6C3E]/5 rounded-full blur-[120px]" />
@@ -182,5 +190,6 @@ export default function HubResetPassword() {
         </div>
       </div>
     </div>
+    </>
   );
 }

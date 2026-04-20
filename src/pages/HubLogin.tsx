@@ -1,6 +1,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { HubSEO } from "@/lib/seo";
 
 // Client-side rate limiting: 5 attempts, 60s lockout
 const MAX_ATTEMPTS = 5;
@@ -108,6 +109,13 @@ export default function HubLogin() {
   const isLocked = lockoutRemaining > 0;
 
   return (
+    <>
+      <HubSEO
+        title="Login"
+        description="Acesse o Muuney Hub — inteligência de mercado em tempo real para agentes autônomos de investimentos. Dados BACEN SGS e CVM consolidados em um painel único."
+        path="/login"
+        isProtected={true}
+      />
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
       {/* Subtle gradient backdrop */}
       <div className="fixed inset-0 pointer-events-none">
@@ -213,5 +221,6 @@ export default function HubLogin() {
         </p>
       </div>
     </div>
+    </>
   );
 }

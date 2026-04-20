@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { HubSEO } from "@/lib/seo";
 
 export default function HubFirstAccess() {
   const [email, setEmail] = useState("");
@@ -53,6 +54,13 @@ export default function HubFirstAccess() {
   };
 
   return (
+    <>
+      <HubSEO
+        title="Primeiro acesso"
+        description="Configure sua senha de acesso ao Muuney Hub — beta restrito a AAIs e escritórios convidados. Inteligência de mercado em tempo real via BACEN SGS e CVM."
+        path="/primeiro-acesso"
+        isProtected={true}
+      />
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#0B6C3E]/5 rounded-full blur-[120px]" />
@@ -153,7 +161,7 @@ export default function HubFirstAccess() {
                   to="/login"
                   className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
                 >
-                  Ja tenho conta
+                  Já tenho conta
                 </Link>
                 <span className="text-zinc-700 text-xs">|</span>
                 <Link
@@ -168,5 +176,6 @@ export default function HubFirstAccess() {
         </div>
       </div>
     </div>
+    </>
   );
 }

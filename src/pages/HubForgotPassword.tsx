@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { HubSEO } from "@/lib/seo";
 
 export default function HubForgotPassword() {
   const [email, setEmail] = useState("");
@@ -50,6 +51,13 @@ export default function HubForgotPassword() {
   };
 
   return (
+    <>
+      <HubSEO
+        title="Recuperar senha"
+        description="Recupere o acesso ao Muuney Hub. Enviaremos um link seguro para redefinir sua senha e voltar ao painel de inteligência de mercado."
+        path="/forgot-password"
+        isProtected={true}
+      />
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#0B6C3E]/5 rounded-full blur-[120px]" />
@@ -154,5 +162,6 @@ export default function HubForgotPassword() {
         </div>
       </div>
     </div>
+    </>
   );
 }
