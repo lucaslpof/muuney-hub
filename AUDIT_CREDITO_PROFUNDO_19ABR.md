@@ -1,7 +1,7 @@
 # Auditoria Profunda — Módulo Overview de Crédito
 **muuney.hub · 19/04/2026 · pre-beta launch 30/04**
 
-> **Status entrega (19/04/2026, noite):** P0 (8 tickets) **✅ shipped** em commit `30253fb`. P1 (7 de 8 tickets frontend-only) **✅ shipped** em commit `1628bf5`. P2 polish batch (4 shipped novos + 1 pré-shipped + 1 já endereçado + 2 diferidos) em commit `<pending>`. Build clean (tsc 0, vite 5.13s). HubCredito chunk 89 → 129 kB (+40 kB para 19 features). P1-6 (alertas dinâmicos — requer migration + admin UI), P2-5 (unit consistency sweep) e P2-8 (a11y axe-core audit) diferidos pós-beta.
+> **Status entrega (19/04/2026, noite):** P0 (8 tickets) **✅ shipped** em commit `30253fb`. P1 (7 de 8 tickets frontend-only) **✅ shipped** em commit `1628bf5`. P2 polish batch (4 shipped novos + 1 pré-shipped + 1 já endereçado + 2 diferidos) em commit `54244c7`. Build clean (tsc 0, vite 5.13s). HubCredito chunk 89 → 129 kB (+40 kB para 19 features). P1-6 (alertas dinâmicos — requer migration + admin UI), P2-5 (unit consistency sweep) e P2-8 (a11y axe-core audit) diferidos pós-beta.
 
 ## TL;DR
 
@@ -138,7 +138,7 @@ Organizados por impacto×esforço. Todos frontend-only ou dados já disponíveis
 
 ## P2 — Polish
 
-**Status entrega (commit `<pending>`):** 4 de 8 tickets shipped frontend-only. P2-4 já em produção via commit anterior (InterestCalculator SCENARIOS). P2-6 endereçado por EmptyState existente nos charts. P2-5 e P2-8 diferidos pós-beta (sweep disciplinado + axe-core audit).
+**Status entrega (commit `54244c7`):** 4 de 8 tickets shipped frontend-only. P2-4 já em produção via commit anterior (InterestCalculator SCENARIOS). P2-6 endereçado por EmptyState existente nos charts. P2-5 e P2-8 diferidos pós-beta (sweep disciplinado + axe-core audit).
 
 ### P2-1 · NarrativeSection nas 3 sections restantes
 **Status**: ✅ Shipped. Adicionado `NarrativeSection` em **Visão Geral** (5 mini-stats: Regime consolidado, Saldo SFN, Inadim. Total, Taxa PF média, Concessões PF — regime derivado de inadLast/spreadLast/concessoesMoMLast classificando 5 regimes: Stress Sistêmico / Contração / Expansão / Aperto de Risco / Normalização, prosa sintetizando o estado do ciclo de crédito), **Operações** (5 mini-stats: Modalidades disponíveis, Cartões emitidos, Saldo veículos PF, Saldo cartão rotativo, Crédito/PIB — prosa explicando o catálogo de 18 modalidades BACEN + fallback aggregate quando SGS não publica taxa específica) e **Analytics** (5 mini-stats: Selic nominal, Focus IPCA 12m, Focus Selic, Juro real ex-ante com cor dinâmica por severidade, Inadim. SFN — prosa sobre juro real ex-ante como força dominante sobre concessões + alertas automáticos). Todas com accent `#0B6C3E`.
@@ -182,7 +182,7 @@ Organizados por impacto×esforço. Todos frontend-only ou dados já disponíveis
 - `src/pages/HubCredito.tsx` — 5y bundles para Rolling Grid + Focus bundle lazy-fetched em Analytics + COPOM overlay em 4 charts + ExportPdfButton integrado
 - `src/components/hub/OnboardingTour.tsx` — Crédito step enriquecido (8 steps total)
 
-**P2 (commit `<pending>`):**
+**P2 (commit `54244c7`):**
 - `src/components/hub/CreditCalendarHeatmap.tsx` — NEW (~284 linhas) — Year × Month diverging heatmap com semântica kind-aware (rate/spread/default = higher bad; volume = higher good)
 - `src/pages/HubCredito.tsx` — NarrativeSection em Visão Geral + Operações + Analytics (15 mini-stats novos, 3 regimes/5 estados detectados), CreditCalendarHeatmap integrado em Visão Geral (inadimplência SFN calendário 5y), removido gate lazy-load de spread/concessao/cartoes bundles para universal sparkline coverage
 - `src/components/hub/HubLayout.tsx` — `useHubSections()` wire para passar `section={activeSectionLabel}` ao FeedbackWidget (feedback agora scoped por seção ativa do Hub)
