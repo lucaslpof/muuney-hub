@@ -1,10 +1,50 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, X, Sparkles, Loader2, AlertCircle, Settings } from "lucide-react";
+import { Check, X, Sparkles, Loader2, AlertCircle, Settings, Calendar, Clock, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 import { pickFromListOrNull } from "@/lib/queryParams";
+
+interface BillingStatus {
+  plan: "monthly" | "yearly" | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
+  trial_ends_at: string | null;
+  cancel_at_period_end: boolean;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function daysBetween(iso: string | null): number | null {
+  if (!iso) return null;
+  const end = new Date(iso).getTime();
+  if (Number.isNaN(end)) return null;
+  return Math.ceil((end - Date.now()) / 86_400_000);
+}
+
+const STATUS_LABELS: Record<string, { label: string; tone: "emerald" | "amber" | "red" | "zinc" }> = {
+  active: { label: "Ativa", tone: "emerald" },
+  trialing: { label: "Período de teste", tone: "emerald" },
+  past_due: { label: "Pagamento pendente", tone: "amber" },
+  unpaid: { label: "Não paga", tone: "red" },
+  canceled: { label: "Cancelada", tone: "red" },
+  incomplete: { label: "Incompleta", tone: "amber" },
+  incomplete_expired: { label: "Expirada", tone: "red" },
+  paused: { label: "Pausada", tone: "amber" },
+};
+
+const TONE_CLASSES: Record<string, string> = {
+  emerald: "bg-[#0B6C3E]/10 border-[#0B6C3E]/40 text-[#0B6C3E]",
+  amber: "bg-amber-500/10 border-amber-500/40 text-amber-400",
+  red: "bg-red-500/10 border-red-500/40 text-red-400",
+  zinc: "bg-zinc-800 border-zinc-700 text-zinc-400",
+};
 
 const CHECKOUT_STATUSES = ["success", "cancelled"] as const;
 type CheckoutStatus = (typeof CHECKOUT_STATUSES)[number];
@@ -59,7 +99,7 @@ function FeatureCell({ value }: { value: boolean | string }) {
 }
 
 export default function HubUpgrade() {
-  const { tier, isPro, isAdmin, refreshTier } = useAuth();
+  const { user, tier, isPro, isAdmin, refreshTier } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -68,8 +108,42 @@ export default function HubUpgrade() {
   const [cancelledBanner, setCancelledBanner] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmTimeout, setConfirmTimeout] = useState(false);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch billing status for Pro users (not needed for admins — they bypass billing)
+  useEffect(() => {
+    if (!user?.id || !isPro || isAdmin) {
+      setBilling(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error: fetchErr } = await supabase
+        .from("hub_user_tiers")
+        .select("plan, subscription_status, current_period_end, trial_ends_at, cancel_at_period_end")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (fetchErr) {
+        console.warn("Failed to fetch billing status:", fetchErr);
+        return;
+      }
+      if (data) {
+        setBilling({
+          plan: (data.plan as BillingStatus["plan"]) ?? null,
+          subscription_status: data.subscription_status ?? null,
+          current_period_end: data.current_period_end ?? null,
+          trial_ends_at: data.trial_ends_at ?? null,
+          cancel_at_period_end: Boolean(data.cancel_at_period_end),
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, isPro, isAdmin, tier]);
 
   // Handle checkout return — poll for tier upgrade with timeout
   useEffect(() => {
@@ -270,6 +344,99 @@ export default function HubUpgrade() {
           <div className="mb-8 px-4 py-3 bg-red-500/10 border border-red-500/40 rounded-lg flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
             <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Billing status card (Pro only, non-admin) */}
+        {isPro && !isAdmin && billing && (
+          <div className="mb-8 bg-[#111111] border border-zinc-800 rounded-2xl p-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[240px]">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">
+                    Sua assinatura
+                  </span>
+                  {billing.subscription_status && STATUS_LABELS[billing.subscription_status] && (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-wider ${
+                        TONE_CLASSES[STATUS_LABELS[billing.subscription_status].tone]
+                      }`}
+                    >
+                      {STATUS_LABELS[billing.subscription_status].label}
+                    </span>
+                  )}
+                  {billing.cancel_at_period_end && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 border-amber-500/40 text-amber-400">
+                      <AlertTriangle className="w-3 h-3" />
+                      Cancelamento agendado
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+                  <div>
+                    <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">
+                      Plano
+                    </p>
+                    <p className="text-white font-medium">
+                      {billing.plan === "yearly" ? "Pro Anual · R$ 490/ano" : billing.plan === "monthly" ? "Pro Mensal · R$ 49/mês" : "Pro"}
+                    </p>
+                  </div>
+                  {billing.subscription_status === "trialing" && billing.trial_ends_at && (
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Teste termina
+                      </p>
+                      <p className="text-[#0B6C3E] font-medium">
+                        {formatDate(billing.trial_ends_at)}
+                        {(() => {
+                          const d = daysBetween(billing.trial_ends_at);
+                          return d != null && d >= 0 ? (
+                            <span className="text-zinc-500 text-xs ml-1.5">
+                              ({d} {d === 1 ? "dia" : "dias"})
+                            </span>
+                          ) : null;
+                        })()}
+                      </p>
+                    </div>
+                  )}
+                  {billing.current_period_end && (
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {billing.cancel_at_period_end ? "Acesso até" : "Próxima cobrança"}
+                      </p>
+                      <p className="text-zinc-200 font-medium">
+                        {formatDate(billing.current_period_end)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={openBillingPortal}
+                disabled={portalLoading}
+                className="shrink-0 py-2 px-4 bg-transparent hover:bg-[#0B6C3E]/10 border border-[#0B6C3E]/50 disabled:opacity-60 disabled:cursor-not-allowed text-[#0B6C3E] rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {portalLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Abrindo…
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-4 h-4" />
+                    Gerenciar
+                  </>
+                )}
+              </button>
+            </div>
+            {billing.cancel_at_period_end && billing.current_period_end && (
+              <p className="mt-4 text-xs text-amber-400/80">
+                Sua assinatura foi cancelada e seu acesso Pro vai até {formatDate(billing.current_period_end)}.
+                Você pode reativar a qualquer momento em "Gerenciar".
+              </p>
+            )}
           </div>
         )}
 

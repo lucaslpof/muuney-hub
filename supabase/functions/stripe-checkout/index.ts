@@ -6,6 +6,10 @@
 //   STRIPE_PRICE_ID_MONTHLY    — price_... (Pro R$49/mês)
 //   STRIPE_PRICE_ID_YEARLY     — price_... (Pro R$490/ano)
 //   SITE_URL                   — https://hub.muuney.com.br (Hub domain)
+// Optional:
+//   STRIPE_TRIAL_DAYS          — "14" to enable 14-day trial; unset/0 disables.
+//                                Trial is granted only to users who never had
+//                                an active subscription (hub_user_tiers.pro_since IS NULL).
 //
 // POST body: { plan: "monthly" | "yearly" }
 // Requires authenticated user (Authorization: Bearer <jwt>).
@@ -86,13 +90,19 @@ Deno.serve(async (req: Request) => {
     // Ensure hub_user_tiers row exists (default free) — webhook will upgrade to pro
     const { data: existingTier } = await supabase
       .from("hub_user_tiers")
-      .select("tier, stripe_customer_id")
+      .select("tier, stripe_customer_id, pro_since")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (!existingTier) {
       await supabase.from("hub_user_tiers").insert({ user_id: user.id, tier: "free" });
     }
+
+    // Trial eligibility: only first-time subscribers (never had an active Pro sub).
+    // STRIPE_TRIAL_DAYS=0 or unset disables trial globally.
+    const trialDaysRaw = Deno.env.get("STRIPE_TRIAL_DAYS");
+    const trialDays = trialDaysRaw ? parseInt(trialDaysRaw, 10) : 0;
+    const eligibleForTrial = trialDays > 0 && existingTier?.pro_since == null;
 
     // Init Stripe
     const stripe = new Stripe(stripeKey, {
@@ -124,6 +134,7 @@ Deno.serve(async (req: Request) => {
       allow_promotion_codes: true,
       subscription_data: {
         metadata: { supabase_user_id: user.id, plan },
+        ...(eligibleForTrial ? { trial_period_days: trialDays } : {}),
       },
       metadata: { supabase_user_id: user.id, plan },
     });

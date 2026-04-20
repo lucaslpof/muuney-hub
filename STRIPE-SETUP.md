@@ -80,6 +80,7 @@ Adicionar (valores copiados dos passos 1, 2, 4):
 | `STRIPE_PRICE_ID_YEARLY` | `price_...` do produto anual |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` do webhook |
 | `SITE_URL` | `https://hub.muuney.com.br` |
+| `STRIPE_TRIAL_DAYS` *(opcional)* | `14` para habilitar trial de 14 dias. `0` ou ausente desabilita. Apenas para usuários que nunca foram Pro (checa `hub_user_tiers.pro_since IS NULL`). |
 
 ---
 
@@ -154,8 +155,26 @@ Se webhook reportar `setTierForCustomer: no hub_user_tiers row matched customer 
 
 ---
 
+## Trial de 14 dias (opcional)
+
+Para habilitar o trial de 14 dias no checkout:
+
+1. Supabase → Edge Functions → Manage secrets → adicionar `STRIPE_TRIAL_DAYS=14`
+2. Redeploy é desnecessário — secrets são picked up imediatamente
+
+Regras do trial (implementadas em `stripe-checkout/index.ts`):
+
+- Aplicado apenas para usuários que nunca tiveram uma assinatura Pro ativa (`hub_user_tiers.pro_since IS NULL`)
+- Trial é gerenciado pela Stripe (não exige implementação server-side extra)
+- Após o trial, Stripe cobra automaticamente o cartão cadastrado no checkout
+- Durante o trial, `subscription.status = "trialing"` e `tier = "pro"` (mesmo acesso de um Pro pagante)
+- Se o usuário cancelar antes do trial expirar (via Customer Portal), nada é cobrado
+
+Para desabilitar: setar `STRIPE_TRIAL_DAYS=0` ou remover a secret.
+
+---
+
 ## Campos que a gente NÃO usa
 
 - `price_id` do checkout não vai na URL (exposição desnecessária) — preço é escolhido pelo backend baseado em `plan=monthly|yearly`
-- Trial não está ativo — se quiser, adicionar `trial_period_days: 14` no objeto `subscription_data` de stripe-checkout
 - Cupons: `allow_promotion_codes: true` já está ligado — basta criar cupons no Stripe Dashboard

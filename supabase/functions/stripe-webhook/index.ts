@@ -129,12 +129,34 @@ Deno.serve(async (req: Request) => {
         const status = sub.status;
         const activeStatuses = ["active", "trialing"];
         const tier = activeStatuses.includes(status) ? "pro" : "free";
+
+        // Derive plan (monthly | yearly) from price ID or subscription metadata.
+        // Metadata is set by stripe-checkout; price ID lookup is the fallback
+        // for subscriptions that existed before we added metadata.
+        const planFromMeta = sub.metadata?.plan;
+        const priceMonthly = Deno.env.get("STRIPE_PRICE_ID_MONTHLY");
+        const priceYearly = Deno.env.get("STRIPE_PRICE_ID_YEARLY");
+        const firstItem = sub.items.data[0];
+        const priceId = firstItem?.price?.id;
+        let plan: "monthly" | "yearly" | null = null;
+        if (planFromMeta === "monthly" || planFromMeta === "yearly") {
+          plan = planFromMeta;
+        } else if (priceId === priceMonthly) {
+          plan = "monthly";
+        } else if (priceId === priceYearly) {
+          plan = "yearly";
+        }
+
         await setTierForCustomer(customerId, tier, {
           stripe_subscription_id: sub.id,
           subscription_status: status,
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: sub.cancel_at_period_end ?? false,
+          trial_started_at: sub.trial_start ? new Date(sub.trial_start * 1000).toISOString() : null,
+          trial_ends_at: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+          ...(plan ? { plan } : {}),
         });
-        console.log(`Subscription ${sub.id} → ${status} (tier=${tier})`);
+        console.log(`Subscription ${sub.id} → ${status} (tier=${tier}, plan=${plan ?? "?"})`);
         break;
       }
 
