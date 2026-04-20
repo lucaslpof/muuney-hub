@@ -140,6 +140,96 @@ export const KPI_HINTS: Record<string, string> = {
     "Volatilidade: desvio-padrão dos retornos, indicador de risco. Anualizada pela √(252) para retornos diários.",
   "desvio padrão":
     "Desvio-padrão: dispersão dos retornos em torno da média. Base de Sharpe/Sortino/VaR.",
+
+  // ── Renda Fixa — Taxas de referência ──
+  cdi:
+    "CDI — Certificado de Depósito Interbancário: taxa média dos empréstimos entre bancos. Benchmark livre de risco para fundos e CDBs.",
+  "cdi acumulado":
+    "CDI Acumulado: CDI composto nos últimos 12 meses. Benchmark padrão para comparar fundos DI e CDBs pós-fixados.",
+  "selic efetiva":
+    "Selic Efetiva: taxa média apurada no SELIC (custódia). Expressa em % a.d. — anualização: (1+v/100)^252 − 1.",
+  "selic meta":
+    "Selic Meta: taxa definida pelo COPOM. Referência para CDI e política monetária. Decisões: 8 reuniões/ano.",
+  poupança:
+    "Poupança — Rendimento: hoje Selic > 8,5% → 0,5%/mês + TR. Comparação essencial para decisão de renda fixa PF.",
+  "taxa referencial":
+    "TR — Taxa Referencial: remuneração de poupança/FGTS/financiamentos SFH. Calculada pelo BCB com base em LFTs.",
+
+  // ── Renda Fixa — Curva DI × Pré ──
+  "curva di":
+    "Curva de Juros (DI × Pré): taxas pré-fixadas negociadas no mercado futuro DI. Reflete expectativa de Selic para cada prazo.",
+  "di 30d":
+    "Swap DI × Pré 30d: taxa pré-fixada para 30 dias úteis. Proxy de curto prazo da expectativa de Selic.",
+  "di 360d":
+    "Swap DI × Pré 360d (1a): expectativa de Selic média no próximo ano. Benchmark para CDBs 1a.",
+  "di 1800d":
+    "Swap DI × Pré 1800d (5a): expectativa de Selic média em 5 anos. Benchmark para prefixados médios.",
+  inclinação:
+    "Inclinação da Curva: diferença entre longo e curto. Positiva = expectativa de alta da Selic; Negativa (invertida) = expectativa de corte/recessão.",
+  "curva invertida":
+    "Curva Invertida: vértices longos abaixo dos curtos. Historicamente antecede ciclos de corte da Selic ou recessão.",
+
+  // ── Renda Fixa — Títulos públicos / NTN-B ──
+  "ntn-b":
+    "NTN-B / Tesouro IPCA+: título público indexado ao IPCA + juro real. Protege contra inflação e trava rentabilidade real.",
+  "ltn":
+    "LTN / Tesouro Prefixado: título sem cupom (zero-coupon), pago a valor de face no vencimento. Trava taxa nominal.",
+  "lft":
+    "LFT / Tesouro Selic: título pós-fixado, rende Selic. Baixa volatilidade MaM (marcação a mercado), ideal para reserva.",
+  "ntn-f":
+    "NTN-F / Tesouro Prefixado com Juros Semestrais: título pré-fixado com cupom de 10% a.a. pago em janeiro e julho.",
+  "breakeven inflation":
+    "Breakeven Inflation (BEI): diferença entre juro nominal (LTN/DI) e real (NTN-B) para o mesmo prazo. Reflete IPCA esperado pelo mercado.",
+  breakeven:
+    "Breakeven Inflation: IPCA implícito no preço dos títulos = taxa prefixada − taxa real. Comparar com Focus para detectar desancoragem.",
+  "juro real":
+    "Juro Real: taxa nominal − inflação esperada. Ex-ante: Selic − Focus IPCA 12m. Positivo elevado = política monetária restritiva.",
+  "juro real ex-ante":
+    "Juro Real Ex-Ante: Selic − expectativa Focus IPCA 12m. Métrica de aperto monetário. >6% historicamente restritivo para EM.",
+
+  // ── Renda Fixa — Tesouro Direto ──
+  "tesouro direto":
+    "Tesouro Direto: plataforma B3 de venda pulverizada de títulos públicos a PF. Custódia B3 0,20% a.a. sobre saldo.",
+  "estoque td":
+    "Estoque Tesouro Direto: valor total em custódia de investidores PF. Cresce com ciclos de Selic alta e aversão a risco.",
+  "vendas td":
+    "Vendas Líquidas Tesouro Direto: compras − resgates no período. Positivo = fluxo entrando em RF pública.",
+  "custódia b3":
+    "Taxa de Custódia B3: 0,20% a.a. sobre saldo no Tesouro Direto (isento até R$ 10k em Tesouro Selic). Cobrada semestralmente.",
+  "ir regressivo":
+    "IR Regressivo RF: 22,5% (≤180d), 20% (181-360d), 17,5% (361-720d), 15% (>720d). Incide no resgate sobre o lucro.",
+
+  // ── Renda Fixa — Métricas de preço e risco ──
+  duration:
+    "Duration (Macaulay): prazo médio ponderado dos fluxos de caixa, em anos. Mede sensibilidade de preço a variações de taxa.",
+  "duration modificada":
+    "Duration Modificada: Duration / (1 + taxa). Estima variação % de preço: ΔP/P ≈ −DMod × Δy.",
+  convexidade:
+    "Convexidade: segunda derivada do preço em relação à taxa. Ajuste para grandes variações de taxa (termo quadrático).",
+  dv01:
+    "DV01 (Dollar Value of 01 bp): variação de preço em R$ para deslocamento de 1 ponto-base (0,01%) na taxa. Mede exposição absoluta.",
+  "marcação a mercado":
+    "Marcação a Mercado (MaM): reavaliação diária do preço do título pela taxa de negociação atual. Pode gerar ganho/perda antes do vencimento.",
+  mam:
+    "Marcação a Mercado: preço do título hoje dado a taxa de mercado. Vender antes do vencimento cristaliza ganho/perda por MaM.",
+
+  // ── Renda Fixa — Crédito privado ──
+  "ima-b":
+    "IMA-B: índice Anbima que replica cesta de NTN-Bs. Benchmark para fundos IPCA+ de longo prazo.",
+  debênture:
+    "Debênture: título de dívida corporativa. Pode ser incentivada (isenta IR PF) ou comum. Risco de crédito do emissor.",
+  "debênture incentivada":
+    "Debênture Incentivada (Lei 12.431): título de dívida de projetos de infraestrutura. Isenta de IR para PF, ideal após CDI 100%.",
+  "cra":
+    "CRA — Certificado de Recebíveis do Agronegócio: securitização de recebíveis agro. Isento IR PF. Risco de crédito do originador.",
+  "cri":
+    "CRI — Certificado de Recebíveis Imobiliários: securitização de recebíveis imobiliários. Isento IR PF. Lastro em imóveis/aluguéis.",
+  "spread cdi+":
+    "Spread CDI+: prêmio de risco sobre o CDI em título pós-fixado. Ex: CDI+2,5% = CDI + 2,5pp ao ano.",
+  "spread aa":
+    "Spread AA (crédito privado): prêmio médio exigido em debêntures rating AA sobre o CDI. Benchmark para high grade corporativo.",
+  "spread a":
+    "Spread A (crédito privado): prêmio médio em debêntures rating A sobre o CDI. Maior que AA pelo aumento de risco.",
 };
 
 export function getKpiHint(label: string): string | undefined {

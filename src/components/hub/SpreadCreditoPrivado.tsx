@@ -6,6 +6,7 @@ import {
 import { ShieldAlert, TrendingUp, AlertTriangle, Landmark, Download, Minus } from "lucide-react";
 import type { SeriesDataPoint } from "@/hooks/useHubData";
 import { fmtNum, formatMonthShort } from "@/lib/format";
+import { exportCsv, csvFilename } from "@/lib/csvExport";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SPREAD CRÉDITO PRIVADO v2
@@ -135,17 +136,18 @@ export function SpreadCreditoPrivado({
     }));
   }, [emissoesSeries]);
 
-  /* CSV export */
+  /* CSV export — migrado para helper shared (pt-BR semicolon + UTF-8 BOM) */
   const exportCSV = () => {
-    const header = "Data,Spread AA,Spread A,Diferencial\n";
-    const rows = spreadChartData.map((d) => `${d.date},${fmtNum(d.AA, 2)},${fmtNum(d.A, 2)},${fmtNum(d.diff, 2)}`).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "spread_credito_privado.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    exportCsv(
+      spreadChartData,
+      [
+        { header: "Data", accessor: (d) => d.date },
+        { header: "Spread AA (p.p.)", accessor: (d) => fmtNum(d.AA, 2) },
+        { header: "Spread A (p.p.)", accessor: (d) => fmtNum(d.A, 2) },
+        { header: "Diferencial (p.p.)", accessor: (d) => fmtNum(d.diff, 2) },
+      ],
+      csvFilename("renda-fixa", "spread-credito-privado"),
+    );
   };
 
   return (

@@ -14,6 +14,16 @@ import { SkeletonPage } from "@/components/hub/SkeletonLoader";
 import { EmptyState } from "@/components/hub/EmptyState";
 import { FixedIncomeNarrativePanel } from "@/components/hub/FixedIncomeNarrativePanel";
 import { YieldCurveSimulator } from "@/components/hub/YieldCurveSimulator";
+import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
+import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
+import { PrintFooter } from "@/components/hub/PrintFooter";
+import { CreditCalendarHeatmap } from "@/components/hub/CreditCalendarHeatmap";
+import { RfRollingGrid } from "@/components/hub/RfRollingGrid";
+import { TesouroSimulator } from "@/components/hub/TesouroSimulator";
+import { RfPortfolioCalculator } from "@/components/hub/RfPortfolioCalculator";
+import { CreditoPrivadoDeepPanel } from "@/components/hub/CreditoPrivadoDeepPanel";
+import { buildRfRollingRow } from "@/lib/rfRollingDeltas";
 import {
   useHubLatest,
   useHubSeriesBundle,
@@ -142,6 +152,14 @@ const HubRendaFixa = () => {
   // Crédito Privado (lazy)
   const { data: credprivBundle } = useHubSeriesBundle("credpriv", period, "macro", sectionVisible("credpriv"));
 
+  // 5y bundles for rolling grids / calendar heatmap (reused across sections — always fetch)
+  const { data: taxaRefBundle5y } = useHubSeriesBundle("taxa_ref", "5y", "macro", true);
+  const { data: selicBundle5y } = useHubSeriesBundle("selic", "5y", "macro", true);
+  const { data: curvaDi5y } = useHubSeriesBundle("curva_di", "5y", "macro", true);
+  const { data: ntnbBundle5y } = useHubSeriesBundle("ntnb", "5y", "macro", sectionVisible("titulos") || sectionVisible("analytics"));
+  const { data: breakevenBundle5y } = useHubSeriesBundle("breakeven", "5y", "macro", sectionVisible("titulos") || sectionVisible("analytics"));
+  const { data: credpriv5y } = useHubSeriesBundle("credpriv", "5y", "macro", sectionVisible("credpriv"));
+
   /* ─── Extract individual series ─── */
   const selic = pickSeries(selicBundle, "432");        // Selic is in 'selic' category
   const cdi = pickSeries(taxaRefBundle, "4392");
@@ -253,6 +271,72 @@ const HubRendaFixa = () => {
     { code: "990303", label: "Emissões Deb.", data: emissoesSeries, unit: "R$ bi" },
   ], [spreadAASeries, spreadASeries, emissoesSeries]);
 
+  /* ─── Rolling rows (5y windows) for RfRollingGrid ─── */
+  const rollingRows = useMemo(() => {
+    const selic5y = pickSeries(selicBundle5y, "432");
+    const cdi5y = pickSeries(taxaRefBundle5y, "4392");
+    const di360_5y = pickSeries(curvaDi5y, "7817");
+    const di1800_5y = pickSeries(curvaDi5y, "7821");
+    return [
+      buildRfRollingRow({
+        key: "selic",
+        label: "Selic Meta",
+        data: selic5y,
+        kind: "rate",
+        lowerIsBetter: true, // alta de Selic = aperto monetário (ruim para holder pré)
+      }),
+      buildRfRollingRow({
+        key: "cdi",
+        label: "CDI acum.",
+        data: cdi5y,
+        kind: "rate",
+        lowerIsBetter: false, // alta de CDI = melhor carry pós-fixado
+      }),
+      buildRfRollingRow({
+        key: "di360",
+        label: "DI Pré 360d",
+        data: di360_5y,
+        kind: "rate",
+        lowerIsBetter: true, // alta do pré = mark-to-market negativo
+      }),
+      buildRfRollingRow({
+        key: "di1800",
+        label: "DI Pré 1800d",
+        data: di1800_5y,
+        kind: "rate",
+        lowerIsBetter: true,
+      }),
+      buildRfRollingRow({
+        key: "slope",
+        label: "Slope (1800−30)",
+        data: (() => {
+          const short = pickSeries(curvaDi5y, "7813");
+          const long = pickSeries(curvaDi5y, "7821");
+          if (!short.length || !long.length) return [];
+          const longMap = new Map(long.map((p) => [p.date, p.value]));
+          return short
+            .map((p) => {
+              const l = longMap.get(p.date);
+              return l != null ? { date: p.date, value: l - p.value } : null;
+            })
+            .filter((p): p is { date: string; value: number } => p !== null);
+        })(),
+        kind: "curve",
+        lowerIsBetter: false, // slope positivo crescente = curva normal (bom)
+      }),
+    ];
+  }, [selicBundle5y, taxaRefBundle5y, curvaDi5y]);
+
+  /* ─── Data-as-of date (most recent across RF universe) ─── */
+  const rfDataAsOf = useMemo(() => {
+    const dates = kpis
+      .filter((k) => ["selic", "taxa_ref", "curva_di", "ntnb", "breakeven", "poupanca", "tesouro", "credpriv"].includes(k.category))
+      .map((k) => k.last_date)
+      .filter((d): d is string => !!d);
+    if (dates.length === 0) return null;
+    return dates.sort().reverse()[0];
+  }, [kpis]);
+
   /* ─── IMA-B Proxy (accumulated returns from NTN-B yields) ─── */
   const imaBProxy = useMemo(() => {
     // Duration approximations (years)
@@ -314,6 +398,83 @@ const HubRendaFixa = () => {
   const selicValue = kpis.find((k) => k.serie_code === "432")?.last_value;
   const realRate = selicValue && ipca12mValue ? selicValue - ipca12mValue : null;
   const focusSelicValue = kpis.find((k) => k.serie_code === "990002")?.last_value;
+
+  /* ─── Narrative mini-stats per section ─── */
+  const overviewMiniStats: MiniStat[] = useMemo(() => {
+    const cdi = kpis.find((k) => k.serie_code === "4392")?.last_value;
+    const bei3v = kpis.find((k) => k.serie_code === "990102")?.last_value;
+    return [
+      { label: "Selic Meta", value: selicValue != null ? `${selicValue.toFixed(2)}%` : "—", color: "text-emerald-400", sublabel: "BACEN · COPOM" },
+      { label: "CDI acum.", value: cdi != null ? `${cdi.toFixed(2)}%` : "—", color: "text-zinc-200", sublabel: "SGS 4392" },
+      { label: "Curva", value: curveShape.shape, color: curveShape.color, sublabel: `Slope ${((kpis.find(k => k.serie_code === "7821")?.last_value ?? 0) - (kpis.find(k => k.serie_code === "7813")?.last_value ?? 0)).toFixed(2)}pp` },
+      { label: "Juro real", value: realRate != null ? `${realRate.toFixed(2)}%` : "—", color: realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400", sublabel: "Selic − IPCA 12m" },
+      { label: "BEI 3a", value: bei3v != null ? `${bei3v.toFixed(2)}%` : "—", color: bei3v != null && bei3v > 4.5 ? "text-amber-400" : "text-emerald-400", sublabel: "vs Meta 3.0%" },
+    ];
+  }, [kpis, selicValue, realRate, curveShape]);
+
+  const taxasCurvaMiniStats: MiniStat[] = useMemo(() => {
+    const di30v = kpis.find((k) => k.serie_code === "7813")?.last_value ?? 0;
+    const di1800v = kpis.find((k) => k.serie_code === "7821")?.last_value ?? 0;
+    const slope = di1800v - di30v;
+    const di360v = kpis.find((k) => k.serie_code === "7817")?.last_value;
+    const cdiFocusDiff = focusSelicValue && selicValue ? focusSelicValue - selicValue : null;
+    return [
+      { label: "DI 30d", value: di30v ? `${di30v.toFixed(2)}%` : "—", color: "text-zinc-200" },
+      { label: "DI 360d", value: di360v != null ? `${di360v.toFixed(2)}%` : "—", color: "text-zinc-200" },
+      { label: "DI 1800d", value: di1800v ? `${di1800v.toFixed(2)}%` : "—", color: "text-zinc-200" },
+      { label: "Term Premium", value: `${slope >= 0 ? "+" : ""}${slope.toFixed(2)}pp`, color: slope >= 0 ? "text-emerald-400" : "text-red-400", sublabel: slope >= 0 ? "Curva normal" : "Invertida" },
+      { label: "Focus vs Selic", value: cdiFocusDiff != null ? `${cdiFocusDiff >= 0 ? "+" : ""}${cdiFocusDiff.toFixed(2)}pp` : "—", color: cdiFocusDiff != null && Math.abs(cdiFocusDiff) > 1 ? "text-amber-400" : "text-zinc-200", sublabel: "Consenso mercado" },
+    ];
+  }, [kpis, selicValue, focusSelicValue]);
+
+  const titulosMiniStats: MiniStat[] = useMemo(() => {
+    const ntnb29 = kpis.find((k) => k.serie_code === "12460")?.last_value;
+    const ntnb35 = kpis.find((k) => k.serie_code === "12461")?.last_value;
+    const ntnb45 = kpis.find((k) => k.serie_code === "12462")?.last_value;
+    const estoqueTDv = kpis.find((k) => k.serie_code === "990201")?.last_value;
+    const vendasTDv = kpis.find((k) => k.serie_code === "990202")?.last_value;
+    return [
+      { label: "NTN-B 2029", value: ntnb29 != null ? `${ntnb29.toFixed(2)}%` : "—", color: ntnb29 != null && ntnb29 > 7 ? "text-emerald-400" : "text-zinc-200", sublabel: "Real · curto" },
+      { label: "NTN-B 2035", value: ntnb35 != null ? `${ntnb35.toFixed(2)}%` : "—", color: "text-zinc-200", sublabel: "Real · médio" },
+      { label: "NTN-B 2045", value: ntnb45 != null ? `${ntnb45.toFixed(2)}%` : "—", color: "text-zinc-200", sublabel: "Real · longo" },
+      { label: "Estoque TD", value: estoqueTDv != null ? `R$ ${estoqueTDv.toFixed(0)} bi` : "—", color: "text-emerald-400" },
+      { label: "Vendas TD", value: vendasTDv != null ? `R$ ${vendasTDv.toFixed(1)} bi` : "—", color: vendasTDv != null && vendasTDv > 0 ? "text-emerald-400" : "text-red-400", sublabel: "Net · mês" },
+    ];
+  }, [kpis]);
+
+  const credprivMiniStats: MiniStat[] = useMemo(() => {
+    const aa = kpis.find((k) => k.serie_code === "990301")?.last_value;
+    const a = kpis.find((k) => k.serie_code === "990302")?.last_value;
+    const emiss = kpis.find((k) => k.serie_code === "990303")?.last_value;
+    const cracri = kpis.find((k) => k.serie_code === "990304")?.last_value;
+    const diff = aa != null && a != null ? a - aa : null;
+    return [
+      { label: "Spread AA", value: aa != null ? `${aa.toFixed(2)}pp` : "—", color: aa != null && aa > 1.5 ? "text-amber-400" : "text-emerald-400", sublabel: "sobre CDI" },
+      { label: "Spread A", value: a != null ? `${a.toFixed(2)}pp` : "—", color: a != null && a > 2.5 ? "text-red-400" : "text-amber-400", sublabel: "sobre CDI" },
+      { label: "Diferencial", value: diff != null ? `${diff.toFixed(2)}pp` : "—", color: diff != null && diff > 1.2 ? "text-red-400" : "text-zinc-200", sublabel: "A − AA · risco cluster" },
+      { label: "Emissões", value: emiss != null ? `R$ ${emiss.toFixed(1)} bi` : "—", color: emiss != null && emiss > 30 ? "text-emerald-400" : "text-amber-400", sublabel: "Debêntures · mês" },
+      { label: "CRA + CRI", value: cracri != null ? `R$ ${cracri.toFixed(0)} bi` : "—", color: "text-zinc-200", sublabel: "Estoque" },
+    ];
+  }, [kpis]);
+
+  const analyticsMiniStats: MiniStat[] = useMemo(() => {
+    const bei1v = kpis.find((k) => k.serie_code === "990101")?.last_value;
+    const bei3v = kpis.find((k) => k.serie_code === "990102")?.last_value;
+    const bei5v = kpis.find((k) => k.serie_code === "990103")?.last_value;
+    return [
+      { label: "Selic nominal", value: selicValue != null ? `${selicValue.toFixed(2)}%` : "—", color: "text-zinc-200" },
+      { label: "IPCA 12m", value: ipca12mValue != null ? `${ipca12mValue.toFixed(2)}%` : "—", color: "text-zinc-200" },
+      { label: "Juro real", value: realRate != null ? `${realRate.toFixed(2)}%` : "—", color: realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400", sublabel: "ex-ante · restritivo >7%" },
+      { label: "BEI 1a", value: bei1v != null ? `${bei1v.toFixed(2)}%` : "—", color: "text-zinc-200", sublabel: "Inflação implícita" },
+      { label: "BEI 3a", value: bei3v != null ? `${bei3v.toFixed(2)}%` : "—", color: bei3v != null && bei3v > 5 ? "text-amber-400" : "text-zinc-200", sublabel: "Meta 3.0% ±1.5pp" },
+      { label: "BEI 5a", value: bei5v != null ? `${bei5v.toFixed(2)}%` : "—", color: "text-zinc-200" },
+    ];
+  }, [kpis, selicValue, ipca12mValue, realRate]);
+
+  /* ─── Calendar heatmap inputs ─── */
+  const ntnb2035_5y = useMemo(() => pickSeries(ntnbBundle5y, "12461"), [ntnbBundle5y]);
+  const bei3_5y = useMemo(() => pickSeries(breakevenBundle5y, "990102"), [breakevenBundle5y]);
+  const spreadAA_5y = useMemo(() => pickSeries(credpriv5y, "990301"), [credpriv5y]);
 
   /* ─── Alert Signals (Fixed Income) ─── */
   const fixedIncomeAlerts = useMemo(() => {
@@ -426,9 +587,9 @@ const HubRendaFixa = () => {
       <div className="min-w-0 space-y-4">
         <Breadcrumbs items={[{ label: "Renda Fixa" }]} className="mb-4" />
         {/* ─── Sticky header ─── */}
-        <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
+        <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414] no-print">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-base font-bold text-zinc-100 tracking-tight">Renda Fixa</h1>
               <span className="text-[9px] text-zinc-600 font-mono hidden sm:inline">
                 {kpis.length} indicadores · Curva DI · NTN-B · Crédito Privado
@@ -436,19 +597,23 @@ const HubRendaFixa = () => {
               <span className={`text-[9px] font-mono font-bold ${curveShape.color}`}>
                 Curva: {curveShape.shape}
               </span>
+              <DataAsOfStamp date={rfDataAsOf} cadence="daily" source="BACEN SGS" compact />
             </div>
-            <div className="flex items-center gap-0.5 bg-[#111111] border border-[#1a1a1a] rounded-md p-0.5">
-              {PERIODS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-2 py-1 text-[10px] font-mono rounded transition-colors ${
-                    period === p ? "bg-[#10B981] text-white" : "text-zinc-600 hover:text-zinc-300"
-                  }`}
-                >
-                  {p.toUpperCase()}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5 bg-[#111111] border border-[#1a1a1a] rounded-md p-0.5">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`px-2 py-1 text-[10px] font-mono rounded transition-colors ${
+                      period === p ? "bg-[#10B981] text-white" : "text-zinc-600 hover:text-zinc-300"
+                    }`}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <ExportPdfButton title="Renda Fixa — Hub Muuney" accent={ACCENT} />
             </div>
           </div>
         </div>
@@ -464,64 +629,99 @@ const HubRendaFixa = () => {
             subtitle="KPIs + Taxas de Referência"
             icon={BarChart3}
           >
-            <AlertCard kpis={kpis} module="macro" />
+            <NarrativeSection
+              accent={ACCENT}
+              prose={
+                <>
+                  A <strong className="text-zinc-200">Selic</strong> a{" "}
+                  <strong className="text-emerald-400">{selicValue != null ? `${selicValue.toFixed(2)}%` : "—"}</strong>{" "}
+                  combinada com <strong className="text-zinc-200">IPCA 12m</strong> em{" "}
+                  <strong>{ipca12mValue != null ? `${ipca12mValue.toFixed(2)}%` : "—"}</strong> implica juro real{" "}
+                  <strong className={realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400"}>
+                    {realRate != null ? `${realRate.toFixed(2)}%` : "—"}
+                  </strong>
+                  {realRate != null && realRate > 7 && <> — patamar restritivo, com pressão sobre atividade e desancoragem controlada.</>}
+                  {realRate != null && realRate > 5 && realRate <= 7 && <> — patamar restritivo moderado, consistente com convergência da inflação à meta.</>}
+                  {realRate != null && realRate <= 5 && <> — patamar neutro/acomodatício.</>} A curva DI está{" "}
+                  <strong className={curveShape.color}>{curveShape.shape}</strong>, com slope (1800d − 30d){" "}
+                  <strong>
+                    {(
+                      (kpis.find((k) => k.serie_code === "7821")?.last_value ?? 0) -
+                      (kpis.find((k) => k.serie_code === "7813")?.last_value ?? 0)
+                    ).toFixed(2)} p.p.
+                  </strong>
+                  , sinalizando o term premium precificado pelo mercado.
+                </>
+              }
+              miniStats={overviewMiniStats}
+            >
+              <AlertCard kpis={kpis} module="macro" />
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {kpis.map((card) => (
-                <KPICard
-                  key={card.serie_code}
-                  title={card.display_name}
-                  value={card.last_value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                  unit={card.unit}
-                  change={card.change_pct}
-                  trend={card.trend}
-                  lastDate={card.last_date}
-                  loading={cardsLoading}
-                  sparklineData={sparklineMap[card.serie_code]}
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {kpis.map((card) => (
+                  <KPICard
+                    key={card.serie_code}
+                    title={card.display_name}
+                    value={card.last_value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                    unit={card.unit}
+                    change={card.change_pct}
+                    trend={card.trend}
+                    lastDate={card.last_date}
+                    loading={cardsLoading}
+                    sparklineData={sparklineMap[card.serie_code]}
+                  />
+                ))}
+              </div>
+
+              {/* Rolling indicators grid (trailing windows) */}
+              <RfRollingGrid
+                rows={rollingRows}
+                title="Indicadores RF rolantes"
+                subtitle="Δ vs janelas 1m-36m · direção depende da visão holder"
+                accent={ACCENT}
+              />
+
+              {/* Quick Intelligence Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { label: "Juro Real (ex-ante)", value: realRate != null ? `${realRate.toFixed(1)}%` : "—", color: realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400", sub: "Selic − IPCA 12m" },
+                  { label: "Curva DI", value: curveShape.shape, color: curveShape.color, sub: `Slope: ${((kpis.find(k => k.serie_code === "7821")?.last_value ?? 0) - (kpis.find(k => k.serie_code === "7813")?.last_value ?? 0)).toFixed(2)} p.p.` },
+                  { label: "Focus Selic 2026", value: focusSelicValue != null ? `${focusSelicValue.toFixed(2)}%` : "—", color: focusSelicValue && selicValue && focusSelicValue < selicValue ? "text-emerald-400" : "text-amber-400", sub: focusSelicValue && selicValue ? `Δ ${(focusSelicValue - selicValue).toFixed(2)} p.p.` : "" },
+                  { label: "BEI 3a vs Meta", value: kpis.find(k => k.serie_code === "990102")?.last_value != null ? `${kpis.find(k => k.serie_code === "990102")!.last_value.toFixed(2)}%` : "—", color: (kpis.find(k => k.serie_code === "990102")?.last_value ?? 0) > 4.5 ? "text-red-400" : "text-emerald-400", sub: "Meta IPCA: 3.0% (±1.5pp)" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-3">
+                    <div className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider mb-1">{item.label}</div>
+                    <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
+                    {item.sub && <div className="text-[8px] text-zinc-600 font-mono mt-0.5">{item.sub}</div>}
+                  </div>
+                ))}
+              </div>
+
+              {/* Key reference rates */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <MacroChart
+                  data={mergeSeries(selic, cdi)}
+                  title="Selic Meta vs CDI"
+                  type="line"
+                  color={ACCENT}
+                  color2={INDIGO}
+                  label="Selic"
+                  label2="CDI"
+                  unit="% a.a."
                 />
-              ))}
-            </div>
-
-            {/* Quick Intelligence Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { label: "Juro Real (ex-ante)", value: realRate != null ? `${realRate.toFixed(1)}%` : "—", color: realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400", sub: "Selic − IPCA 12m" },
-                { label: "Curva DI", value: curveShape.shape, color: curveShape.color, sub: `Slope: ${((kpis.find(k => k.serie_code === "7821")?.last_value ?? 0) - (kpis.find(k => k.serie_code === "7813")?.last_value ?? 0)).toFixed(2)} p.p.` },
-                { label: "Focus Selic 2026", value: focusSelicValue != null ? `${focusSelicValue.toFixed(2)}%` : "—", color: focusSelicValue && selicValue && focusSelicValue < selicValue ? "text-emerald-400" : "text-amber-400", sub: focusSelicValue && selicValue ? `Δ ${(focusSelicValue - selicValue).toFixed(2)} p.p.` : "" },
-                { label: "BEI 3a vs Meta", value: kpis.find(k => k.serie_code === "990102")?.last_value != null ? `${kpis.find(k => k.serie_code === "990102")!.last_value.toFixed(2)}%` : "—", color: (kpis.find(k => k.serie_code === "990102")?.last_value ?? 0) > 4.5 ? "text-red-400" : "text-emerald-400", sub: "Meta IPCA: 3.0% (±1.5pp)" },
-              ].map((item) => (
-                <div key={item.label} className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-3">
-                  <div className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider mb-1">{item.label}</div>
-                  <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
-                  {item.sub && <div className="text-[8px] text-zinc-600 font-mono mt-0.5">{item.sub}</div>}
-                </div>
-              ))}
-            </div>
-
-            {/* Key reference rates */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MacroChart
-                data={mergeSeries(selic, cdi)}
-                title="Selic Meta vs CDI"
-                type="line"
-                color={ACCENT}
-                color2={INDIGO}
-                label="Selic"
-                label2="CDI"
-                unit="% a.a."
-              />
-              <MacroChart
-                data={mergeSeries(tlp, poupanca)}
-                title="TLP vs Poupança"
-                type="line"
-                color={AMBER}
-                color2="#EC4899"
-                label="TLP"
-                label2="Poupança"
-                unit="% a.a."
-              />
-            </div>
+                <MacroChart
+                  data={mergeSeries(tlp, poupanca)}
+                  title="TLP vs Poupança"
+                  type="line"
+                  color={AMBER}
+                  color2="#EC4899"
+                  label="TLP"
+                  label2="Poupança"
+                  unit="% a.a."
+                />
+              </div>
+            </NarrativeSection>
           </MacroSection>
         </SectionErrorBoundary>
 
@@ -537,6 +737,22 @@ const HubRendaFixa = () => {
             icon={LineChartIcon}
             insights={<MacroInsightCard inputs={taxasCurvaInsights} />}
           >
+            <NarrativeSection
+              accent={ACCENT}
+              prose={
+                <>
+                  A curva DI reflete a trajetória esperada da Selic mais um term premium pelo risco de carregar duration.
+                  Vértice curto (30d) a{" "}
+                  <strong>{(kpis.find((k) => k.serie_code === "7813")?.last_value ?? 0).toFixed(2)}%</strong>, médio (360d) a{" "}
+                  <strong>{(kpis.find((k) => k.serie_code === "7817")?.last_value ?? 0).toFixed(2)}%</strong> e longo (1800d) a{" "}
+                  <strong>{(kpis.find((k) => k.serie_code === "7821")?.last_value ?? 0).toFixed(2)}%</strong>. Slope positivo sinaliza
+                  expectativa de cortes; negativo sinaliza recessão/desinflação precificada. Monitorar divergência{" "}
+                  <strong>DI × Focus</strong> é chave: se o DI precifica cortes mais agressivos que o Focus, mercado e analistas discordam
+                  sobre o path da Selic.
+                </>
+              }
+              miniStats={taxasCurvaMiniStats}
+            >
             {/* Yield Curve snapshot via MacroChart v2 */}
             <MacroChart
               data={yieldCurveChartData}
@@ -611,6 +827,7 @@ const HubRendaFixa = () => {
                 refLabel="70% Selic"
               />
             </div>
+            </NarrativeSection>
           </MacroSection>
         </SectionErrorBoundary>
 
@@ -627,7 +844,22 @@ const HubRendaFixa = () => {
             insights={sectionVisible("titulos") ? <MacroInsightCard inputs={titulosInsights} /> : undefined}
           >
             {sectionVisible("titulos") && (
-              <>
+              <NarrativeSection
+                accent={ACCENT}
+                prose={
+                  <>
+                    As <strong className="text-zinc-200">NTN-B</strong> remuneram IPCA + cupom real e são o ativo-chave para travar poder de
+                    compra de longo prazo. Curto (2029){" "}
+                    <strong>{(kpis.find((k) => k.serie_code === "12460")?.last_value ?? 0).toFixed(2)}%</strong>, médio (2035){" "}
+                    <strong>{(kpis.find((k) => k.serie_code === "12461")?.last_value ?? 0).toFixed(2)}%</strong> e longo (2045){" "}
+                    <strong>{(kpis.find((k) => k.serie_code === "12462")?.last_value ?? 0).toFixed(2)}%</strong>. Taxas reais acima de{" "}
+                    <strong>6%</strong> tendem a ser historicamente atrativas para buy-and-hold com visão acima de 3 anos, desde que o
+                    breakeven não esteja desancorado. Fluxo líquido do Tesouro Direto sinaliza apetite do varejo por travar taxas nesses
+                    níveis.
+                  </>
+                }
+                miniStats={titulosMiniStats}
+              >
                 {/* Tesouro Direto */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <MacroChart
@@ -707,7 +939,26 @@ const HubRendaFixa = () => {
                   label="IPCA+ Real"
                   unit="% a.a."
                 />
-              </>
+
+                {/* NTN-B 2035 calendar heatmap — sazonalidade MoM desvio */}
+                {ntnb2035_5y.length > 0 && (
+                  <CreditCalendarHeatmap
+                    data={ntnb2035_5y}
+                    kind="rate"
+                    title="NTN-B 2035 — calendário"
+                    subtitle="Desvio mensal vs mediana histórica (5 anos) · alta = rendimento real maior"
+                    accent="#10B981"
+                  />
+                )}
+
+                {/* Tesouro Direto Simulator */}
+                <TesouroSimulator
+                  selicAtual={selicValue ?? undefined}
+                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  ipcaEsperado={ipca12mValue ?? undefined}
+                  poupancaMes={kpis.find((k) => k.serie_code === "195")?.last_value}
+                />
+              </NarrativeSection>
             )}
           </MacroSection>
         </SectionErrorBoundary>
@@ -725,7 +976,25 @@ const HubRendaFixa = () => {
             insights={sectionVisible("credpriv") ? <MacroInsightCard inputs={credprivInsights} /> : undefined}
           >
             {sectionVisible("credpriv") && (
-              <>
+              <NarrativeSection
+                accent={ACCENT}
+                prose={
+                  <>
+                    Spreads de crédito privado remuneram o prêmio de risco sobre CDI. Ambiente atual:{" "}
+                    <strong>AA em {(kpis.find((k) => k.serie_code === "990301")?.last_value ?? 0).toFixed(2)}pp</strong>,{" "}
+                    <strong>A em {(kpis.find((k) => k.serie_code === "990302")?.last_value ?? 0).toFixed(2)}pp</strong>. Diferencial
+                    (A − AA) acima de <strong>1.2pp</strong> indica risco cluster — mercado exigindo prêmio maior para migrar rating.
+                    Fluxo de emissões {(kpis.find((k) => k.serie_code === "990303")?.last_value ?? 0) > 30
+                      ? "robusto"
+                      : (kpis.find((k) => k.serie_code === "990303")?.last_value ?? 0) > 15
+                        ? "moderado"
+                        : "contraído"}
+                    {" "}— primário abre quando spreads estão comprimidos e fecha em stress. CRI/CRA isentos de IR seguem atrativos para PF
+                    em faixas de alíquota ≥ 22.5%.
+                  </>
+                }
+                miniStats={credprivMiniStats}
+              >
                 {/* Spread time-series charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <MacroChart
@@ -758,7 +1027,17 @@ const HubRendaFixa = () => {
                   spreadASeries={spreadASeries}
                   emissoesSeries={emissoesSeries}
                 />
-              </>
+
+                {/* Crédito Privado Deep Panel — stress heatmap + rating cluster + CRA/CRI + setores */}
+                <CreditoPrivadoDeepPanel
+                  spreadAA={kpis.find((k) => k.serie_code === "990301")?.last_value}
+                  spreadA={kpis.find((k) => k.serie_code === "990302")?.last_value}
+                  selicAtual={selicValue ?? undefined}
+                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  spreadAASeries={spreadAA_5y.length ? spreadAA_5y : spreadAASeries}
+                  spreadASeries={pickSeries(credpriv5y, "990302").length ? pickSeries(credpriv5y, "990302") : spreadASeries}
+                />
+              </NarrativeSection>
             )}
           </MacroSection>
         </SectionErrorBoundary>
@@ -775,7 +1054,22 @@ const HubRendaFixa = () => {
             icon={Brain}
           >
             {sectionVisible("analytics") && (
-              <>
+              <NarrativeSection
+                accent={ACCENT}
+                prose={
+                  <>
+                    Camada analítica consolidando <strong>regime monetário</strong>, <strong>simuladores</strong> e{" "}
+                    <strong>benchmarks vs metas</strong>. Juro real ex-ante{" "}
+                    <strong className={realRate && realRate > 7 ? "text-red-400" : realRate && realRate > 5 ? "text-amber-400" : "text-emerald-400"}>
+                      {realRate != null ? `${realRate.toFixed(2)}%` : "—"}
+                    </strong>
+                    {" "}orienta alocação: acima de 7% privilegia pré-fixados longos e NTN-B (travar taxa); entre 3-5% privilegia pós-fixado
+                    e caixa; abaixo de 3% sinaliza risco de repressão financeira. Breakeven de inflação (BEI) expressa expectativa
+                    precificada na curva real — desancoragem sustentada sinaliza falha de credibilidade do regime de metas.
+                  </>
+                }
+                miniStats={analyticsMiniStats}
+              >
                 {/* Intelligence Panel */}
                 <FixedIncomeNarrativePanel
                   selicMeta={kpis.find((k) => k.serie_code === "432")?.last_value}
@@ -907,16 +1201,41 @@ const HubRendaFixa = () => {
                     })}
                   </div>
                 </div>
-              </>
+
+                {/* BEI 3a calendar heatmap — sazonalidade de desancoragem de expectativas */}
+                {bei3_5y.length > 0 && (
+                  <CreditCalendarHeatmap
+                    data={bei3_5y}
+                    kind="rate"
+                    title="Breakeven 3a — calendário"
+                    subtitle="Desvio mensal vs mediana histórica · alta = inflação implícita acima do usual"
+                    accent="#F59E0B"
+                  />
+                )}
+
+                {/* RF Portfolio Calculator — até 8 holdings, agregados + stress */}
+                <RfPortfolioCalculator
+                  selicAtual={selicValue ?? undefined}
+                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  ipcaEsperado={ipca12mValue ?? undefined}
+                />
+              </NarrativeSection>
             )}
           </MacroSection>
         </SectionErrorBoundary>
 
         {/* ─── Footer ─── */}
-        <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono">
+        <div className="border-t border-[#141414] pt-3 flex items-center justify-between text-[9px] text-zinc-700 font-mono no-print">
           <span>Fonte: BACEN SGS · ANBIMA · Tesouro Nacional</span>
           <span>Atualização: Diária (D+1 útil)</span>
         </div>
+
+        {/* ─── Print-only footer with provenance + disclaimer ─── */}
+        <PrintFooter
+          fundName="Renda Fixa — Hub Muuney"
+          dataAsOf={rfDataAsOf}
+          source="BACEN SGS · ANBIMA · Tesouro Nacional"
+        />
       </div>
     </div>
   );
