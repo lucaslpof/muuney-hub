@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import { KPICard } from "@/components/hub/KPICard";
-import { MacroChart } from "@/components/hub/MacroChart";
+import { MacroChart, type MacroChartEvent } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { BondCalculator } from "@/components/hub/BondCalculator";
 import { SpreadCreditoPrivado } from "@/components/hub/SpreadCreditoPrivado";
@@ -27,13 +27,16 @@ import { buildRfRollingRow } from "@/lib/rfRollingDeltas";
 import {
   useHubLatest,
   useHubSeriesBundle,
+  useMonetaryEvents,
   pickSeries,
   RENDA_FIXA_SAMPLE,
 } from "@/hooks/useHubData";
 import {
   TrendingUp, Landmark,
   LineChart as LineChartIcon, Brain, BarChart3,
+  ExternalLink,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 /* ─── Period config ─── */
 const PERIODS = ["3m", "6m", "1y", "2y", "5y"] as const;
@@ -336,6 +339,23 @@ const HubRendaFixa = () => {
     if (dates.length === 0) return null;
     return dates.sort().reverse()[0];
   }, [kpis]);
+
+  /* ─── COPOM event overlay (hub_monetary_events) ─── */
+  // Surfaces rate decisions as vertical markers in DI/NTN-B/IMA-B charts —
+  // helps holders correlate curve moves com o path da política monetária.
+  const { data: monetaryEvents } = useMonetaryEvents("COPOM");
+  const copomEvents: MacroChartEvent[] = useMemo(() => {
+    if (!monetaryEvents) return [];
+    return monetaryEvents
+      .filter((e) => e.authority === "COPOM")
+      .map((e) => ({
+        date: e.event_date,
+        label: `COPOM ${e.bps_change && e.bps_change > 0 ? "+" : ""}${e.bps_change ?? 0}bps → ${e.rate_after}%`,
+        kind: e.decision,
+        authority: e.authority,
+        rationale: e.rationale || undefined,
+      }));
+  }, [monetaryEvents]);
 
   /* ─── IMA-B Proxy (accumulated returns from NTN-B yields) ─── */
   const imaBProxy = useMemo(() => {
@@ -698,6 +718,62 @@ const HubRendaFixa = () => {
                 ))}
               </div>
 
+              {/* Cross-module navigation strip — deep-links into Macro/Crédito modules
+                  so holders can jump from RF readings to the originating monetary /
+                  credit context without losing the period filter. */}
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                    Navegação cruzada
+                  </h3>
+                  <span className="text-[9px] text-zinc-700 font-mono">
+                    Macro · Crédito · Focus
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    {
+                      label: "Política Monetária",
+                      sub: "Selic · COPOM · M1-M4",
+                      to: `/hub/macro?section=monetaria${period !== "1y" ? `&period=${period}` : ""}`,
+                    },
+                    {
+                      label: "Inflação & Focus",
+                      sub: "IPCA · Breakeven · Consenso",
+                      to: `/hub/macro?section=inflacao${period !== "1y" ? `&period=${period}` : ""}`,
+                    },
+                    {
+                      label: "Crédito — Preço",
+                      sub: "Taxas · Spreads PF/PJ",
+                      to: `/hub/credito?section=preco${period !== "1y" ? `&period=${period}` : ""}`,
+                    },
+                    {
+                      label: "Crédito — Volume",
+                      sub: "Saldos · Concessões · PIB",
+                      to: `/hub/credito?section=volume${period !== "1y" ? `&period=${period}` : ""}`,
+                    },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      className="group bg-[#0a0a0a] border border-[#141414] rounded p-2.5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-colors no-print"
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-bold font-mono text-zinc-200 group-hover:text-emerald-400 truncate">
+                            {item.label}
+                          </div>
+                          <div className="text-[8px] text-zinc-600 font-mono mt-0.5 truncate">
+                            {item.sub}
+                          </div>
+                        </div>
+                        <ExternalLink className="w-3 h-3 text-zinc-700 group-hover:text-emerald-400 flex-shrink-0" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
               {/* Key reference rates */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <MacroChart
@@ -709,6 +785,7 @@ const HubRendaFixa = () => {
                   label="Selic"
                   label2="CDI"
                   unit="% a.a."
+                  events={copomEvents}
                 />
                 <MacroChart
                   data={mergeSeries(tlp, poupanca)}
@@ -753,6 +830,25 @@ const HubRendaFixa = () => {
               }
               miniStats={taxasCurvaMiniStats}
             >
+            {/* Context cross-link: curve shape depende de Selic path + expectativas */}
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono no-print">
+              <span className="text-zinc-600">Contexto:</span>
+              <Link
+                to={`/hub/macro?section=monetaria${period !== "1y" ? `&period=${period}` : ""}`}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-[#0f0f0f] border border-[#1a1a1a] rounded text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors"
+              >
+                Abrir em /hub/macro · Monetária
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+              <Link
+                to={`/hub/macro?section=expectativas${period !== "1y" ? `&period=${period}` : ""}`}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-[#0f0f0f] border border-[#1a1a1a] rounded text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors"
+              >
+                Focus / Expectativas
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+
             {/* Yield Curve snapshot via MacroChart v2 */}
             <MacroChart
               data={yieldCurveChartData}
@@ -776,6 +872,7 @@ const HubRendaFixa = () => {
                 label="DI 30d"
                 label2="DI 360d"
                 unit="% a.a."
+                events={copomEvents}
               />
               <MacroChart
                 data={mergeSeries(di720, di1800)}
@@ -893,6 +990,7 @@ const HubRendaFixa = () => {
                     unit="% a.a."
                     refValue={6.0}
                     refLabel="Média Histórica"
+                    events={copomEvents}
                   />
                   <MacroChart
                     data={ntnb2045}
@@ -995,6 +1093,27 @@ const HubRendaFixa = () => {
                 }
                 miniStats={credprivMiniStats}
               >
+                {/* Context cross-link: spreads de debêntures e crédito bancário PF/PJ
+                    compartilham dinâmica de risco-retorno; inadimplência SFN é leading
+                    indicator de widening de spreads corporativos. */}
+                <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono no-print">
+                  <span className="text-zinc-600">Contexto:</span>
+                  <Link
+                    to={`/hub/credito?section=preco${period !== "1y" ? `&period=${period}` : ""}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-[#0f0f0f] border border-[#1a1a1a] rounded text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors"
+                  >
+                    Abrir em /hub/credito · Preço (Spreads PF/PJ)
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                  <Link
+                    to={`/hub/credito?section=risco${period !== "1y" ? `&period=${period}` : ""}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-[#0f0f0f] border border-[#1a1a1a] rounded text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-colors"
+                  >
+                    Inadimplência SFN (leading indicator)
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+
                 {/* Spread time-series charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <MacroChart
@@ -1107,6 +1226,7 @@ const HubRendaFixa = () => {
                       color={ACCENT}
                       unit=""
                       loading={false}
+                      events={copomEvents}
                     />
                   )}
 
