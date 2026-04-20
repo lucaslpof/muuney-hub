@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Activity, AlertTriangle, CheckCircle, Download } from "lucide-react";
+import { exportCsv, csvFilename } from "@/lib/csvExport";
 
 interface SpreadMonitorProps {
   spreadPF?: number;
@@ -63,21 +64,25 @@ export const SpreadMonitor = ({
 
   const StatusIcon = systemStatus.icon;
 
-  /* ─── CSV export ─── */
+  /* ─── CSV export (pt-BR: separator ; + BOM UTF-8, vírgula decimal) ─── */
   const exportCSV = () => {
-    const header = "Segmento,Atual (p.p.),Média 12M,Média 5A,Desvio (%),Status\n";
-    const rows = entries.map((e) => {
-      const dev = ((e.current / e.avg5y - 1) * 100).toFixed(1);
-      const status = entryStatus(e.current, e.avg5y).label;
-      return `${e.label},${e.current.toFixed(1)},${e.avg12m.toFixed(1)},${e.avg5y.toFixed(1)},${dev},${status}`;
-    }).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "spread_monitor.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const formatPt = (n: number, digits = 1) =>
+      n.toLocaleString("pt-BR", { maximumFractionDigits: digits, useGrouping: false });
+    const columns = [
+      { header: "Segmento", accessor: (e: typeof entries[number]) => e.label },
+      { header: "Atual (p.p.)", accessor: (e: typeof entries[number]) => formatPt(e.current) },
+      { header: "Média 12M", accessor: (e: typeof entries[number]) => formatPt(e.avg12m) },
+      { header: "Média 5A", accessor: (e: typeof entries[number]) => formatPt(e.avg5y) },
+      {
+        header: "Desvio (%)",
+        accessor: (e: typeof entries[number]) => formatPt((e.current / e.avg5y - 1) * 100),
+      },
+      {
+        header: "Status",
+        accessor: (e: typeof entries[number]) => entryStatus(e.current, e.avg5y).label,
+      },
+    ];
+    exportCsv(entries, columns, csvFilename("credito", "spread_monitor"));
   };
 
   return (

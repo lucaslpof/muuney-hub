@@ -7,6 +7,7 @@ import {
 import { Download, Camera, RotateCcw, TrendingUp, Activity } from "lucide-react";
 import { sma, ema, linearRegression, type DataPoint } from "@/lib/statistics";
 import { smartFormatAxis } from "@/lib/format";
+import { exportCsv } from "@/lib/csvExport";
 
 interface MacroChartDataPoint {
   date: string;
@@ -134,18 +135,26 @@ const RichTooltip = ({ active, payload, label, unit }: RichTooltipProps) => {
 };
 
 function exportCSV(data: MacroChartDataPoint[], title: string, label: string, label2?: string) {
-  const header = label2 ? `Data,${label},${label2}` : `Data,${label}`;
-  const rows = data.map((d) =>
-    label2 ? `${d.date},${d.value},${d.value2 ?? ""}` : `${d.date},${d.value}`
-  );
-  const csv = [header, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${title.replace(/[^a-zA-Z0-9]/g, "_")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // pt-BR CSV export: separator `;` + BOM UTF-8 (Excel BR compatible).
+  // Numeric values use pt-BR locale (vírgula decimal).
+  const formatPt = (n: number | undefined | null): string =>
+    n == null || !Number.isFinite(n)
+      ? ""
+      : n.toLocaleString("pt-BR", { maximumFractionDigits: 6, useGrouping: false });
+
+  const columns = label2
+    ? [
+        { header: "Data", accessor: (d: MacroChartDataPoint) => d.date },
+        { header: label, accessor: (d: MacroChartDataPoint) => formatPt(d.value) },
+        { header: label2, accessor: (d: MacroChartDataPoint) => formatPt(d.value2) },
+      ]
+    : [
+        { header: "Data", accessor: (d: MacroChartDataPoint) => d.date },
+        { header: label, accessor: (d: MacroChartDataPoint) => formatPt(d.value) },
+      ];
+
+  const safeName = title.replace(/[^a-zA-Z0-9]/g, "_");
+  exportCsv(data, columns, safeName);
 }
 
 function exportPNG(chartRef: React.RefObject<HTMLDivElement | null>, title: string) {
