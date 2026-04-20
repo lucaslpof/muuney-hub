@@ -1,9 +1,11 @@
 # Auditoria Profunda — Módulo Overview de Crédito
 **muuney.hub · 19/04/2026 · pre-beta launch 30/04**
 
+> **Status entrega (19/04/2026, noite):** P0 (8 tickets) **✅ shipped** em commit `30253fb`. P1 (7 de 8 tickets frontend-only) **✅ shipped** em commit `1628bf5`. P2 polish batch (4 shipped novos + 1 pré-shipped + 1 já endereçado + 2 diferidos) em commit `<pending>`. Build clean (tsc 0, vite 5.13s). HubCredito chunk 89 → 129 kB (+40 kB para 19 features). P1-6 (alertas dinâmicos — requer migration + admin UI), P2-5 (unit consistency sweep) e P2-8 (a11y axe-core audit) diferidos pós-beta.
+
 ## TL;DR
 
-Auditoria end-to-end (frontend + backend + dados) do módulo `/hub/credito` encontrou **1 bug crítico de dado sintético** (CreditOperationsPanel com pesos constantes simulando modalidades) e **16 gaps P1/P2** de UX, narrativa e performance. Esta sessão entregou **todos os P0** (bug crítico + fundação de consistência com módulo Fundos) em código e diagnosticou os itens P1/P2 para sprint pós-beta.
+Auditoria end-to-end (frontend + backend + dados) do módulo `/hub/credito` encontrou **1 bug crítico de dado sintético** (CreditOperationsPanel com pesos constantes simulando modalidades) e **16 gaps P1/P2** de UX, narrativa e performance. Esta sessão entregou **todos os P0** (bug crítico + fundação de consistência com módulo Fundos), **7 de 8 P1** frontend-only e **5 dos 8 P2** (4 implementados + 1 pré-shipped) em código. P1-6 (alertas dinâmicos) + P2-5 (unit consistency sweep) + P2-8 (a11y audit) diferidos para sprint pós-beta.
 
 Impacto do bug P0-2: quando um AAI filtrava "Veículos PF" vs "Consignado" no query builder, o panel exibia números que NÃO vinham do BACEN — eram o saldo total multiplicado por um peso fixo codificado no frontend. Risco reputacional crítico para lançamento dia 30/04.
 
@@ -98,7 +100,7 @@ Pattern: cada hint pt-BR com contexto quantitativo (benchmarks históricos, thre
 **Status**: ✅ Este documento.
 
 ### P0-8 · Build + commit + push
-**Status**: ⏳ próximo passo.
+**Status**: ✅ Concluído em commit `30253fb`. Build clean (tsc 0, vite ~5.1s). HubCredito chunk 89 → 104 kB (+15 kB com NarrativeSection foundation + DataAsOfStamp + KPI_HINTS expandido). Pushed to `origin/main`.
 
 ---
 
@@ -106,76 +108,100 @@ Pattern: cada hint pt-BR com contexto quantitativo (benchmarks históricos, thre
 
 Organizados por impacto×esforço. Todos frontend-only ou dados já disponíveis via BACEN SGS.
 
+**Status entrega (commit `1628bf5`):** 7 de 8 tickets shipped. P1-6 (alertas dinâmicos) deferido — requer migration + admin UI.
+
 ### P1-1 · Rolling indicators grid no Visão Geral
-Grid 1m/3m/6m/12m/24m/36m para Inad. Total, Spread PF, Taxa PF, Concessões PF. Mesmo pattern que `RollingReturnsGrid` em `FundLamina`, reaproveitando `computeRollingReturnsFromMonthly` de `src/lib/rollingReturns.ts`. **Esforço**: M (reuse direto).
+**Status**: ✅ Shipped. Novo helper `src/lib/creditRollingDeltas.ts` com tipos `IndicatorKind` ("rate" | "spread" | "default" | "volume") + `buildCreditRollingRow(label, data, kind, window)`. Novo componente `src/components/hub/CreditRollingGrid.tsx` — Tech-Noir table com colunas 1m/3m/6m/12m/24m/36m, intensidade de cor *direction-aware* (deltas negativos em inadim/spread/taxa pintados emerald; positivos em volume pintados emerald; vice-versa). HubCredito Visão Geral agora fetcha 5y bundles (saldo, concessao, taxa, spread, inadimplencia) com `enabled: true` e monta 4 rows: Inad. Total, Spread PF, Taxa PF, Concessões PF. Accent `#10B981`.
 
 ### P1-2 · COPOM event overlay em charts Macro-ligados
-Taxa PF/PJ/Spread/Selic charts recebem `<ReferenceLine>` em cada decisão COPOM (já temos 34 events em `hub_monetary_events`). Usa `MacroChartEvent` prop existente em `MacroChart` v3. **Esforço**: S.
+**Status**: ✅ Shipped. `MacroChartEvent` prop integrado em 3 charts da section Preço (Taxa Média PF, Spread PF, Taxa PJ) + 1 chart da section Risco (Inadim vs Selic). `useMonetaryEvents("COPOM")` via `src/hooks/useHubData.ts`. ReferenceLines coloridas (hike=red, cut=emerald, hold=zinc), toggle EV no header de cada chart.
 
 ### P1-3 · Breadcrumbs + onboarding tour step
-Breadcrumbs já importado mas pode ser enriquecido com path atual. OnboardingTour.tsx precisa de um step "Módulo Crédito — catálogo BACEN SGS + query builder + 6 narrativas". **Esforço**: S.
+**Status**: ✅ Shipped. `OnboardingTour.tsx` — step Crédito enriquecido com texto específico: "Módulo Crédito — catálogo BACEN SGS, query builder 18 modalidades, 6 narrativas (Visão Geral → Volume → Preço → Risco → Operações → Analytics)." Tour agora tem 8 steps (Welcome + Dashboard + Macro + Crédito + Renda Fixa + Fundos + Ofertas + Feedback). Breadcrumbs já existente em Hub deep pages — refatorado para incluir section atual quando deep-linked via `?section=`.
 
 ### P1-4 · PDF export do módulo Crédito
-Portar `ExportPdfButton` + `PrintFooter` + `@media print` CSS de Fundos. Bônus: AAIs gostam de imprimir briefing pros clientes institucionais. **Esforço**: S.
+**Status**: ✅ Shipped. `ExportPdfButton` integrado no header sticky de `HubCredito.tsx`. `PrintFooter` renderizado no final da página (visible apenas em @media print). Classes `no-print` aplicadas em HubSidebar, top bar nav, FeedbackWidget, OnboardingTour, MobileNav. @media print CSS de Fundos (`src/index.css`) cobre o módulo — A4, Tech-Noir flip para ink-friendly, break-inside avoid em charts/cards.
 
 ### P1-5 · Correlation heatmap com Focus expectativas
-`CreditCorrelationPanel` ganha 3 séries Focus (IPCA, Selic, PIB 12m) para cross-correlação inadimplência × expectativas. Já temos os dados via `hub-macro-api ?module=credito` com códigos sintéticos 990xxx. **Esforço**: M.
+**Status**: ✅ Shipped. `CreditCorrelationPanel` refatorado com prop `kind?: "credit" | "focus"`. Analytics section agora monta 2 panels lado-a-lado: (a) correlação crédito-interna (inadim × spread × taxa × concessões), (b) correlação crédito × Focus (inadim × expectativa IPCA/Selic/PIB 12m). Pearson date-aligned via `Map<string, number>` para reconciliar cadência mensal (crédito) com semanal (Focus). Chips indigo para indicadores FWD (Focus) vs emerald para indicadores BACEN (atuais). `useHubSeriesBundle("focus", period, "credito", enabled)` lazy-fetched apenas quando Analytics section está visível.
 
 ### P1-6 · Alertas Automáticos com thresholds dinâmicos
-Atualmente thresholds hardcoded (4%, 20pp, -5%, 55%). Mover para configuração via Supabase table `hub_alert_thresholds` (module, metric, severity_amber, severity_red) + UI de ajuste admin-only. **Esforço**: M (requer migration + admin UI).
+**Status**: ⏳ Deferido (requer migration + admin UI). Backlog pós-beta: criar `hub_alert_thresholds` table (module, metric, severity_amber, severity_red, updated_by, updated_at), migrar thresholds hardcoded atuais (4% inadim, 20pp spread, -5% concessões MoM, 55% crédito/PIB), construir admin UI page `/admin/thresholds` acessível apenas por tier=admin.
 
 ### P1-7 · Segment drill-down em CreditOperationsPanel
-Click em linha da ComparisonTable → modal/drawer com série histórica da modalidade específica + benchmark peer (outras modalidades mesmo tipo+recurso). **Esforço**: M.
+**Status**: ✅ Shipped. Novo `ModalityDetailDrawer` embedded em `CreditOperationsPanel.tsx` — modal fullscreen triggered por click em linha da `ComparisonTable`. Drawer abre com lazy-enabled `useHubSeriesBundle` (5y window, `enabled: drillEnabled` guard evita fetch até drawer abrir). KPI strip topo (Saldo atual, Taxa, Inad, 12m delta). Dual-line chart histórico (saldo + taxa eixos duplos) + single-line inadim chart. Peer benchmarking section: mean dos outros modalities mesmo tipo+recurso via helper `meanByDate(series[], targetDates)` O(N) per-date mean. Drawer a11y: `role="button"`, `tabIndex`, `aria-modal`, ESC handler, body scroll lock, click-outside close, `no-print` class.
 
 ### P1-8 · Export state share-link
-URL com filtros do query builder serializados em query params (modalities selecionadas, period). Permite AAIs compartilhar setup específico com colegas ou clientes. **Esforço**: S.
+**Status**: ✅ Shipped. `CreditOperationsPanel` query builder filters (tipo [PF/PJ], recurso [Livres/Direcionados], modalidades[] selecionadas, period [6M/1A/2A/5A/MAX]) agora serializados em `useSearchParams` (replace: true). URL pattern: `/hub/credito?section=operacoes&tipo=PF&recurso=Livres&modalities=20570,20572,20581&period=2A`. Hidratação inicial via lazy `useState` reading searchParams. Debounced sync (300ms) para performance. Links compartilháveis via copy URL ou share button (toast confirm).
 
 ---
 
 ## P2 — Polish
 
+**Status entrega (commit `<pending>`):** 4 de 8 tickets shipped frontend-only. P2-4 já em produção via commit anterior (InterestCalculator SCENARIOS). P2-6 endereçado por EmptyState existente nos charts. P2-5 e P2-8 diferidos pós-beta (sweep disciplinado + axe-core audit).
+
 ### P2-1 · NarrativeSection nas 3 sections restantes
-Visão Geral (regime consolidado + top-line KPIs), Operações (explicação do catálogo 18 modalidades + fallback aggregate), Analytics (ponte para insights cross-módulo). **Esforço**: S.
+**Status**: ✅ Shipped. Adicionado `NarrativeSection` em **Visão Geral** (5 mini-stats: Regime consolidado, Saldo SFN, Inadim. Total, Taxa PF média, Concessões PF — regime derivado de inadLast/spreadLast/concessoesMoMLast classificando 5 regimes: Stress Sistêmico / Contração / Expansão / Aperto de Risco / Normalização, prosa sintetizando o estado do ciclo de crédito), **Operações** (5 mini-stats: Modalidades disponíveis, Cartões emitidos, Saldo veículos PF, Saldo cartão rotativo, Crédito/PIB — prosa explicando o catálogo de 18 modalidades BACEN + fallback aggregate quando SGS não publica taxa específica) e **Analytics** (5 mini-stats: Selic nominal, Focus IPCA 12m, Focus Selic, Juro real ex-ante com cor dinâmica por severidade, Inadim. SFN — prosa sobre juro real ex-ante como força dominante sobre concessões + alertas automáticos). Todas com accent `#0B6C3E`.
 
 ### P2-2 · Heatmap diverging Credit/Spread × Month-year
-Tabela ano × mês com color intensity para variação do spread ou concessões. Espelha `DrawdownHeatmap` dos Fundos. **Esforço**: S.
+**Status**: ✅ Shipped. Novo componente `src/components/hub/CreditCalendarHeatmap.tsx` (~284 linhas) espelhando `DrawdownHeatmap` com semântica kind-aware: `rate`/`spread`/`default` (higher = bad, red), `volume` (higher = good, emerald). Pivot ano × mês, 4-step diverging intensity (abs(diff)/maxAbsDiff), footer com Último/Mediana/Máx/Mín (Máx/Mín color-coded por kind). Integrado em HubCredito Visão Geral: `<CreditCalendarHeatmap data={pickSeries(inadBundle5y, "21082")} kind="default" title="Inadimplência SFN — calendário" subtitle="Desvio mensal vs mediana histórica (5 anos) · maior = pior" accent="#EF4444" />`. Mostra sazonalidade do crédito stress e regime shifts.
 
 ### P2-3 · Sparkline universal em todas as KPICards
-Já existe para subset dos KPIs. Expandir para todas as 73 séries com `toSparkline(data, 20)` aplicado sobre os bundles. **Esforço**: XS.
+**Status**: ✅ Shipped. Removido `sectionVisible(...)` gate nos bundles `spread`, `concessao` e `cartoes` — agora são sempre fetched junto com os demais Visão Geral bundles. Isso alimenta `sparklineMap` (via `buildSparklineMap`) com mais séries desde o primeiro render, garantindo que KPICards do hero (inc. spread PF `20783`, concessões PF `20631`, cartões emitidos `25147`) nunca renderem sparkline vazio. Custo: ~3 queries extras na landing, todas com `staleTime: 30min`.
 
 ### P2-4 · InterestCalculator preset scenarios por perfil AAI
-Conservador / Moderado / Agressivo — pré-preenche taxa + prazo + valor baseado em cliente médio dos AAIs. **Esforço**: S.
+**Status**: ✅ Já shipped em commit anterior (pre-P2 batch). `InterestCalculator.tsx` linhas 43-48 já contém `SCENARIOS` constant com 3 perfis: `Conservador` (12% a.a., 120 meses, R$ 50k), `Base` (20% a.a., 60 meses, R$ 30k), `Agressivo` (35% a.a., 36 meses, R$ 15k). Botões de preset no header do calculator.
 
 ### P2-5 · Unit consistency sweep
-Auditoria dos 73 metas — alguns retornam `R$ milhões`, outros `R$ bi`, outros `%`. `normalizeToBi()` já criado em CreditOperationsPanel, falta aplicar o pattern em `MacroInsightCard` + outros charts que ainda assumem unidade implícita. **Esforço**: M (disciplinado, requer testar 73 séries).
+**Status**: ⏳ Deferido pós-beta. Backlog: aplicar `normalizeToBi()` pattern de `CreditOperationsPanel` em `MacroInsightCard` + outros charts que ainda assumem unidade implícita. Testar 73 séries de crédito individualmente contra `hub_macro_series_meta.unit`.
 
 ### P2-6 · Empty states contextuais
-Quando modalidade sem dados selecionada, exibir `<EmptyState variant="no-data" />` ao invés de chart vazio. Já disponível no componente. **Esforço**: XS.
+**Status**: ✅ Endereçado. `ChartPanel` já renderiza inline empty state ("Sem dados no período") quando series array é vazio. `EmptyState variant="no-data"` disponível como fallback mais elaborado. Não foi necessária refatoração ampla — cobertura atual é suficiente para beta.
 
 ### P2-7 · Feedback widget scoped by section
-`FeedbackWidget` já captura `pathname` mas não `section`. Adicionar `useContext(HubSectionsContext)` para categorizar feedback por seção no `hub_feedback.section`. **Esforço**: XS.
+**Status**: ✅ Shipped. `HubLayout.tsx` agora consome `useHubSections()` context e passa `section={activeSectionLabel}` para `<FeedbackWidget />`. `FeedbackWidget.tsx` (sem alteração — prop `section?: string` já existia) anexa o label da section ativa no `hub_feedback.section` column. Isso categoriza feedback por seção do Hub (e.g. "Visão Geral", "Volume", "Taxas & Spreads", "Risco", "Operações", "Analytics") em vez de só pelo pathname.
 
 ### P2-8 · a11y sweep
-axe-core audit + WCAG 2.1 AA compliance check em HubCredito. Áreas prováveis: contraste de texto zinc-600 sobre #0a0a0a em algumas charts. **Esforço**: M.
+**Status**: ⏳ Deferido pós-beta. axe-core audit + WCAG 2.1 AA compliance check em HubCredito. Áreas prováveis: contraste de texto zinc-600 sobre #0a0a0a em algumas charts, labels ARIA em icon-only buttons do OperationsPanel, tab order em modais.
 
 ---
 
 ## Entregáveis desta sessão
 
+**P0 (commit `30253fb`):**
 - `src/components/hub/CreditOperationsPanel.tsx` — rewrite (~750 linhas, elimina bug sintético)
 - `src/pages/HubCredito.tsx` — DataAsOfStamp header + NarrativeSection em 3 sections + helpers lastVal/momDelta/yoyDelta
 - `src/components/hub/KPICard.tsx` — KPI_HINTS +26 termos crédito
 - `AUDIT_CREDITO_PROFUNDO_19ABR.md` — este documento
 
+**P1 (commit `1628bf5`):**
+- `src/lib/creditRollingDeltas.ts` — NEW — tipos IndicatorKind + buildCreditRollingRow
+- `src/components/hub/CreditRollingGrid.tsx` — NEW — Tech-Noir table com direction-aware cell colors
+- `src/components/hub/CreditCorrelationPanel.tsx` — prop `kind?: "credit" | "focus"` + date-aligned Pearson via Map
+- `src/components/hub/CreditOperationsPanel.tsx` — `ModalityDetailDrawer` drill-down + peer benchmarking + URL persistence
+- `src/pages/HubCredito.tsx` — 5y bundles para Rolling Grid + Focus bundle lazy-fetched em Analytics + COPOM overlay em 4 charts + ExportPdfButton integrado
+- `src/components/hub/OnboardingTour.tsx` — Crédito step enriquecido (8 steps total)
+
+**P2 (commit `<pending>`):**
+- `src/components/hub/CreditCalendarHeatmap.tsx` — NEW (~284 linhas) — Year × Month diverging heatmap com semântica kind-aware (rate/spread/default = higher bad; volume = higher good)
+- `src/pages/HubCredito.tsx` — NarrativeSection em Visão Geral + Operações + Analytics (15 mini-stats novos, 3 regimes/5 estados detectados), CreditCalendarHeatmap integrado em Visão Geral (inadimplência SFN calendário 5y), removido gate lazy-load de spread/concessao/cartoes bundles para universal sparkline coverage
+- `src/components/hub/HubLayout.tsx` — `useHubSections()` wire para passar `section={activeSectionLabel}` ao FeedbackWidget (feedback agora scoped por seção ativa do Hub)
+- `AUDIT_CREDITO_PROFUNDO_19ABR.md` — este documento atualizado com status P2
+
 ## Métricas
 
 - **Bug crítico**: 1 corrigido (CreditOperationsPanel pesos sintéticos)
-- **Código**: ~900 linhas net (rewrite + additions), 0 erros TypeScript
-- **Pattern parity com Fundos**: 4/4 (NarrativeSection, KPI_HINTS, DataAsOfStamp, CSV export pt-BR)
+- **Código P0**: ~900 linhas net, 0 erros TypeScript
+- **Código P1**: ~580 linhas net (rolling grid + drawer + Focus correlation + overlays), 0 erros TypeScript
+- **Código P2**: ~300 linhas net (CreditCalendarHeatmap + 3 NarrativeSection + feedback wire), 0 erros TypeScript
+- **Pattern parity com Fundos**: 8/8 (NarrativeSection, KPI_HINTS, DataAsOfStamp, CSV export pt-BR, Rolling grid, PDF export, Drill-down drawer, Calendar heatmap)
 - **Séries SGS re-validadas**: 18 modalidades × 3 (saldo/taxa/inadim) = 54 refs, 100% contra `hub_macro_series_meta`
-- **Tickets P1 mapeados**: 8
-- **Tickets P2 mapeados**: 8
+- **Bundle impact**: HubCredito 89 → 129 kB (+40 kB para 19 features P0+P1+P2)
+- **Tickets P1 mapeados**: 8 (7 shipped, 1 deferido)
+- **Tickets P2 mapeados**: 8 (4 shipped novos + 1 pré-shipped + 1 já endereçado + 2 diferidos)
 
 ## Commits
 
-(a gerar via `git log` pós-commit P0-8)
+- `30253fb` — feat(hub/credito): P0 audit fixes (bug sintético + NarrativeSection + DataAsOfStamp + KPI_HINTS)
+- `1628bf5` — feat(hub/credito): P1 batch (Rolling Grid + COPOM overlay + Focus correlation + Drill-down + URL persistence + PDF export + Onboarding)
+- `<pending>` — feat(hub/credito): P2 polish (Calendar heatmap + 3 NarrativeSection + sparkline universal + feedback scoped)

@@ -58,6 +58,8 @@ const HubMain = () => {
   const { collapsed } = useSidebar();
   const { user, tier, isPro, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const sectionsCtx = useHubSections();
+  const activeSectionLabel = sectionsCtx?.sections.find((s) => s.id === sectionsCtx.activeId)?.label;
 
   const handleLogout = async () => {
     await signOut();
@@ -138,7 +140,7 @@ const HubMain = () => {
 
       {/* Beta feedback widget */}
       <div className="no-print">
-        <FeedbackWidget />
+        <FeedbackWidget section={activeSectionLabel} />
       </div>
 
       {/* First-visit onboarding tour */}

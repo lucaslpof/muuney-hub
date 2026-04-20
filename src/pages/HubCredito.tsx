@@ -23,6 +23,7 @@ import { CreditProductPanel } from "@/components/hub/CreditProductPanel";
 import { CreditOperationsPanel } from "@/components/hub/CreditOperationsPanel";
 import { CreditNarrativePanel } from "@/components/hub/CreditNarrativePanel";
 import { CreditRollingGrid } from "@/components/hub/CreditRollingGrid";
+import { CreditCalendarHeatmap } from "@/components/hub/CreditCalendarHeatmap";
 import { buildCreditRollingRow } from "@/lib/creditRollingDeltas";
 import {
   useHubLatest,
@@ -158,17 +159,18 @@ const HubCredito = () => {
 
   /* ─── Data: Series bundles (lazy per section) ─── */
   // Overview always loaded: saldo_credito, inadimplencia, taxa
+  // Plus spread/concessao/cartoes (feed hero KPIs 20783/20631/25147 → universal sparkline coverage)
   const { data: saldoBundle } = useHubSeriesBundle("saldo_credito", period, "credito");
   const { data: inadBundle } = useHubSeriesBundle("inadimplencia", period, "credito");
   const { data: taxaBundle } = useHubSeriesBundle("taxa", period, "credito");
+  const { data: spreadBundle } = useHubSeriesBundle("spread", period, "credito");
+  const { data: concessaoBundle } = useHubSeriesBundle("concessao", period, "credito");
+  const { data: cartoesBundle } = useHubSeriesBundle("cartoes", period, "credito");
 
   // Lazy: only fetch when section visited
   const { data: saldoPfBundle } = useHubSeriesBundle("saldo_pf_modal", period, "credito", sectionVisible("volume"));
   const { data: saldoPjBundle } = useHubSeriesBundle("saldo_pj_modal", period, "credito", sectionVisible("volume"));
-  const { data: concessaoBundle } = useHubSeriesBundle("concessao", period, "credito", sectionVisible("volume"));
-  const { data: spreadBundle } = useHubSeriesBundle("spread", period, "credito", sectionVisible("preco"));
   const { data: inadDetalheBundle } = useHubSeriesBundle("inadim_detalhe", period, "credito", sectionVisible("risco"));
-  const { data: cartoesBundle } = useHubSeriesBundle("cartoes", period, "credito", sectionVisible("operacoes"));
   const { data: alavancagemBundle } = useHubSeriesBundle("alavancagem", period, "credito", sectionVisible("analytics"));
 
   const allBundles = { saldoBundle, inadBundle, taxaBundle, saldoPfBundle, saldoPjBundle, concessaoBundle, spreadBundle, inadDetalheBundle, cartoesBundle, alavancagemBundle };
@@ -428,6 +430,107 @@ const HubCredito = () => {
               icon={LayoutGrid}
               seriesCount={kpis.length}
             >
+              {/* Narrativa de abertura — Visão Geral (regime consolidado) */}
+              {(() => {
+                const saldoLast = lastVal(saldoTotal);
+                const inadLast = lastVal(inadTotal);
+                const spreadLast = lastVal(spreadPF);
+                const taxaLast = lastVal(taxaPF);
+                const concessoesMoMLast = lastVal(concessoesMoM);
+                const creditoPibLast = lastVal(creditoPib);
+
+                // Regime consolidado: sinaliza em qual quadrante o mercado está
+                const regime =
+                  inadLast != null && spreadLast != null && concessoesMoMLast != null
+                    ? inadLast > 4 && spreadLast > 22
+                      ? "Stress Sistêmico"
+                      : concessoesMoMLast < -3
+                      ? "Contração"
+                      : concessoesMoMLast > 3 && inadLast < 3.5
+                      ? "Expansão"
+                      : inadLast > 3.8
+                      ? "Aperto de Risco"
+                      : "Normalização"
+                    : "—";
+
+                const regimeColor =
+                  regime === "Stress Sistêmico"
+                    ? "text-red-400"
+                    : regime === "Contração" || regime === "Aperto de Risco"
+                    ? "text-amber-400"
+                    : regime === "Expansão"
+                    ? "text-emerald-400"
+                    : "text-zinc-300";
+
+                const concessoesMoMFmt = formatDelta(concessoesMoMLast, { suffix: "%", digits: 1 });
+
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Regime",
+                    value: regime,
+                    sublabel: "quadrante crédito",
+                    color: regimeColor,
+                    tooltip: "Classificação automática a partir de inadimplência, spread e ritmo de concessões.",
+                  },
+                  {
+                    label: "Saldo SFN",
+                    value: saldoLast != null ? `R$ ${saldoLast.toFixed(0)} bi` : "—",
+                    sublabel: creditoPibLast != null ? `${creditoPibLast.toFixed(1)}% do PIB` : undefined,
+                    color: "text-zinc-200",
+                    tooltip: "Estoque total do sistema financeiro nacional — série BACEN SGS 20540.",
+                  },
+                  {
+                    label: "Inadim. Total",
+                    value: inadLast != null ? `${inadLast.toFixed(2)}%` : "—",
+                    sublabel: "meta BCB ~3,0%",
+                    color:
+                      inadLast != null
+                        ? inadLast > 4
+                          ? "text-red-400"
+                          : inadLast > 3.5
+                          ? "text-amber-400"
+                          : "text-emerald-400"
+                        : "text-zinc-400",
+                    tooltip: "Carteira com atraso >90 dias sobre o total — série BACEN SGS 21082.",
+                  },
+                  {
+                    label: "Taxa PF média",
+                    value: taxaLast != null ? `${taxaLast.toFixed(1)}% a.a.` : "—",
+                    sublabel: spreadLast != null ? `spread ${spreadLast.toFixed(1)} p.p.` : undefined,
+                    color: "text-zinc-200",
+                    tooltip: "Taxa média consolidada para pessoa física — série BACEN SGS 20714.",
+                  },
+                  {
+                    label: "Concessões PF",
+                    value: concessoesMoMLast != null ? concessoesMoMFmt.text : "—",
+                    sublabel: "var. MoM",
+                    color: concessoesMoMFmt.color,
+                    tooltip: "Variação mensal no fluxo de novo crédito PF — sinal antecedente do ciclo.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#0B6C3E"
+                    prose={
+                      <>
+                        Mercado em regime de <strong className={regimeColor}>{regime}</strong> —
+                        estoque SFN em <strong className="text-zinc-200">R$ {saldoLast?.toFixed(0) ?? "—"} bi</strong>{" "}
+                        ({creditoPibLast != null ? `${creditoPibLast.toFixed(1)}% do PIB` : "—"}), inadimplência agregada em{" "}
+                        <strong className="text-zinc-200">{inadLast?.toFixed(2) ?? "—"}%</strong>{" "}
+                        (meta BCB 3,0%) e spread PF em{" "}
+                        <strong className="text-zinc-200">{spreadLast?.toFixed(1) ?? "—"} p.p.</strong>. Ritmo de
+                        concessões PF {concessoesMoMLast != null ? (
+                          <span className={concessoesMoMFmt.color}>{concessoesMoMFmt.text} MoM</span>
+                        ) : "sem variação"} —{" "}
+                        {concessoesMoMLast != null && concessoesMoMLast > 0 ? "sinal de aceleração do ciclo." : "sinal de desaceleração do ciclo."}
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Hero KPIs */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {heroKPIs.map((card) => (
@@ -479,6 +582,15 @@ const HubCredito = () => {
               <CreditRollingGrid
                 rows={rollingRows}
                 subtitle="Δ vs janela · Inadimplência, Spread, Taxa PF e Concessões PF"
+              />
+
+              {/* Calendar heatmap — sazonalidade da inadimplência ano × mês (5y) */}
+              <CreditCalendarHeatmap
+                data={pickSeries(inadBundle5y, "21082")}
+                kind="default"
+                title="Inadimplência SFN — calendário"
+                subtitle="Desvio mensal vs mediana histórica (5 anos) · maior = pior"
+                accent="#EF4444"
               />
 
               {/* Overview Mensal */}
@@ -981,6 +1093,68 @@ const HubCredito = () => {
               icon={Filter}
               seriesCount={23}
             >
+              {/* Narrativa de abertura — Operações (catálogo + caveats) */}
+              {(() => {
+                const cartoesLast = lastVal(cartoes);
+                const creditoPibLast = lastVal(creditoPib);
+                const veiculosLast = lastVal(veiculos);
+                const cartaoCredLast = lastVal(cartaoCredito);
+
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Modalidades",
+                    value: "18",
+                    sublabel: "PF + PJ + Agregados",
+                    color: "text-zinc-200",
+                    tooltip: "18 modalidades BACEN SGS disponíveis no query builder — PF Livres, PF Direcionados, PJ Livres, PJ Direcionados e Agregados.",
+                  },
+                  {
+                    label: "Cartões emitidos",
+                    value: cartoesLast != null ? `${cartoesLast.toFixed(0)} mi` : "—",
+                    sublabel: "estoque nacional",
+                    color: "text-zinc-200",
+                    tooltip: "Cartões de crédito emitidos no SFN — série BACEN SGS 25147.",
+                  },
+                  {
+                    label: "Veículos PF",
+                    value: veiculosLast != null ? `R$ ${veiculosLast.toFixed(0)} bi` : "—",
+                    sublabel: "cíclica à Selic",
+                    color: "text-zinc-200",
+                    tooltip: "Saldo de crédito para aquisição de veículos — série BACEN SGS 20581.",
+                  },
+                  {
+                    label: "Cartão rotativo",
+                    value: cartaoCredLast != null ? `R$ ${cartaoCredLast.toFixed(0)} bi` : "—",
+                    sublabel: "menor elasticidade",
+                    color: "text-zinc-200",
+                    tooltip: "Saldo de cartão de crédito — série BACEN SGS 20590. Inclui rotativo.",
+                  },
+                  {
+                    label: "Crédito / PIB",
+                    value: creditoPibLast != null ? `${creditoPibLast.toFixed(1)}%` : "—",
+                    sublabel: "alerta >55%",
+                    color: creditoPibLast != null && creditoPibLast > 55 ? "text-amber-400" : "text-emerald-400",
+                    tooltip: "Profundidade financeira. Brasil ~55% vs EUA ~180%. >60% = alerta sistêmico.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#0B6C3E"
+                    prose={
+                      <>
+                        Query builder com <strong className="text-zinc-200">18 modalidades</strong> BACEN SGS (saldo + taxa + inadimplência).
+                        Modalidades sem taxa específica usam <strong className="text-zinc-200">fallback agregado</strong> (taxa média do segmento) com badge visual
+                        e tooltip explícito — nunca pesos sintéticos. Clique em qualquer linha da tabela comparativa para abrir o{" "}
+                        <strong className="text-zinc-200">drill-down drawer</strong> com evolução 5y, KPIs e benchmarking peer.
+                        Filtros e modalidades selecionadas ficam persistidos na URL para compartilhamento.
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Operations Query Builder */}
               <CreditOperationsPanel />
 
@@ -1020,6 +1194,78 @@ const HubCredito = () => {
               icon={Brain}
               seriesCount={6}
             >
+              {/* Narrativa de abertura — Analytics (cross-módulo) */}
+              {(() => {
+                const inadLast = lastVal(inadTotal);
+                const selicLevel = 14.25;
+                const focusIpcaLast = lastVal(focusIpca);
+                const focusSelicLast = lastVal(focusSelic);
+                const juroReal = focusIpcaLast != null ? selicLevel - focusIpcaLast : null;
+
+                const miniStats: MiniStat[] = [
+                  {
+                    label: "Selic nominal",
+                    value: `${selicLevel.toFixed(2)}%`,
+                    sublabel: "BCB — política",
+                    color: "text-zinc-200",
+                    tooltip: "Taxa básica da economia — referência para spreads e custo do funding.",
+                  },
+                  {
+                    label: "Focus IPCA 12m",
+                    value: focusIpcaLast != null ? `${focusIpcaLast.toFixed(2)}%` : "—",
+                    sublabel: "mediana semanal",
+                    color: "text-indigo-300",
+                    tooltip: "Expectativa de inflação acumulada em 12 meses — boletim Focus BCB.",
+                  },
+                  {
+                    label: "Focus Selic",
+                    value: focusSelicLast != null ? `${focusSelicLast.toFixed(2)}%` : "—",
+                    sublabel: "fim do ano",
+                    color: "text-indigo-300",
+                    tooltip: "Expectativa de Selic ao final do ano corrente — sinal antecedente do ciclo monetário.",
+                  },
+                  {
+                    label: "Juro real ex-ante",
+                    value: juroReal != null ? `${juroReal.toFixed(2)}%` : "—",
+                    sublabel: ">6% = restritivo",
+                    color:
+                      juroReal != null
+                        ? juroReal > 6
+                          ? "text-red-400"
+                          : juroReal > 4
+                          ? "text-amber-400"
+                          : "text-emerald-400"
+                        : "text-zinc-400",
+                    tooltip: "Selic nominal − IPCA esperado (Focus 12m). Patamar >6% historicamente contrai crédito.",
+                  },
+                  {
+                    label: "Inadim. SFN",
+                    value: inadLast != null ? `${inadLast.toFixed(2)}%` : "—",
+                    sublabel: "ponto de partida",
+                    color: "text-zinc-200",
+                    tooltip: "Carteira inadimplente >90d. Base para o regime consolidado e alertas desta seção.",
+                  },
+                ];
+
+                return (
+                  <NarrativeSection
+                    accent="#0B6C3E"
+                    prose={
+                      <>
+                        Painel de correlações cruza inadimplência, spread, taxa e concessões com expectativas do{" "}
+                        <strong className="text-indigo-300">Focus</strong> (IPCA, Selic, PIB) para medir alinhamento entre
+                        macro e crédito. Juro real ex-ante em <strong className="text-zinc-200">{juroReal?.toFixed(2) ?? "—"}%</strong>{" "}
+                        (<span className={juroReal != null && juroReal > 6 ? "text-red-400" : juroReal != null && juroReal > 4 ? "text-amber-400" : "text-emerald-400"}>
+                          {juroReal != null && juroReal > 6 ? "restritivo" : juroReal != null && juroReal > 4 ? "neutro" : "afrouxamento"}
+                        </span>) — força dominante sobre concessões e spread daqui a 2-3 trimestres.
+                        Alertas automáticos abaixo disparam quando inadimplência {">"}4%, spread {">"}20pp, concessões {"<"}-5% MoM ou crédito/PIB {">"}55%.
+                      </>
+                    }
+                    miniStats={miniStats}
+                  />
+                );
+              })()}
+
               {/* Credit Narrative Panel — regime detection + cross-signals */}
               <CreditNarrativePanel
                 inadTotal={kpiVal("21082") || undefined}
