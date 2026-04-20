@@ -35,6 +35,7 @@ import {
 } from "@/hooks/useHubData";
 import type { MacroChartEvent } from "@/components/hub/MacroChart";
 import { percentChange, sma } from "@/lib/statistics";
+import { pickFromList } from "@/lib/queryParams";
 import {
   LayoutGrid, Warehouse, Percent, ShieldAlert,
   Filter, Brain, ChevronDown,
@@ -79,15 +80,15 @@ function buildSparklineMap(bundles: Record<string, SeriesBundle | undefined>): R
 
 /* ─── Main Component ─── */
 const HubCredito = () => {
-  /* ─── Deep-linking: period & section from URL ─── */
+  /* ─── Deep-linking: period & section from URL (sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialPeriod = searchParams.get("period") || "1y";
-  const initialSection = searchParams.get("section") || "overview";
-
+  const SECTION_IDS = SECTIONS.map((s) => s.id);
   const [period, setPeriod] = useState<string>(
-    (PERIODS as readonly string[]).includes(initialPeriod) ? initialPeriod : "1y"
+    () => pickFromList(searchParams.get("period"), PERIODS, "1y")
   );
-  const [activeSection, setActiveSection] = useState<string>(initialSection);
+  const [activeSection, setActiveSection] = useState<string>(
+    () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
+  );
   const [heroExpanded, setHeroExpanded] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 

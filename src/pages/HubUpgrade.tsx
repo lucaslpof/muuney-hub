@@ -4,6 +4,10 @@ import { Check, X, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
+import { pickFromListOrNull } from "@/lib/queryParams";
+
+const CHECKOUT_STATUSES = ["success", "cancelled"] as const;
+type CheckoutStatus = (typeof CHECKOUT_STATUSES)[number];
 
 interface Feature {
   label: string;
@@ -66,7 +70,10 @@ export default function HubUpgrade() {
 
   // Handle checkout return — poll for tier upgrade with timeout
   useEffect(() => {
-    const status = searchParams.get("status");
+    const status: CheckoutStatus | null = pickFromListOrNull(
+      searchParams.get("status"),
+      CHECKOUT_STATUSES,
+    );
     if (status === "success") {
       setSuccessBanner(true);
       setConfirming(true);

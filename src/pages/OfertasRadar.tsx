@@ -48,6 +48,7 @@ import { formatBRL, formatDate, formatMonthLabel, formatCount, fmtNum } from "@/
 import OfertasNarrativePanel from "@/components/hub/OfertasNarrativePanel";
 import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
+import { pickFromList } from "@/lib/queryParams";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -104,13 +105,15 @@ const SECTIONS = [
   { id: "analytics", label: "Analytics", icon: Brain },
 ];
 
+const SECTION_IDS = SECTIONS.map((s) => s.id);
+
 const COLORS = ["#0B6C3E", "#F59E0B", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316", "#06B6D4", "#10B981"];
 
 /** Ofertas Públicas Radar — V4 Fase 3 */
 export default function OfertasRadar() {
-  /* ─── Deep-linking ─── */
+  /* ─── Deep-linking (sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialSection = searchParams.get("section") || "overview";
+  const initialSection = pickFromList(searchParams.get("section"), SECTION_IDS, "overview");
 
   const [activeSection, setActiveSection] = useState<string>(initialSection);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});

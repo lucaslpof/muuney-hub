@@ -16,6 +16,7 @@ import {
   pickSeries,
   type SeriesBundle,
 } from "@/hooks/useHubData";
+import { pickFromList } from "@/lib/queryParams";
 import type { MacroChartEvent } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
 import { InflationCalculator } from "@/components/hub/InflationCalculator";
@@ -68,15 +69,15 @@ function buildSparklineMap(bundles: Record<string, SeriesBundle | undefined>): R
 
 /* ─── Main Component ─── */
 const HubMacro = () => {
-  /* ─── Deep-linking: period & section from URL ─── */
+  /* ─── Deep-linking: period & section from URL (sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialPeriod = searchParams.get("period") || "1y";
-  const initialSection = searchParams.get("section") || "overview";
-
+  const SECTION_IDS = SECTIONS.map((s) => s.id);
   const [period, setPeriod] = useState<string>(
-    (PERIODS as readonly string[]).includes(initialPeriod) ? initialPeriod : "1y"
+    () => pickFromList(searchParams.get("period"), PERIODS, "1y")
   );
-  const [activeSection, setActiveSection] = useState<string>(initialSection);
+  const [activeSection, setActiveSection] = useState<string>(
+    () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
+  );
   const [heroExpanded, setHeroExpanded] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -210,11 +211,11 @@ const HubMacro = () => {
 
   /* ─── Scroll to initial section from URL on mount ─── */
   useEffect(() => {
-    if (initialSection !== "overview") {
-      const el = document.getElementById(initialSection);
+    if (activeSection !== "overview") {
+      const el = document.getElementById(activeSection);
       if (el) {
         setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-        setVisitedSections((prev) => new Set([...prev, initialSection]));
+        setVisitedSections((prev) => new Set([...prev, activeSection]));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

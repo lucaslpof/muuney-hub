@@ -14,8 +14,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
+import { pickFromList } from "@/lib/queryParams";
 
 type TabId = "profile" | "email" | "password" | "plan";
+const TAB_IDS: readonly TabId[] = ["profile", "email", "password", "plan"];
 
 interface TabMeta {
   id: TabId;
@@ -52,9 +54,8 @@ interface Feedback {
 export default function HubSettings() {
   const { user, tier, isPro, isAdmin, refreshTier } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get("tab") as TabId | null) ?? "profile";
   const [activeTab, setActiveTab] = useState<TabId>(
-    TABS.some((t) => t.id === initialTab) ? initialTab : "profile"
+    () => pickFromList(searchParams.get("tab"), TAB_IDS, "profile")
   );
 
   // Profile state

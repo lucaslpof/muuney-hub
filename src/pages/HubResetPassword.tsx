@@ -2,8 +2,16 @@ import { useState, useEffect, useRef, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { HubSEO } from "@/lib/seo";
+import { pickFromListOrNull } from "@/lib/queryParams";
 
 type OtpType = "recovery" | "invite" | "magiclink" | "signup" | "email_change";
+const OTP_TYPES: readonly OtpType[] = [
+  "recovery",
+  "invite",
+  "magiclink",
+  "signup",
+  "email_change",
+];
 
 export default function HubResetPassword() {
   const [password, setPassword] = useState("");
@@ -13,16 +21,21 @@ export default function HubResetPassword() {
   const [validToken, setValidToken] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isMountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    // AbortController replaces the legacy isMountedRef pattern. Supabase SDK calls
+    // don't natively accept AbortSignal, so we use signal.aborted as the guard
+    // before touching React state after an async boundary.
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
 
     // Listen for PASSWORD_RECOVERY (fallback if Supabase auto-parses hash)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (!isMountedRef.current) return;
+      if (signal.aborted) return;
       if (event === "PASSWORD_RECOVERY") {
         setValidToken(true);
       }
@@ -32,14 +45,14 @@ export default function HubResetPassword() {
       // Primary flow: our Send Email Hook delivers ?token_hash=...&type=... directly
       // to this page. Verify via the SDK (which handles apikey automatically).
       const tokenHash = searchParams.get("token_hash");
-      const type = searchParams.get("type") as OtpType | null;
+      const type = pickFromListOrNull(searchParams.get("type"), OTP_TYPES);
 
       if (tokenHash && type) {
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type,
         });
-        if (!isMountedRef.current) return;
+        if (signal.aborted) return;
         if (otpError) {
           console.error("verifyOtp failed:", otpError);
           setValidToken(false);
@@ -56,7 +69,7 @@ export default function HubResetPassword() {
 
       // Fallback: user already has an active session (e.g., Supabase auto-parsed hash)
       const { data: { session } } = await supabase.auth.getSession();
-      if (!isMountedRef.current) return;
+      if (signal.aborted) return;
       if (session) {
         setValidToken(true);
       } else {
@@ -65,7 +78,7 @@ export default function HubResetPassword() {
     })();
 
     return () => {
-      isMountedRef.current = false;
+      controller.abort();
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,18 +97,21 @@ export default function HubResetPassword() {
       return;
     }
 
+    const signal = abortRef.current?.signal;
     setLoading(true);
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (signal?.aborted) return;
       if (updateError) throw updateError;
       // Success — redirect to dashboard
       navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
+      if (signal?.aborted) return;
       const message =
         err instanceof Error ? err.message : "Erro ao redefinir senha.";
       setError(message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 

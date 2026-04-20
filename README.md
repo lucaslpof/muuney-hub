@@ -1,130 +1,102 @@
-# Muuney.hub - Frontend Implementation (P3, P4, P5)
+# muuney.hub
 
-**Implementação:** 3 tarefas de frontend para plataforma de inteligência de mercado financeiro B2B
+B2B market intelligence platform for agentes autônomos de investimentos (AAIs).
+Built by **FLUXX CASH TECNOLOGIA LTDA** on BACEN SGS + CVM regulatory feeds.
 
-## 📦 Conteúdo
-
-```
-muuney-hub/
-├── src/
-│   ├── components/
-│   │   ├── ui/
-│   │   │   └── withModuleState.tsx          [HOC + wrapper p/ estado de módulos]
-│   │   ├── layout/
-│   │   │   ├── MobileNav.tsx                [Bottom nav para mobile]
-│   │   │   └── MobileNav.css
-│   │   └── onboarding/
-│   │       ├── OnboardingTour.tsx           [Tour interativo 7 steps]
-│   │       └── OnboardingTour.css           [CSS puro, zero deps]
-│   ├── hooks/
-│   │   ├── useModuleState.ts                [Normaliza estado de módulos]
-│   │   └── useOnboarding.ts                 [Gerencia tour + Supabase]
-│   └── styles/
-│       ├── mobile-audit.md                  [Análise de problemas]
-│       └── mobile-fixes.css                 [Overrides mobile globais]
-├── migrations/
-│   └── 20260414_hub_user_preferences.sql    [Tabela + RLS + triggers]
-└── APPLY_INSTRUCTIONS.md                    [Step-by-step integração]
-```
-
-## 🎯 Tarefas Implementadas
-
-### P3: Integrar SkeletonLoader + EmptyState nos 5 módulos
-- ✅ `useModuleState.ts` — Normaliza retorno de hooks (useHubMacro, etc.)
-- ✅ `withModuleState.tsx` — HOC wrapper encapsula padrão de loading/error/empty
-- ✅ Template de integração: envolver cada seção com `<ModuleStateWrapper />`
-
-### P4: Onboarding Tour Guiado
-- ✅ `useOnboarding.ts` — Hook com 7 steps, persiste em Supabase
-- ✅ `OnboardingTour.tsx` — Componente com highlight + tooltip dinâmico
-- ✅ CSS puro (OnboardingTour.css) — Zero dependências externas
-- ✅ Ativa automaticamente para novos usuários (tier = free)
-- ✅ `data-tour-id` attributes para elementos alvo
-
-### P5: Mobile Responsivity
-- ✅ `MobileNav.tsx` — Bottom navigation (5 módulos + ícones)
-- ✅ `mobile-fixes.css` — Overrides globais para <768px
-- ✅ KPI grid responsivo: 4 col → 2 col → 1 col
-- ✅ Tabelas com scroll horizontal + sticky headers
-- ✅ Charts height dinâmica (300px mobile, 400px desktop)
-- ✅ Touch targets min 44px (WCAG AA)
-- ✅ Safe area support (notch awareness)
-- ✅ `mobile-audit.md` — Documentação completa
-
-## 🚀 Quick Start
-
-1. **Copy files:**
-   ```bash
-   cp -r muuney-hub/src/* ./src/
-   cp muuney-hub/migrations/*.sql ./supabase/migrations/
-   ```
-
-2. **Execute migration:**
-   ```bash
-   supabase migration up
-   ```
-
-3. **Altere 5 arquivos existentes:**
-   - HubLayout.tsx (imports + layout)
-   - HubMacro.tsx (ModuleStateWrapper)
-   - HubCredito.tsx (ModuleStateWrapper)
-   - HubRendaFixa.tsx (ModuleStateWrapper)
-   - HubFundos.tsx (ModuleStateWrapper + flex layout)
-   - HubPortfolio.tsx (ModuleStateWrapper)
-
-4. **Adicione em index.html:**
-   ```html
-   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-   ```
-
-5. **Teste:**
-   - Novo usuário → tour deve ativar
-   - Mobile view → bottom nav + responsive layout
-   - Loading/error states → SkeletonLoader/EmptyState
-
-**Ver `APPLY_INSTRUCTIONS.md` para instruções completas.**
-
-## 🎨 Tech Stack
-
-- React 18 + TypeScript strict
-- Vite 5 + Tailwind CSS 3.4
-- shadcn/ui + Recharts
-- Supabase (auth + hub_user_preferences)
-- CSS puro (zero deps externas)
-
-## 🎭 Aesthetic
-
-**Tech-Noir:** #0a0a0a bg, #0B6C3E accent, JetBrains Mono, dark mode
-- High contrast
-- Sophisticated typography
-- Subtle neon accents
-- Professional "near-future" vibe
-
-## ✅ Quality Assurance
-
-- [x] Production-ready TypeScript
-- [x] Zero TODOs in code
-- [x] WCAG AA accessibility (44px touch, focus indicators)
-- [x] Mobile-first responsive design
-- [x] Performance optimized (CLS < 0.1, LCP < 2.5s)
-- [x] RLS (Row Level Security) em migration
-- [x] Error handling + retry mechanisms
-
-## 📋 Validação Checklist
-
-- [ ] Migration executada com sucesso
-- [ ] OnboardingTour ativa em novo login
-- [ ] ModuleStateWrapper funciona nos 5 módulos
-- [ ] MobileNav aparece em <768px
-- [ ] Tabelas scrollam horizontalmente
-- [ ] Charts responsivos em mobile
-- [ ] Touch targets >= 44px
-- [ ] Safe area respeitada (notch)
-- [ ] Lighthouse score >= 90 (mobile)
-- [ ] Zero console errors
+**Live:** https://hub.muuney.com.br
+**Beta launch:** 30/04/2026
 
 ---
 
-**Status:** Production Ready (14/04/2026)  
-**Deploy:** Vercel (zero config)  
-**Support:** Veja APPLY_INSTRUCTIONS.md para troubleshooting
+## Quick Start
+
+Prerequisites: Node 20+, npm, a Supabase anon key for project `yheopprbuimsunqfaqbp`.
+
+```bash
+# Install
+npm install
+
+# Configure env
+cp .env.example .env.local
+# Edit .env.local with your VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY
+
+# Run dev server (http://localhost:5173)
+npm run dev
+
+# Type-check + build
+npx tsc --noEmit
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+Environment variables are documented in `.env.example`. Only `VITE_*` keys are
+exposed to the browser bundle. Edge Function secrets (Stripe, Resend, service
+role) live in the Supabase dashboard — never in `.env.local`.
+
+---
+
+## Stack
+
+- React 18 + TypeScript strict + Vite 5
+- Tailwind CSS 3.4 + shadcn/ui + Recharts
+- Supabase (auth, Postgres, Edge Functions, RLS)
+- React Query (staleTime-tuned per domain)
+- Vercel (auto-deploy on push to `main`)
+
+---
+
+## Key Directories
+
+```
+src/
+  components/hub/   — shared hub primitives (MacroChart, KPICard, SkeletonLoader…)
+  contexts/         — HubSectionsContext, auth, etc.
+  hooks/            — useAuth, useHubData, useHubFundos, useFeedback, …
+  integrations/     — supabase client
+  lib/              — pure utilities (statistics, fundScore, csvExport, kpiHints…)
+  pages/            — 30+ routes (Hub*, Fundo*, Fidc*, Fii*, Ofertas…)
+supabase/
+  functions/        — Edge Functions (hub-cvm-api, hub-fidc-api, stripe-*, …)
+  migrations/       — Postgres migrations (ordered)
+```
+
+---
+
+## Beta Access
+
+Beta testers are pre-provisioned via the `invite-beta-user` Edge Function
+(admin-only). Invitees hit `/primeiro-acesso`, set a password, and are
+auto-promoted to `tier=pro` via the `auto_promote_beta_invitee` DB trigger.
+
+Full auth + premium gates: see "Auth & Premium Gates" in `CLAUDE.md`.
+
+---
+
+## Deployment
+
+Vercel auto-deploys on push to `main`. Branch previews are not currently enabled.
+SPA routing is handled by `vercel.json` (catch-all rewrite to `index.html`).
+
+After merging, verify in this order:
+1. Vercel deployment succeeded (https://vercel.com/dashboard)
+2. Smoke-check auth flow at https://hub.muuney.com.br/login
+3. Spot-check a Pro-gated page (e.g. /fundos/fidc)
+
+---
+
+## Docs
+
+- `CLAUDE.md` — full project context + history (private)
+- `SMOKE_TEST_BETA_30ABR.md` — pre-launch E2E checklist
+- `AUDIT_*.md` — module-specific deep audits (Fundos, Crédito, Renda Fixa, Macro)
+- `SPEC_*.md` — product specs for major features
+- `launch-prep/` — operational playbooks + launch-week runbooks
+
+---
+
+## Aesthetic
+
+Tech-Noir: `#0a0a0a` background, `#0B6C3E` primary accent, JetBrains Mono for
+numeric/data UI. High contrast, minimal chrome, dense information design.

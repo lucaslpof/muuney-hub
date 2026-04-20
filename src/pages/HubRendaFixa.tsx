@@ -25,6 +25,7 @@ import { RfPortfolioCalculator } from "@/components/hub/RfPortfolioCalculator";
 import { CreditoPrivadoDeepPanel } from "@/components/hub/CreditoPrivadoDeepPanel";
 import { buildRfRollingRow } from "@/lib/rfRollingDeltas";
 import { normalizeToBi } from "@/lib/unitNormalize";
+import { pickFromList } from "@/lib/queryParams";
 import {
   useHubLatest,
   useHubSeriesBundle,
@@ -70,11 +71,15 @@ const RED = "#EF4444";
    MAIN COMPONENT — HubRendaFixa (H1.3)
    Audit batch 16 — 5 narrative sections, lazy-load, deep-linking, MacroChart v2
    ═══════════════════════════════════════════════════════════════════════════ */
+const SECTION_IDS = SECTIONS.map((s) => s.id) as readonly SectionId[];
+
 const HubRendaFixa = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [period, setPeriod] = useState<string>(searchParams.get("period") || "1y");
+  const [period, setPeriod] = useState<string>(
+    () => pickFromList(searchParams.get("period"), PERIODS, "1y")
+  );
   const [activeSection, setActiveSection] = useState<SectionId>(
-    (searchParams.get("section") as SectionId) || "overview"
+    () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
   );
 
   /* ─── Deep-linking: sync URL ↔ state ─── */

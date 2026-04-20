@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/hub/EmptyState";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+import { pickFromList, toInt, toSortOrder, toSearchQuery } from "@/lib/queryParams";
 
 const SECTIONS = [
   { id: "overview", label: "Visão Geral", icon: LayoutGrid },
@@ -29,13 +30,25 @@ const SECTIONS = [
   { id: "segmentos", label: "Segmentos", icon: Zap },
 ];
 
+const SECTION_IDS = SECTIONS.map((s) => s.id);
+const ORDER_BY_FIELDS = [
+  "patrimonio_liquido",
+  "dividend_yield_mes",
+  "rentabilidade_efetiva_mes",
+  "rentabilidade_patrimonial_mes",
+  "nr_cotistas",
+  "valor_patrimonial_cota",
+  "pct_despesas_adm",
+] as const;
+
 /** FiiHub Component */
 export default function FiiHub() {
-  /* ─── Deep-linking: section + filters/sort from URL (P2-8 URL persistence) ─── */
+  /* ─── Deep-linking: section + filters/sort from URL (P2-8 URL persistence, sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialSection = searchParams.get("section") || "overview";
 
-  const [activeSection, setActiveSection] = useState<string>(initialSection);
+  const [activeSection, setActiveSection] = useState<string>(
+    () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
+  );
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   /* ─── Lazy-load: track which sections have been visible ─── */
@@ -45,27 +58,39 @@ export default function FiiHub() {
 
   const sectionVisible = useCallback((id: string) => visitedSections.has(id), [visitedSections]);
 
-  /* ─── Screener Filters (hydrated from URL) ─── */
+  /* ─── Screener Filters (hydrated from URL, sanitized) ─── */
   const [selectedSegmento, setSelectedSegmento] = useState<string | null>(
-    () => searchParams.get("segmento") || null
+    () => {
+      const raw = toSearchQuery(searchParams.get("segmento"), 80);
+      return raw || null;
+    }
   );
   const [selectedTipoGestao, setSelectedTipoGestao] = useState<string | null>(
-    () => searchParams.get("tipo_gestao") || null
+    () => {
+      const raw = toSearchQuery(searchParams.get("tipo_gestao"), 40);
+      return raw || null;
+    }
   );
-  const [minPl, setMinPl] = useState<number>(() => Number(searchParams.get("min_pl") || 0));
-  const [minDy, setMinDy] = useState<number>(() => Number(searchParams.get("min_dy") || 0));
-  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get("q") || "");
+  const [minPl, setMinPl] = useState<number>(
+    () => toInt(searchParams.get("min_pl"), { min: 0, max: 1_000_000_000, fallback: 0 })
+  );
+  const [minDy, setMinDy] = useState<number>(
+    () => toInt(searchParams.get("min_dy"), { min: 0, max: 100, fallback: 0 })
+  );
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => toSearchQuery(searchParams.get("q"), 100)
+  );
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
-  /* ─── Rankings Sorting (hydrated from URL) ─── */
+  /* ─── Rankings Sorting (hydrated from URL, sanitized) ─── */
   const [rankingOrderBy, setRankingOrderBy] = useState<string>(
-    () => searchParams.get("orderBy") || "patrimonio_liquido"
+    () => pickFromList(searchParams.get("orderBy"), ORDER_BY_FIELDS, "patrimonio_liquido")
   );
   const [rankingOrder, setRankingOrder] = useState<string>(
-    () => searchParams.get("order") || "desc"
+    () => toSortOrder(searchParams.get("order"), "desc")
   );
   const [rankingPage, setRankingPage] = useState<number>(
-    () => Number(searchParams.get("page") || 0)
+    () => toInt(searchParams.get("page"), { min: 0, max: 9999, fallback: 0 })
   );
 
   /* ─── Sync state → URL (replace, no-op for defaults) ─── */

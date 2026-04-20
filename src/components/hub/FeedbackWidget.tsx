@@ -21,7 +21,7 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState<number | null>(null);
-  const { submit, submitting, submitted, error, reset } = useFeedback();
+  const { submit, submitting, submitted, queued, error, reset } = useFeedback();
   const location = useLocation();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -78,8 +78,14 @@ export function FeedbackWidget({ section }: FeedbackWidgetProps) {
             <div className="w-10 h-10 rounded-full bg-[#0B6C3E]/20 flex items-center justify-center">
               <Check size={20} className="text-[#0B6C3E]" />
             </div>
-            <p className="text-sm text-zinc-200 font-medium">Obrigado pelo feedback!</p>
-            <p className="text-[11px] text-zinc-500">Sua opinião nos ajuda a melhorar.</p>
+            <p className="text-sm text-zinc-200 font-medium">
+              {queued ? "Salvo para envio" : "Obrigado pelo feedback!"}
+            </p>
+            <p className="text-[11px] text-zinc-500 text-center">
+              {queued
+                ? "Sem conexão no momento. Enviaremos assim que você voltar a ficar online."
+                : "Sua opinião nos ajuda a melhorar."}
+            </p>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
+import { pickFromList } from "@/lib/queryParams";
 import { ExportButton } from "@/components/hub/ExportButton";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
@@ -837,15 +838,15 @@ const MetricasDetail = ({ cnpj, period }: { cnpj: string; period: string }) => {
    MAIN COMPONENT — HubFundos (H1.4 Fase B — 6 Narrative Sections)
    ═══════════════════════════════════════════════════════════════════════════ */
 const HubFundos = () => {
-  /* ─── Deep-linking: period & section from URL ─── */
+  /* ─── Deep-linking: period & section from URL (sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialPeriod = searchParams.get("period") || "3m";
-  const initialSection = searchParams.get("section") || "overview";
-
+  const SECTION_IDS = SECTIONS.map((s) => s.id);
   const [period, setPeriod] = useState<string>(
-    (PERIODS as readonly string[]).includes(initialPeriod) ? initialPeriod : "3m"
+    () => pickFromList(searchParams.get("period"), PERIODS, "3m")
   );
-  const [activeSection, setActiveSection] = useState<string>(initialSection);
+  const [activeSection, setActiveSection] = useState<string>(
+    () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
+  );
   const [selectedFund, setSelectedFund] = useState<string | null>(null);
   const [modoAssessor, setModoAssessor] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
