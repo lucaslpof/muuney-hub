@@ -28,13 +28,20 @@ function getSupabase() {
 
 async function setTierForCustomer(customerId: string, tier: "free" | "pro", extras: Record<string, unknown> = {}) {
   const supabase = getSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("hub_user_tiers")
     .update({ tier, updated_at: new Date().toISOString(), ...extras })
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select("user_id");
   if (error) {
     console.error("Failed to update tier:", error);
     throw error;
+  }
+  // Warn — customer exists at Stripe but no matching hub_user_tiers row.
+  // Most commonly: the row was created with stripe_customer_id=null and never
+  // backfilled, or the user was deleted. Without this log we'd silently ignore.
+  if (!data || data.length === 0) {
+    console.warn(`setTierForCustomer: no hub_user_tiers row matched customer ${customerId} (tier=${tier})`);
   }
 }
 

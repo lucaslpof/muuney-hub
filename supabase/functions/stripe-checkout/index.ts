@@ -5,7 +5,7 @@
 //   STRIPE_SECRET_KEY          — sk_test_... or sk_live_...
 //   STRIPE_PRICE_ID_MONTHLY    — price_... (Pro R$49/mês)
 //   STRIPE_PRICE_ID_YEARLY     — price_... (Pro R$490/ano)
-//   SITE_URL                   — https://muuney.app (fallback https://muuney.com.br)
+//   SITE_URL                   — https://hub.muuney.com.br (Hub domain)
 //
 // POST body: { plan: "monthly" | "yearly" }
 // Requires authenticated user (Authorization: Bearer <jwt>).
@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const priceMonthly = Deno.env.get("STRIPE_PRICE_ID_MONTHLY");
     const priceYearly = Deno.env.get("STRIPE_PRICE_ID_YEARLY");
-    const siteUrl = Deno.env.get("SITE_URL") ?? "https://muuney.app";
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://hub.muuney.com.br";
 
     if (!stripeKey || !priceMonthly || !priceYearly) {
       return new Response(

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, X, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { Check, X, Sparkles, Loader2, AlertCircle, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { HubSEO } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +34,9 @@ const FEATURES: Feature[] = [
   { label: "Priority support", free: false, pro: true },
 ];
 
-const CHECKOUT_FN_URL = `${import.meta.env.VITE_SUPABASE_URL ?? "https://yheopprbuimsunqfaqbp.supabase.co"}/functions/v1/stripe-checkout`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "https://yheopprbuimsunqfaqbp.supabase.co";
+const CHECKOUT_FN_URL = `${SUPABASE_URL}/functions/v1/stripe-checkout`;
+const PORTAL_FN_URL = `${SUPABASE_URL}/functions/v1/stripe-portal`;
 
 function FeatureCell({ value }: { value: boolean | string }) {
   if (value === true) {
@@ -60,6 +62,7 @@ export default function HubUpgrade() {
   const { tier, isPro, isAdmin, refreshTier } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState(false);
   const [cancelledBanner, setCancelledBanner] = useState(false);
@@ -154,6 +157,42 @@ export default function HubUpgrade() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setLoading(null);
+    }
+  }
+
+  async function openBillingPortal() {
+    setError(null);
+    setPortalLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const jwt = sessionData.session?.access_token;
+      if (!jwt) {
+        setError("Sessão expirada. Faça login novamente.");
+        setPortalLoading(false);
+        return;
+      }
+
+      const res = await fetch(PORTAL_FN_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Portal error: ${res.status}`);
+      }
+
+      const { url } = await res.json();
+      if (!url) throw new Error("URL do portal não retornada");
+
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setPortalLoading(false);
     }
   }
 
@@ -313,12 +352,33 @@ export default function HubUpgrade() {
               ou R$ 490/ano (2 meses grátis)
             </p>
             {isPro ? (
-              <button
-                disabled
-                className="w-full py-3 bg-zinc-800 text-zinc-500 rounded-lg font-medium cursor-not-allowed"
-              >
-                Plano atual
-              </button>
+              <div className="space-y-2">
+                <button
+                  disabled
+                  className="w-full py-3 bg-zinc-800 text-zinc-500 rounded-lg font-medium cursor-not-allowed"
+                >
+                  Plano atual
+                </button>
+                {!isAdmin && (
+                  <button
+                    onClick={openBillingPortal}
+                    disabled={portalLoading}
+                    className="w-full py-3 bg-transparent hover:bg-[#0B6C3E]/10 border border-[#0B6C3E]/50 disabled:opacity-60 disabled:cursor-not-allowed text-[#0B6C3E] rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {portalLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Abrindo…
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="w-4 h-4" />
+                        Gerenciar assinatura
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="space-y-2">
                 <button
