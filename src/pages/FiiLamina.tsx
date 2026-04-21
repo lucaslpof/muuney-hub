@@ -355,6 +355,7 @@ export default function FiiLamina() {
         description={`Análise FII: ${fundName || "fundo imobiliário"} — PL R$ ${formatPL(meta?.vl_patrim_liq)}, segmento ${segmento}, dividend yield ${latest?.dividend_yield_mes}%. Rentabilidade, distribuição mensal e composição de ativos.`}
         path={`/fundos/fii/${slug}`}
         keywords={`${fundName}, FII, fundo imobiliário, lâmina FII, análise FII, dividend yield, fundos imobiliários Brasil`}
+        image="https://hub.muuney.com.br/og/fii-lamina.png"
         isProtected={true}
       />
 

@@ -363,6 +363,7 @@ const HubCredito = () => {
         description="Visão completa do mercado de crédito brasileiro: spreads bancários, inadimplência PF e PJ, concessões, taxas médias e 73 séries BACEN SGS."
         path="/credito"
         keywords="mercado de crédito, inadimplência Brasil, spread bancário, taxa de juros crédito, concessões BACEN, risco de crédito, crédito PF, crédito PJ"
+        image="https://hub.muuney.com.br/og/credito.png"
         isProtected={true}
       />
       <Breadcrumbs items={[{ label: "Overview de Crédito" }]} className="mb-4 no-print" />

@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 
 const BASE_URL = "https://hub.muuney.com.br";
-const OG_IMAGE = "https://muuney.com.br/og-image-hub.png";
+const OG_IMAGE = "https://hub.muuney.com.br/og/default.png";
 
 const DEFAULT_KEYWORDS = "inteligência de mercado, dados BACEN, dados CVM, panorama macroeconômico, crédito Brasil, Selic, IPCA, PTAX, fintech B2B, análise financeira";
 

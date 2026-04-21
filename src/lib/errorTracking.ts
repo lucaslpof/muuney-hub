@@ -1,8 +1,9 @@
 /**
  * Observability layer for muuney.hub
  * Lightweight error tracking + performance monitoring.
- * Ready for Sentry/LogRocket integration when budget allows.
+ * Forwards to Sentry when VITE_SENTRY_DSN is set (see src/lib/sentry.ts).
  */
+import { forwardToSentry } from "./sentry";
 
 interface ErrorContext {
   componentStack?: string;
@@ -37,6 +38,13 @@ export function logError(error: Error, context?: ErrorContext): void {
 
   // Console output (dev + prod)
   console.error("[muuney.hub] Error tracked:", entry);
+
+  // Forward to Sentry if initialized (no-op otherwise)
+  forwardToSentry(error, {
+    source: context?.source,
+    componentStack: context?.componentStack,
+    metadata: context?.metadata,
+  });
 
   // Persist to localStorage for debug inspection
   try {

@@ -157,6 +157,7 @@ const HubDashboard = () => {
         description="Painel de inteligência financeira com indicadores em tempo real: Selic, IPCA, câmbio, inadimplência e fundos CVM monitorados."
         path="/dashboard"
         keywords="dashboard financeiro, indicadores econômicos, Selic hoje, IPCA acumulado, câmbio dólar, spreads bancários, inadimplência PF"
+        image="https://hub.muuney.com.br/og/default.png"
         isProtected={true}
       />
       <Breadcrumbs items={[{ label: "Dashboard" }]} className="mb-4" />

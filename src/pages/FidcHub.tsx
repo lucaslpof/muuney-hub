@@ -310,6 +310,7 @@ export default function FidcHub() {
         description="Inteligência completa de FIDCs: rankings sortable, screener multi-filtro, análise de subordinação e inadimplência, breakdown por lastro. Dados CVM RCVM 175."
         path="/fundos/fidc"
         keywords="FIDC, fundos de direitos creditórios, subordinação, inadimplência, lastro, CVM RCVM 175, ranking FIDC"
+        image="https://hub.muuney.com.br/og/fidc.png"
         isProtected={true}
       />
       {/* Sidebar Navigation */}

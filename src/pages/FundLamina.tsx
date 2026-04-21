@@ -399,6 +399,7 @@ export default function FundLamina() {
         description={`Análise completa: ${fundDisplayName(meta) || "fundo"} — ${meta?.classe_rcvm175 || meta?.classe || ""}, PL R$ ${formatPL(meta?.vl_patrim_liq)}, ${meta?.gestor_nome || "gestor"}. Performance, composição, drawdown e Fund Score™.`}
         path={`/fundos/${slug}`}
         keywords={`${fundDisplayName(meta)}, ${meta?.classe_rcvm175 || meta?.classe}, lâmina fundo, análise fundo, Fund Score`}
+        image="https://hub.muuney.com.br/og/fund-lamina.png"
         isProtected={true}
       />
 

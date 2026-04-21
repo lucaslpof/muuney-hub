@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { setSentryUser } from "@/lib/sentry";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 export type UserTier = "free" | "pro" | "admin";
@@ -68,6 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (signal?.aborted) return;
       currentUserIdRef.current = user?.id;
       setState({ user, session, tier, loading: false });
+      // Correlate Sentry events to authenticated user (no-op if Sentry disabled)
+      setSentryUser(user ? { id: user.id, email: user.email, tier } : null);
     },
     []
   );

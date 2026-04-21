@@ -473,6 +473,7 @@ export default function FidcLamina() {
         description={`Análise FIDC: ${fundName || "fundo"} — PL R$ ${formatPL(meta?.vl_patrim_liq)}, taxa de administração ${meta?.taxa_adm}%. Rentabilidade senior/subordinada, histórico mensal e composição.`}
         path={`/fundos/fidc/${slug}`}
         keywords={`${fundName}, FIDC, fundo de investimento em direitos creditórios, lâmina FIDC, análise FIDC`}
+        image="https://hub.muuney.com.br/og/fidc-lamina.png"
         isProtected={true}
       />
 

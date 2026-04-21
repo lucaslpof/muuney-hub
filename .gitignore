@@ -42,3 +42,8 @@ supabase/.temp/
 
 # Marketing assets (live in workspace/drive, not repo)
 marketing-assets/
+
+# Playwright E2E artifacts
+playwright-report/
+test-results/
+playwright/.cache/

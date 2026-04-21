@@ -314,6 +314,7 @@ export default function FiiHub() {
         description="Inteligência completa de FIIs: rankings sortable, screener multi-filtro, dividend yield, breakdown por segmento. 1.250+ fundos imobiliários monitorados."
         path="/fundos/fii"
         keywords="FII, fundos imobiliários, dividend yield, segmento FII, lajes corporativas, logística, shoppings, CRI, ranking FII"
+        image="https://hub.muuney.com.br/og/fii.png"
         isProtected={true}
       />
       {/* Sidebar Navigation */}

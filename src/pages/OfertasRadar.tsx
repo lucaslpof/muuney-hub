@@ -413,6 +413,7 @@ export default function OfertasRadar() {
           title="Ofertas Públicas"
           description="Radar de ofertas públicas CVM — pipeline, timeline e explorer de debêntures, CRI, CRA, FIDC, FII e ações."
           path="/ofertas"
+          image="https://hub.muuney.com.br/og/ofertas.png"
         />
         <Breadcrumbs items={[{ label: "Ofertas Públicas" }]} className="mb-3" />
         <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">

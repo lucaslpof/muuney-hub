@@ -273,6 +273,7 @@ const HubMacro = () => {
         description="Análise macroeconômica completa com dados BACEN: Selic, IPCA, PIB, emprego, setor externo, expectativas Focus e curva de juros DI."
         path="/macro"
         keywords="panorama macroeconômico, Selic BACEN, IPCA mensal, PIB Brasil, Focus expectativas, curva de juros, câmbio PTAX, taxa de desemprego"
+        image="https://hub.muuney.com.br/og/macro.png"
         isProtected={true}
       />
       <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />

@@ -615,6 +615,7 @@ const HubRendaFixa = () => {
         description="Terminal de renda fixa: curva DI, NTN-B, Tesouro Direto, spreads de crédito privado, simulador de yield curve e calculadora de bonds."
         path="/renda-fixa"
         keywords="renda fixa, curva DI, NTN-B, Tesouro Direto, spread debêntures, calculadora renda fixa, juros Brasil, yield curve, breakeven inflation"
+        image="https://hub.muuney.com.br/og/renda-fixa.png"
         isProtected={true}
       />
       {/* ─── Section nav (registered into top-bar via context) ─── */}

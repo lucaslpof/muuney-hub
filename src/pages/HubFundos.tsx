@@ -1070,6 +1070,7 @@ const HubFundos = () => {
         description="Análise de 29.491 fundos CVM com Fund Score™, rankings por categoria, lâminas RCVM 175, screener multi-filtro e módulos FIDC, FII e FIP."
         path="/fundos"
         keywords="fundos de investimento CVM, ranking fundos, FIDC, FII, FIP, Fund Score, lâmina CVM, screener fundos, análise fundos"
+        image="https://hub.muuney.com.br/og/fundos.png"
         isProtected={true}
       />
       <Breadcrumbs items={[{ label: "Fundos" }]} className="mb-4" />
