@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import { toast } from "@/hooks/use-toast";
 import { initErrorTracking } from "@/lib/errorTracking";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -68,6 +69,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <AuthProvider>
             <App />
+            <Analytics />
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
