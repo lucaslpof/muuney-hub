@@ -90,7 +90,7 @@ const HubMain = () => {
       }`}
     >
       {/* Top bar — holds per-page section navigator */}
-      <header className="no-print h-14 border-b border-zinc-800/50 flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
+      <header className="no-print h-11 border-b border-zinc-800/50 flex items-center gap-3 px-4 md:px-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md z-30">
         <MobileMenuButton />
 
         {/* Section navigator (replaces static "Fontes:" label) */}

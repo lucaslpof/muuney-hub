@@ -122,7 +122,7 @@ const SidebarContent = ({
   return (
     <>
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800/50">
+      <div className="h-11 flex items-center justify-between px-4 border-b border-zinc-800/50">
         <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           {!collapsed ? (
             <>

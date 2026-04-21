@@ -181,8 +181,8 @@ export default function HubPortfolio() {
         isProtected={true}
       />
       {/* ─── Top bar: portfolio switcher + actions ─── */}
-      <div className="border-b border-[#141414] bg-[#0a0a0a] sticky top-14 z-20">
-        <div className="px-4 lg:px-6 py-3 flex items-center gap-3 flex-wrap">
+      <div className="border-b border-[#141414] bg-[#0a0a0a] sticky top-11 z-20">
+        <div className="px-4 lg:px-6 py-2 flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
             <Briefcase className="w-4 h-4 text-[#0B6C3E] flex-shrink-0" />
             <h1 className="text-sm font-bold text-zinc-200 font-mono truncate">

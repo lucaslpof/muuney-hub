@@ -28,7 +28,7 @@ export const MacroSection = forwardRef<HTMLDivElement, MacroSectionProps>(
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, margin: "-40px" }}
         transition={{ duration: 0.3 }}
-        className="scroll-mt-44"
+        className="scroll-mt-28"
       >
         {/* ─── Section header ─── */}
         <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-zinc-800/30">

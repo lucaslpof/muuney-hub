@@ -278,10 +278,10 @@ const HubMacro = () => {
       <Breadcrumbs items={[{ label: "Panorama Macroeconômico" }]} className="mb-4" />
 
       {/* ═══ Sticky header ═══ */}
-      <div className="sticky top-14 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-[#141414]">
+      <div className="sticky top-11 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm -mx-6 px-6 py-2 border-b border-[#141414]">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-base font-bold text-zinc-100 tracking-tight font-mono">
+            <h1 className="text-sm font-bold text-zinc-100 tracking-tight font-mono">
               Panorama Macroeconômico
             </h1>
             <span className="text-[9px] text-zinc-600 font-mono">
