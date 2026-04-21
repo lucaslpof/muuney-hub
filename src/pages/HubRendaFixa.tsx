@@ -432,14 +432,17 @@ const HubRendaFixa = () => {
   }, [ntnb2029, ntnb2035, ntnb2045]);
 
   /* ─── Real Rate computation ─── */
-  const ipca12mValue = kpis.find((k) => k.serie_code === "13522")?.last_value;
-  const selicValue = kpis.find((k) => k.serie_code === "432")?.last_value;
+  // NOTE: mapLatestResponse() em useHubData.ts converte códigos BACEN numéricos
+  // para friendly names (432→selic_meta, 4392→cdi_acumulado, 13522→ipca_12m).
+  // Códigos sem entrada em CODE_TO_FRIENDLY ficam como string numérica (ex: 990002).
+  const ipca12mValue = kpis.find((k) => k.serie_code === "ipca_12m")?.last_value;
+  const selicValue = kpis.find((k) => k.serie_code === "selic_meta")?.last_value;
   const realRate = selicValue && ipca12mValue ? selicValue - ipca12mValue : null;
   const focusSelicValue = kpis.find((k) => k.serie_code === "990002")?.last_value;
 
   /* ─── Narrative mini-stats per section ─── */
   const overviewMiniStats: MiniStat[] = useMemo(() => {
-    const cdi = kpis.find((k) => k.serie_code === "4392")?.last_value;
+    const cdi = kpis.find((k) => k.serie_code === "cdi_acumulado")?.last_value;
     const bei3v = kpis.find((k) => k.serie_code === "990102")?.last_value;
     return [
       { label: "Selic Meta", value: selicValue != null ? `${selicValue.toFixed(2)}%` : "—", color: "text-emerald-400", sublabel: "BACEN · COPOM" },
@@ -886,7 +889,7 @@ const HubRendaFixa = () => {
                 color={ACCENT}
                 label="Taxa DI"
                 unit="% a.a."
-                refValue={kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25}
+                refValue={kpis.find((k) => k.serie_code === "selic_meta")?.last_value ?? 14.25}
                 refLabel="Selic Meta"
               />
             ) : (
@@ -955,7 +958,7 @@ const HubRendaFixa = () => {
                 color="#EC4899"
                 label="Poupança"
                 unit="% a.a."
-                refValue={(kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25) * 0.7}
+                refValue={(kpis.find((k) => k.serie_code === "selic_meta")?.last_value ?? 14.25) * 0.7}
                 refLabel="70% Selic"
               />
             </div>
@@ -1094,7 +1097,7 @@ const HubRendaFixa = () => {
                 {/* Tesouro Direto Simulator */}
                 <TesouroSimulator
                   selicAtual={selicValue ?? undefined}
-                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  cdiAtual={kpis.find((k) => k.serie_code === "cdi_acumulado")?.last_value}
                   ipcaEsperado={ipca12mValue ?? undefined}
                   poupancaMes={kpis.find((k) => k.serie_code === "195")?.last_value}
                 />
@@ -1194,7 +1197,7 @@ const HubRendaFixa = () => {
                   spreadAA={kpis.find((k) => k.serie_code === "990301")?.last_value}
                   spreadA={kpis.find((k) => k.serie_code === "990302")?.last_value}
                   selicAtual={selicValue ?? undefined}
-                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  cdiAtual={kpis.find((k) => k.serie_code === "cdi_acumulado")?.last_value}
                   spreadAASeries={spreadAA_5y.length ? spreadAA_5y : spreadAASeries}
                   spreadASeries={pickSeries(credpriv5y, "990302").length ? pickSeries(credpriv5y, "990302") : spreadASeries}
                 />
@@ -1233,7 +1236,7 @@ const HubRendaFixa = () => {
               >
                 {/* Intelligence Panel */}
                 <FixedIncomeNarrativePanel
-                  selicMeta={kpis.find((k) => k.serie_code === "432")?.last_value}
+                  selicMeta={kpis.find((k) => k.serie_code === "selic_meta")?.last_value}
                   focusSelic={kpis.find((k) => k.serie_code === "990002")?.last_value ?? 12.50}
                   curveShort={kpis.find((k) => k.serie_code === "7813")?.last_value}
                   curveMid={kpis.find((k) => k.serie_code === "7817")?.last_value}
@@ -1241,7 +1244,7 @@ const HubRendaFixa = () => {
                   spreadAA={kpis.find((k) => k.serie_code === "990301")?.last_value}
                   breakeven1a={kpis.find((k) => k.serie_code === "990101")?.last_value}
                   breakeven5a={kpis.find((k) => k.serie_code === "990103")?.last_value}
-                  ipca12m={kpis.find((k) => k.serie_code === "13522")?.last_value}
+                  ipca12m={kpis.find((k) => k.serie_code === "ipca_12m")?.last_value}
                   ntnb2029={kpis.find((k) => k.serie_code === "12460")?.last_value}
                   ntnb2035={kpis.find((k) => k.serie_code === "12461")?.last_value}
                   vendasTD={kpis.find((k) => k.serie_code === "990202")?.last_value}
@@ -1321,12 +1324,12 @@ const HubRendaFixa = () => {
 
                 {/* Yield Curve Simulator v2 */}
                 <YieldCurveSimulator
-                  currentSelic={kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25}
+                  currentSelic={kpis.find((k) => k.serie_code === "selic_meta")?.last_value ?? 14.25}
                 />
 
                 {/* BondCalculator v2 */}
                 <BondCalculator
-                  currentSelic={kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25}
+                  currentSelic={kpis.find((k) => k.serie_code === "selic_meta")?.last_value ?? 14.25}
                 />
 
                 {/* Benchmarks */}
@@ -1334,7 +1337,7 @@ const HubRendaFixa = () => {
                   <h3 className="text-sm font-bold text-zinc-100 mb-3">Benchmarks vs Metas</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
-                      { label: "Selic Meta", current: kpis.find((k) => k.serie_code === "432")?.last_value ?? 14.25, target: 12.50, unit: "% a.a." },
+                      { label: "Selic Meta", current: kpis.find((k) => k.serie_code === "selic_meta")?.last_value ?? 14.25, target: 12.50, unit: "% a.a." },
                       { label: "NTN-B 2035 (real)", current: kpis.find((k) => k.serie_code === "12461")?.last_value ?? 7.10, target: 6.0, unit: "% a.a." },
                       { label: "Breakeven 1a", current: kpis.find((k) => k.serie_code === "990101")?.last_value ?? 5.82, target: 4.50, unit: "%" },
                       { label: "Spread AA", current: kpis.find((k) => k.serie_code === "990301")?.last_value ?? 1.35, target: 1.20, unit: "p.p." },
@@ -1378,7 +1381,7 @@ const HubRendaFixa = () => {
                 {/* RF Portfolio Calculator — até 8 holdings, agregados + stress */}
                 <RfPortfolioCalculator
                   selicAtual={selicValue ?? undefined}
-                  cdiAtual={kpis.find((k) => k.serie_code === "4392")?.last_value}
+                  cdiAtual={kpis.find((k) => k.serie_code === "cdi_acumulado")?.last_value}
                   ipcaEsperado={ipca12mValue ?? undefined}
                 />
               </NarrativeSection>
