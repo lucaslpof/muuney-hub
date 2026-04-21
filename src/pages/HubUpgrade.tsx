@@ -515,9 +515,17 @@ export default function HubUpgrade() {
               <span className="text-4xl font-bold text-white">R$ 49</span>
               <span className="text-zinc-500 text-sm ml-2">/mês</span>
             </div>
-            <p className="text-[#0B6C3E] text-xs mb-6">
+            <p className="text-[#0B6C3E] text-xs mb-3">
               ou R$ 490/ano (2 meses grátis)
             </p>
+            {!isPro && (
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#0B6C3E]/10 border border-[#0B6C3E]/30 mb-4">
+                <Sparkles className="w-3 h-3 text-[#0B6C3E]" />
+                <span className="text-[10px] text-[#0B6C3E] font-mono uppercase tracking-wider">
+                  14 dias grátis
+                </span>
+              </div>
+            )}
             {isPro ? (
               <div className="space-y-2">
                 <button
@@ -547,35 +555,44 @@ export default function HubUpgrade() {
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <button
                   onClick={() => startCheckout("monthly")}
                   disabled={loading !== null}
-                  className="w-full py-3 bg-[#0B6C3E] hover:bg-[#0B6C3E]/90 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#0B6C3E] hover:bg-[#0B6C3E]/90 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex flex-col items-center justify-center gap-0.5"
                 >
                   {loading === "monthly" ? (
-                    <>
+                    <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Redirecionando…
-                    </>
+                    </span>
                   ) : (
-                    "Assinar mensal — R$ 49/mês"
+                    <>
+                      <span>Começar 14 dias grátis</span>
+                      <span className="text-[11px] text-white/70 font-normal">Depois R$ 49/mês</span>
+                    </>
                   )}
                 </button>
                 <button
                   onClick={() => startCheckout("yearly")}
                   disabled={loading !== null}
-                  className="w-full py-3 bg-transparent hover:bg-[#0B6C3E]/10 border border-[#0B6C3E]/50 disabled:opacity-60 disabled:cursor-not-allowed text-[#0B6C3E] rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-transparent hover:bg-[#0B6C3E]/10 border border-[#0B6C3E]/50 disabled:opacity-60 disabled:cursor-not-allowed text-[#0B6C3E] rounded-lg font-medium transition-colors flex flex-col items-center justify-center gap-0.5"
                 >
                   {loading === "yearly" ? (
-                    <>
+                    <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Redirecionando…
-                    </>
+                    </span>
                   ) : (
-                    "Assinar anual — R$ 490/ano"
+                    <>
+                      <span>Começar 14 dias grátis (anual)</span>
+                      <span className="text-[11px] text-[#0B6C3E]/80 font-normal">Depois R$ 490/ano · 2 meses grátis</span>
+                    </>
                   )}
                 </button>
+                <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
+                  Cartão cobrado apenas após o trial. Cancele a qualquer momento.
+                </p>
               </div>
             )}
           </div>

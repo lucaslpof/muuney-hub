@@ -8,6 +8,7 @@ import {
 import { KPICard } from "@/components/hub/KPICard";
 import { MacroChart } from "@/components/hub/MacroChart";
 import { AlertCard } from "@/components/hub/AlertCard";
+import { HeroKPIs } from "@/components/hub/HeroKPIs";
 import { IngestionStatus } from "@/components/hub/IngestionStatus";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { SkeletonPage } from "@/components/hub/SkeletonLoader";
@@ -385,6 +386,9 @@ const HubDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* ─── Hero KPIs: Universo de Fundos ─── */}
+      <HeroKPIs />
 
       {/* ─── Cross-module Alerts ─── */}
       <AlertCard kpis={allKPIs} module="credito" />

@@ -1,7 +1,7 @@
 # Muuney.hub — Decisions Log
 
-**Última atualização:** 20/Abr/2026 (D-10) — 2ª rodada (Q15-Q20 adicionadas)
-**Status:** respostas de Lucas às rodadas D-11→D-7 (bloqueantes launch) + D-4 (alto impacto)
+**Última atualização:** 21/Abr/2026 (D-9) — 3ª rodada (Stripe Live ativação + ES256 fix)
+**Status:** respostas de Lucas às rodadas D-11→D-7 (bloqueantes launch) + D-4 (alto impacto) + D-9 (Stripe)
 
 ---
 
@@ -12,6 +12,7 @@
 | # | Item | Decisão Lucas | Ação |
 |---|------|---------------|------|
 | 1 | 3 bugs hub-cvm-api v23 | **Procurar e corrigir** ✅ FECHADO 20/Abr/2026 | Bug-triage documentado + Lucas autorizou "Executar o fix completo" → migration `create_gestora_and_admin_rankings_rpcs` aplicada + hub-cvm-api v24 deployed (monthly_overview orderCol fix + catch block refactor) + smoke test 3/3 endpoints HTTP 200 em prod. Ver `ops/bug-triage.md` para detalhe. |
+| 1.5 | Stripe Live ativação + ES256 JWT fix | **Ativar Live + redeploy verify_jwt=false** ✅ PARCIAL 21/Abr/2026 | Stripe Dashboard Passos 1-6 do runbook concluídos (conta BR Live, 2 prices, Billing Portal, webhook 5 events, 6 secrets Supabase, Edge Functions via MCP). ES256 JWT bug descoberto: platform verifier rejeita ES256 com UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM. Fix: stripe-checkout v2 + stripe-portal v2 redeployed via MCP com `verify_jwt=false` (funções já validam token internamente via SERVICE_ROLE_KEY). Smoke test E2E: checkout session create 200 OK + customer Live criado; payment finalization pendente (Lucas abandonou primeira session sem submeter cartão). Nova session cs_live_b1JYO... aguardando submissão de cartão real. Ver `ops/stripe-setup-runbook.md` + `ops/stripe-next-steps-post-smoke.md`. |
 | 2 | Feature flag Dashboard Hero via env var Vercel | **OK** | Usar `VITE_DASHBOARD_HERO_ENABLED=true/false` — rollback < 5 min via Vercel env update + redeploy |
 | 3 | Sentry conta + DSN | **OK** | Lucas cria conta Sentry esta semana, compartilha DSN via env var Vercel (`VITE_SENTRY_DSN`) |
 | 4 | SITE_URL no Supabase Auth | **OK** | Confirmado `https://muuney.app` (não localhost) |
@@ -259,3 +260,7 @@ Reajustar meta conforme taxa resposta real (benchmark inicial: 15-25% reply rate
 | 20/Abr/2026 | Press list | Não existe — agente monta até D-6 (13-press-list-muuney-hub.md) |
 | 20/Abr/2026 | Cold outreach | Meta revisada 30-40→15-20/semana com agente gerando drafts personalizados |
 | 20/Abr/2026 | Bug triage v23 | 3 bugs 500 confirmados + 1 meta-bug serialização (ops/bug-triage.md) |
+| 21/Abr/2026 | Stripe Live ativação | Stripe Dashboard Passos 1-6 concluídos (conta BR Live + Pro Mensal R$49 + Pro Anual R$490 + Billing Portal + webhook 5 events + 6 secrets Supabase) |
+| 21/Abr/2026 | ES256 JWT fix | stripe-checkout v2 + stripe-portal v2 redeployed via MCP com verify_jwt=false — platform verifier rejeita ES256, funções validam internamente via SERVICE_ROLE_KEY |
+| 21/Abr/2026 | Pix BR deferido | Stripe BR ainda não aprovou Pix — launch 30/Abr só com cartão, Pix ativado em follow-up pós-launch |
+| 21/Abr/2026 | Smoke test parcial | Checkout session create 200 OK + customer Live criado; payment finalization pendente (Lucas abandonou 1ª session). Nova session cs_live_b1JYO... aguardando. Ver ops/stripe-next-steps-post-smoke.md |
