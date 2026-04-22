@@ -46,10 +46,15 @@ export default defineConfig({
               id.includes('@remix-run/router')
             ) return 'vendor-router';
             // vendor-react = pure React core only. NO router, NO consumer libs.
+            // NOTE: react-is is intentionally NOT here — it must co-locate with its
+            // consumers (hoist-non-react-statics via @sentry/react, recharts, etc.)
+            // to avoid cross-chunk CJS-interop read-before-init, which surfaces as:
+            //   Cannot read properties of undefined (reading 'ForwardRef')
+            // We let react-is fall through to vendor-misc where Sentry + hoist
+            // already live.
             if (
               id.includes('/react/') ||
               id.includes('/react-dom/') ||
-              id.includes('/react-is/') ||
               id.includes('/scheduler/')
             ) {
               return 'vendor-react';
