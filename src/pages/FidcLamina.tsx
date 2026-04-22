@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, Info } from "lucide-react";
+import { ArrowLeft, TrendingUp, BarChart3, LineChart as LineChartIcon, Info, FileSpreadsheet } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { HubSEO } from "@/lib/seo";
 import { motion } from "framer-motion";
@@ -15,6 +15,7 @@ import { ClasseBadge } from "@/lib/rcvm175";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
 import { PrintFooter } from "@/components/hub/PrintFooter";
+import { exportFidcLamina } from "@/lib/fidcExcelExport";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { computeMonthlyRiskMetrics } from "@/lib/monthlyRiskMetrics";
@@ -129,6 +130,20 @@ export default function FidcLamina() {
   const meta = fidcData?.meta;
   const monthly = monthlyData?.data || fidcData?.monthly || [];
   const latest = fidcData?.latest;
+
+  // Excel export (lazy-loads SheetJS on first click)
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExcelExport = useCallback(async () => {
+    if (!meta || isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportFidcLamina(meta, monthly, latest ?? null, fidcData?.similar ?? []);
+    } catch (err) {
+      console.error("[FidcLamina] Excel export failed", err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [meta, monthly, latest, fidcData?.similar, isExporting]);
 
   const rentabilidadeSeries = useMemo(() => computeRentabilidadeSeries(monthly), [monthly]);
   const capitalSeries = useMemo(() => computeCapitalSeries(monthly), [monthly]);
@@ -502,7 +517,25 @@ export default function FidcLamina() {
                 />
               </div>
             </div>
-            <ExportPdfButton title={fundName} accent="#F97316" />
+            <div className="flex items-center gap-2 no-print">
+              <button
+                type="button"
+                onClick={handleExcelExport}
+                disabled={isExporting || !meta}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-[10px] font-mono uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  borderColor: "#F9731655",
+                  color: "#F97316",
+                  backgroundColor: "#F9731612",
+                }}
+                aria-label="Exportar lâmina em Excel"
+                title="Exportar lâmina em Excel (5 abas)"
+              >
+                <FileSpreadsheet className="w-3 h-3" aria-hidden="true" />
+                <span>{isExporting ? "Gerando…" : "Exportar Excel"}</span>
+              </button>
+              <ExportPdfButton title={fundName} accent="#F97316" />
+            </div>
           </div>
         </div>
       </div>

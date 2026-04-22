@@ -39,6 +39,11 @@ export default defineConfig({
             if (id.includes('@tanstack/react-query')) return 'vendor-query';
             if (id.includes('react-helmet')) return 'vendor-helmet';
             if (id.includes('lucide-react')) return 'vendor-icons';
+            // xlsx (SheetJS) — isolated so dynamic import() in xlsxExport.ts
+            // produces a true lazy chunk fetched only when user clicks
+            // "Exportar Excel". Without this isolation, xlsx would be bundled
+            // into vendor-misc (~420kB) and eagerly loaded on first page hit.
+            if (id.includes('/xlsx/') || id.endsWith('/xlsx')) return 'vendor-xlsx';
             // Router: isolated so @remix-run/router does NOT leak into vendor-misc
             // and then close a cycle back to vendor-react.
             if (
