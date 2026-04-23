@@ -10,7 +10,7 @@ on:
       base_url:
         description: "Target base URL (prod, preview, local)"
         required: false
-        default: "https://muuney.app"
+        default: "https://hub.muuney.com.br"
 
 concurrency:
   group: e2e-smoke-${{ github.ref }}
@@ -39,7 +39,7 @@ jobs:
 
       - name: Run smoke tests
         env:
-          PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'https://muuney.app' }}
+          PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'https://hub.muuney.com.br' }}
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
         run: npx playwright test --reporter=github,list

@@ -3,9 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Playwright E2E configuration for muuney.hub smoke tests.
  *
- * Default BASE_URL aponta para prod (https://muuney.app) para smoke tests rápidos.
+ * Default BASE_URL aponta para prod (https://hub.muuney.com.br) para smoke tests rápidos.
  * Para testar contra preview/dev, passe PLAYWRIGHT_BASE_URL como env var:
- *   PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run e2e
+ *   PLAYWRIGHT_BASE_URL=http://localhost:3001 npm run e2e
  *
  * Credentials: fornecer via env vars E2E_USER_EMAIL + E2E_USER_PASSWORD.
  * Em CI, esses segredos vêm do GitHub Secrets.
@@ -21,7 +21,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://muuney.app",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://hub.muuney.com.br",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
