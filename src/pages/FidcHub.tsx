@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useDebouncedValue } from "@/hooks/useDebounce";
-import { LayoutGrid, Zap, Search, BarChart3 } from "lucide-react";
+import { LayoutGrid, Zap, Search, BarChart3, FileSpreadsheet } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { HubSEO } from "@/lib/seo";
@@ -10,6 +10,11 @@ import { PercentTooltip } from "@/components/hub/ChartTooltip";
 import { motion } from "framer-motion";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
+import {
+  exportFidcHubRankings,
+  fetchAllFidcRankings,
+  type FidcRankingsFilters,
+} from "@/lib/fidcHubRankingsExcel";
 
 import {
   useFidcV4Overview, useFidcV4Rankings, useFidcSegments,
@@ -178,6 +183,39 @@ export default function FidcHub() {
       csvFilename("fidc", "rankings")
     );
   }, [rankingsFunds]);
+
+  /* ─── Excel Export (V5-D3) — fetch all filtered results, not just current page ─── */
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
+  const handleExportRankingsExcel = useCallback(async () => {
+    if (isExportingXlsx) return;
+    try {
+      setIsExportingXlsx(true);
+      const filters: FidcRankingsFilters = {
+        orderBy: rankingOrderBy,
+        order: rankingOrder,
+        lastro: selectedLastro,
+        minPl,
+        maxInadim,
+        minSubord,
+        search: debouncedSearch || undefined,
+      };
+      const all = await fetchAllFidcRankings(filters, 1000);
+      await exportFidcHubRankings(all, filters);
+    } catch (err) {
+      console.error("[FidcHub] Excel export failed:", err);
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  }, [
+    isExportingXlsx,
+    rankingOrderBy,
+    rankingOrder,
+    selectedLastro,
+    minPl,
+    maxInadim,
+    minSubord,
+    debouncedSearch,
+  ]);
 
   /* ─── Narrative Analytics (regime + derived KPIs) ─── */
   const narrativeOverview = useMemo(() => {
@@ -480,7 +518,25 @@ export default function FidcHub() {
                       "—"
                     )}
                   </div>
-                  <ExportButton onClick={handleExportRankings} label="CSV" disabled={rankingsFunds.length === 0} />
+                  <div className="flex items-center gap-2 no-print">
+                    <ExportButton onClick={handleExportRankings} label="CSV" disabled={rankingsFunds.length === 0} />
+                    <button
+                      type="button"
+                      onClick={handleExportRankingsExcel}
+                      disabled={isExportingXlsx || rankingsFunds.length === 0}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: "#F9731555",
+                        color: "#F97316",
+                        backgroundColor: "#F9731612",
+                      }}
+                      aria-label="Exportar rankings FIDC em Excel"
+                      title="Exportar rankings em Excel (todos os filtros aplicados)"
+                    >
+                      <FileSpreadsheet className="w-3 h-3" aria-hidden="true" />
+                      <span>{isExportingXlsx ? "Gerando…" : "XLSX"}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Segment chips (lastro filter) */}

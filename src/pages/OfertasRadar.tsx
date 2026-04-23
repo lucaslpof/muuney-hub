@@ -12,6 +12,7 @@ import {
   Building2,
   Eye,
   Brain,
+  FileSpreadsheet,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -48,6 +49,7 @@ import { formatBRL, formatDate, formatMonthLabel, formatCount, fmtNum } from "@/
 import OfertasNarrativePanel from "@/components/hub/OfertasNarrativePanel";
 import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
+import { exportOfertasRankings, fetchAllOfertas } from "@/lib/ofertasExcel";
 import { pickFromList } from "@/lib/queryParams";
 
 /* ─── Status badges ─── */
@@ -232,6 +234,29 @@ export default function OfertasRadar() {
     ];
     exportCsv(listData.ofertas, columns, csvFilename("ofertas", "explorer"));
   }, [listData?.ofertas]);
+
+  /* ─── Excel Export (V5-D3) — fetch all filtered results, not just current page ─── */
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
+  const handleExportExplorerExcel = useCallback(async () => {
+    if (isExportingXlsx) return;
+    try {
+      setIsExportingXlsx(true);
+      const filters = {
+        tipo_ativo: exTipoAtivo || undefined,
+        status: exStatus || undefined,
+        modalidade: exModalidade || undefined,
+        search: searchQuery || undefined,
+        order_by: orderBy,
+        order,
+      };
+      const all = await fetchAllOfertas(filters, 2000);
+      await exportOfertasRankings(all, filters);
+    } catch (err) {
+      console.error("[OfertasRadar] Excel export failed:", err);
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  }, [isExportingXlsx, exTipoAtivo, exStatus, exModalidade, searchQuery, orderBy, order]);
 
   const handleExportTopEmissores = useCallback(() => {
     if (!listData?.ofertas.length) return;
@@ -1043,7 +1068,21 @@ export default function OfertasRadar() {
                     </button>
                     <div className="flex-1 text-right text-[9px] font-mono text-zinc-600 flex items-center justify-end gap-3">
                       <span>{formatCount(listData?.count ?? 0)} ofertas encontradas</span>
-                      <ExportButton onClick={handleExportExplorer} disabled={!listData?.ofertas.length} />
+                      <div className="flex items-center gap-2 no-print">
+                        <ExportButton onClick={handleExportExplorer} label="CSV" disabled={!listData?.ofertas.length} />
+                        <button
+                          type="button"
+                          onClick={handleExportExplorerExcel}
+                          disabled={isExportingXlsx || !listData?.ofertas.length}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          style={{ borderColor: "#0B6C3E55", color: "#0B6C3E", backgroundColor: "#0B6C3E12" }}
+                          aria-label="Exportar ofertas em Excel"
+                          title="Exportar ofertas em Excel (todos os filtros aplicados)"
+                        >
+                          <FileSpreadsheet className="w-3 h-3" aria-hidden="true" />
+                          <span>{isExportingXlsx ? "Gerando…" : "XLSX"}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

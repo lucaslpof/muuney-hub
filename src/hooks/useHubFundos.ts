@@ -878,7 +878,7 @@ export const INSIGHT_SEVERITY_COLORS: Record<InsightSeverity, { bg: string; text
 
 const FIDC_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-fidc-api";
 
-async function fetchFidc(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+export async function fetchFidc(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
   const url = new URL(FIDC_API);
   url.searchParams.set("endpoint", endpoint);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -1184,7 +1184,7 @@ export function useFiiV4Monthly(cnpj: string | null, months: number = 24) {
 
 const OFERTAS_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-ofertas-api";
 
-async function fetchOfertas(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
+export async function fetchOfertas(endpoint: string, params: Record<string, string> = {}): Promise<unknown> {
   const url = new URL(OFERTAS_API);
   url.searchParams.set("endpoint", endpoint);
   Object.entries(params).forEach(([k, v]) => {
