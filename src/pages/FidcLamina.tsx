@@ -27,6 +27,8 @@ import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/Fund
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPanel";
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+import { FicFidcPlaceholder, isFicFidc } from "@/components/hub/FicFidcPlaceholder";
+import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -480,6 +482,11 @@ export default function FidcLamina() {
 
   const fundName = meta.denom_social || `FIDC ${meta.cnpj_fundo_classe || meta.cnpj_fundo}`;
 
+  // V5-D6: FIC-FIDC detection via denom_social pattern (subclasse_rcvm175 is
+  // NULL for all FIDCs — can't be used). Drives both the header badge and the
+  // <FicFidcPlaceholder/> section below.
+  const isFic = isFicFidc(meta.denom_social);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Dynamic SEO for FIDC Lâmina */}
@@ -508,6 +515,19 @@ export default function FidcLamina() {
               <h1 className="text-lg font-semibold text-zinc-100 truncate">{fundName}</h1>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <ClasseBadge classe="FIDC" size="md" />
+                {isFic ? (
+                  <span
+                    className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border"
+                    style={{
+                      borderColor: "#F9731588",
+                      color: "#F97316",
+                      backgroundColor: "#F9731620",
+                    }}
+                    title="Fundo de Investimento em Cotas de FIDCs — carteira investida detalhada em desenvolvimento (ver seção abaixo)"
+                  >
+                    FIC-FIDC
+                  </span>
+                ) : null}
                 <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
                 <DataAsOfStamp
                   date={latest?.dt_comptc}
@@ -798,6 +818,27 @@ export default function FidcLamina() {
             </div>
           </motion.div>
         </SectionErrorBoundary>
+
+        {/* === Section 3b: FIC-FIDC Transparência (Path B) === */}
+        {/* V5-D6: Renders only when fund name matches FIC-FIDC pattern. Full
+            carteira investida composition is deferred to post-beta sprint
+            (Path A — requires Tab_IX ingestion + CDA parser fix). */}
+        {isFic ? (
+          <SectionErrorBoundary sectionName="FIC-FIDC Transparência">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+            >
+              <div className="lg:col-span-2">
+                <FicFidcPlaceholder fundName={fundName} accent="#F97316" />
+              </div>
+              <div>
+                <CvmRegulationCard preset="cvm-175" compact />
+              </div>
+            </motion.div>
+          </SectionErrorBoundary>
+        ) : null}
 
         {/* === Section 4: Performance === */}
         {rentabilidadeSeries.length > 1 && (

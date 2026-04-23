@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/hub/EmptyState";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
+import { isFicFidc } from "@/components/hub/FicFidcPlaceholder";
 import { pickFromList, toInt, toSortOrder, toSearchQuery } from "@/lib/queryParams";
 
 const SECTIONS = [
@@ -814,12 +815,28 @@ export default function FidcHub() {
                               </td>
                               <td className="px-4 py-2 text-zinc-600">{rankingPage * 50 + idx + 1}</td>
                               <td className="px-4 py-2">
-                                <Link
-                                  to={`/fundos/fidc/${fund.slug || fund.cnpj_fundo_classe}`}
-                                  className="text-[#0B6C3E] hover:underline truncate max-w-xs"
-                                >
-                                  {fund.denom_social || `FIDC ${fund.cnpj_fundo_classe}`}
-                                </Link>
+                                <div className="flex items-center gap-1.5">
+                                  <Link
+                                    to={`/fundos/fidc/${fund.slug || fund.cnpj_fundo_classe}`}
+                                    className="text-[#0B6C3E] hover:underline truncate max-w-xs"
+                                  >
+                                    {fund.denom_social || `FIDC ${fund.cnpj_fundo_classe}`}
+                                  </Link>
+                                  {isFicFidc(fund.denom_social) ? (
+                                    <span
+                                      className="text-[7px] font-mono uppercase tracking-wider px-1 py-0.5 rounded border flex-shrink-0"
+                                      style={{
+                                        borderColor: "#F9731566",
+                                        color: "#F97316",
+                                        backgroundColor: "#F9731612",
+                                      }}
+                                      title="FIC-FIDC · carteira investida em desenvolvimento"
+                                      aria-label="Fundo de Investimento em Cotas de FIDCs"
+                                    >
+                                      FIC
+                                    </span>
+                                  ) : null}
+                                </div>
                               </td>
                               <td className="px-4 py-2 text-right text-zinc-300">{formatPL(fund.vl_pl_total)}</td>
                               <td className="px-4 py-2 text-right">
