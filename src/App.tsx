@@ -24,6 +24,8 @@ const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
 const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
+const AlternativosHub = React.lazy(() => import("./pages/AlternativosHub"));
+const AlternativosDetail = React.lazy(() => import("./pages/AlternativosDetail"));
 const HubPortfolio = React.lazy(() => import("./pages/HubPortfolio"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
@@ -101,6 +103,15 @@ const App = () => (
           <Route
             path="/ofertas"
             element={<ProRoute feature="o módulo Ofertas Públicas"><OfertasRadar /></ProRoute>}
+          />
+          {/* Ativos Alternativos — Pro only, specific before generic */}
+          <Route
+            path="/alternativos/:slug"
+            element={<ProRoute feature="a lâmina de Ativos Alternativos"><AlternativosDetail /></ProRoute>}
+          />
+          <Route
+            path="/alternativos"
+            element={<ProRoute feature="o módulo Ativos Alternativos"><AlternativosHub /></ProRoute>}
           />
           <Route path="/fundos/:slug" element={<FundLamina />} />
           <Route path="/fundos" element={<HubFundos />} />
