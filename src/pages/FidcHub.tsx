@@ -198,7 +198,11 @@ export default function FidcHub() {
   const handleBatchPrint = useCallback(() => {
     if (selectedSlugs.size === 0) return;
     const slugsParam = Array.from(selectedSlugs).join(",");
-    navigate(`/fundos/fidc/batch-print?slugs=${encodeURIComponent(slugsParam)}`);
+    // V5-D5: autoprint=1 tells the batch page to fire window.print() as soon
+    // as every card settles (see FidcBatchPrint.tsx). One-click workflow.
+    navigate(
+      `/fundos/fidc/batch-print?slugs=${encodeURIComponent(slugsParam)}&autoprint=1`,
+    );
   }, [selectedSlugs, navigate]);
 
   /* ─── Pie Chart Data ─── */

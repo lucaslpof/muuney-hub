@@ -237,6 +237,20 @@
     page-break-before: always;
   }
 
+  /* Batch print card — one FIDC lâmina per A4 page.
+     `.print-card` wraps an entire lâmina so the browser avoids splitting
+     it mid-section. Used by FidcBatchCard (V5-D5 batch PDF). */
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: auto;
+  }
+  .print-card section,
+  .print-card .recharts-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   /* Tables legibility in print */
   table {
     border-collapse: collapse !important;

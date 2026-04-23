@@ -1,5 +1,5 @@
 /**
- * FidcBatchCard.tsx — V5-D4 (22/04/2026)
+ * FidcBatchCard.tsx — V5-D5 (22/04/2026)
  *
  * Compact single-FIDC card rendered inside the batch print layout.
  * Fetches detail + monthly via the same hooks FidcLamina uses, but
@@ -10,9 +10,15 @@
  * Designed to fit ~1 A4 page per card. The parent `FidcBatchPrint`
  * page wraps each card with a `.print-page-break` break-after rule
  * so each FIDC starts on its own page in the generated PDF.
+ *
+ * V5-D5 additions:
+ * - `onReady(slug, outcome)` callback fired exactly once when the
+ *   card's underlying queries settle (success | error | not-found).
+ *   The parent batch page uses it to count ready cards and
+ *   auto-trigger `window.print()` when every card has resolved.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import {
   useFidcDetail,
@@ -101,16 +107,24 @@ function BatchKPI({ label, value, sublabel }: BatchKPIProps) {
   );
 }
 
+export type FidcBatchCardOutcome = "ready" | "error" | "not-found";
+
 interface FidcBatchCardProps {
   slug: string;
   index: number;
   total: number;
+  /**
+   * Fired exactly once per mount when the card's data has settled.
+   * Parent batch page uses this to know when the page is ready to
+   * auto-print (V5-D5 `?autoprint=1`).
+   */
+  onReady?: (slug: string, outcome: FidcBatchCardOutcome) => void;
 }
 
-export function FidcBatchCard({ slug, index, total }: FidcBatchCardProps) {
+export function FidcBatchCard({ slug, index, total, onReady }: FidcBatchCardProps) {
   const { data: fidcData, isLoading, isError } = useFidcDetail(slug);
   const cnpj = fidcData?.meta?.cnpj_fundo || fidcData?.meta?.cnpj_fundo_classe || null;
-  const { data: monthlyData } = useFidcV4Monthly(cnpj, 24);
+  const { data: monthlyData, isLoading: isMonthlyLoading } = useFidcV4Monthly(cnpj, 24);
 
   const meta = fidcData?.meta;
   const monthly = monthlyData?.data || fidcData?.monthly || [];
@@ -118,6 +132,25 @@ export function FidcBatchCard({ slug, index, total }: FidcBatchCardProps) {
 
   const rentabSeries = useMemo(() => computeRentabilidadeSeries(monthly), [monthly]);
   const capitalSeries = useMemo(() => computeCapitalSeries(monthly), [monthly]);
+
+  /* ─── V5-D5: fire onReady once when data settles ─── */
+  const firedRef = useRef(false);
+  useEffect(() => {
+    if (firedRef.current || !onReady) return;
+    // Wait until detail query is not loading. Monthly is secondary —
+    // we still fire ready if detail fails, and we allow monthly to
+    // be still loading (the card renders gracefully without it).
+    if (isLoading) return;
+    let outcome: FidcBatchCardOutcome;
+    if (isError) outcome = "error";
+    else if (!fidcData?.meta) outcome = "not-found";
+    else outcome = "ready";
+    // If monthly is still loading on a ready card, wait one more tick
+    // so charts have a shot at rendering before print triggers.
+    if (outcome === "ready" && isMonthlyLoading) return;
+    firedRef.current = true;
+    onReady(slug, outcome);
+  }, [slug, isLoading, isError, fidcData, isMonthlyLoading, onReady]);
 
   const totalCotistas =
     (latest?.nr_cotistas_senior ?? 0) + (latest?.nr_cotistas_subordinada ?? 0);
