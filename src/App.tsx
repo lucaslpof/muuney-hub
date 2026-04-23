@@ -21,6 +21,7 @@ const HubFundos = React.lazy(() => import("./pages/HubFundos"));
 const FundLamina = React.lazy(() => import("./pages/FundLamina"));
 const FidcHub = React.lazy(() => import("./pages/FidcHub"));
 const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
+const FidcBatchPrint = React.lazy(() => import("./pages/FidcBatchPrint"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
 const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
@@ -68,6 +69,18 @@ const App = () => (
         <Route path="/forgot-password" element={<HubForgotPassword />} />
         <Route path="/reset-password" element={<HubResetPassword />} />
         <Route path="/primeiro-acesso" element={<HubFirstAccess />} />
+
+        {/* Batch print view — standalone (no HubLayout chrome for clean PDF), Pro only */}
+        <Route
+          path="/fundos/fidc/batch-print"
+          element={
+            <ProtectedRoute>
+              <ProRoute feature="impressão em lote de lâminas FIDC">
+                <FidcBatchPrint />
+              </ProRoute>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Dashboard + Modules — protected, inside HubLayout (sidebar + header) */}
         <Route

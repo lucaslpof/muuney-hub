@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useDebouncedValue } from "@/hooks/useDebounce";
-import { LayoutGrid, Zap, Search, BarChart3, FileSpreadsheet } from "lucide-react";
+import { LayoutGrid, Zap, Search, BarChart3, FileSpreadsheet, Printer } from "lucide-react";
 import { Breadcrumbs } from "@/components/hub/Breadcrumbs";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
 import { HubSEO } from "@/lib/seo";
@@ -46,10 +46,13 @@ const ORDER_BY_FIELDS = [
   "nr_cedentes",
 ] as const;
 
+const MAX_BATCH_PRINT = 10;
+
 /** FidcHub Component */
 export default function FidcHub() {
   /* ─── Deep-linking: section + filters/sort from URL (P2-8 URL persistence, sanitized) ─── */
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<string>(
     () => pickFromList(searchParams.get("section"), SECTION_IDS, "overview")
@@ -144,6 +147,59 @@ export default function FidcHub() {
     }
   );
   const rankingsFunds = rankingsData?.funds || [];
+
+  /* ─── V5-D4: Multi-select for batch print (up to 10 FIDCs) ─── */
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(() => new Set());
+
+  const toggleSlug = useCallback((slug: string) => {
+    setSelectedSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        if (next.size >= MAX_BATCH_PRINT) return prev; // cap silently
+        next.add(slug);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedSlugs(new Set());
+  }, []);
+
+  const allCurrentPageSelected = useMemo(() => {
+    if (rankingsFunds.length === 0) return false;
+    return rankingsFunds.every((f) => {
+      const slug = f.slug || f.cnpj_fundo_classe;
+      return slug ? selectedSlugs.has(slug) : false;
+    });
+  }, [rankingsFunds, selectedSlugs]);
+
+  const toggleSelectPage = useCallback(() => {
+    setSelectedSlugs((prev) => {
+      const next = new Set(prev);
+      const slugs = rankingsFunds
+        .map((f) => f.slug || f.cnpj_fundo_classe)
+        .filter((s): s is string => !!s);
+      const shouldAdd = !slugs.every((s) => next.has(s));
+      if (shouldAdd) {
+        for (const slug of slugs) {
+          if (next.size >= MAX_BATCH_PRINT) break;
+          next.add(slug);
+        }
+      } else {
+        for (const slug of slugs) next.delete(slug);
+      }
+      return next;
+    });
+  }, [rankingsFunds]);
+
+  const handleBatchPrint = useCallback(() => {
+    if (selectedSlugs.size === 0) return;
+    const slugsParam = Array.from(selectedSlugs).join(",");
+    navigate(`/fundos/fidc/batch-print?slugs=${encodeURIComponent(slugsParam)}`);
+  }, [selectedSlugs, navigate]);
 
   /* ─── Pie Chart Data ─── */
   const pieData = useMemo(() => {
@@ -536,8 +592,45 @@ export default function FidcHub() {
                       <FileSpreadsheet className="w-3 h-3" aria-hidden="true" />
                       <span>{isExportingXlsx ? "Gerando…" : "XLSX"}</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={handleBatchPrint}
+                      disabled={selectedSlugs.size === 0}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-[9px] font-mono uppercase tracking-wider transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: "#F9731555",
+                        color: "#F97316",
+                        backgroundColor: "#F9731612",
+                      }}
+                      aria-label="Imprimir lâminas selecionadas em PDF"
+                      title={`Imprimir ${selectedSlugs.size} lâmina${selectedSlugs.size === 1 ? "" : "s"} selecionada${selectedSlugs.size === 1 ? "" : "s"} em PDF (máx ${MAX_BATCH_PRINT})`}
+                    >
+                      <Printer className="w-3 h-3" aria-hidden="true" />
+                      <span>Imprimir ({selectedSlugs.size})</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* Selection summary bar — visible only when user has selected at least one FIDC */}
+                {selectedSlugs.size > 0 && (
+                  <div className="no-print flex items-center justify-between gap-3 px-3 py-2 rounded border border-[#F97316]/30 bg-[#F97316]/5">
+                    <div className="text-[9px] font-mono text-zinc-300">
+                      <span className="text-[#F97316] font-semibold">{selectedSlugs.size}</span>
+                      <span className="text-zinc-500"> / {MAX_BATCH_PRINT} selecionada{selectedSlugs.size === 1 ? "" : "s"} para impressão em lote</span>
+                      {selectedSlugs.size >= MAX_BATCH_PRINT ? (
+                        <span className="text-amber-400 ml-2">· limite atingido</span>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+                      aria-label="Limpar seleção de lâminas"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                )}
 
                 {/* Segment chips (lastro filter) */}
                 <div className="flex gap-2 flex-wrap">
@@ -661,6 +754,17 @@ export default function FidcHub() {
                     <table className="w-full text-[9px] font-mono">
                       <thead className="border-b border-[#1a1a1a] bg-[#0a0a0a]">
                         <tr>
+                          <th className="px-3 py-2 text-center text-zinc-600 no-print w-8">
+                            <input
+                              type="checkbox"
+                              checked={allCurrentPageSelected && rankingsFunds.length > 0}
+                              onChange={toggleSelectPage}
+                              disabled={rankingsFunds.length === 0}
+                              aria-label="Selecionar todos os FIDCs da página atual"
+                              title={`Selecionar todos da página (até ${MAX_BATCH_PRINT} total)`}
+                              className="h-3 w-3 cursor-pointer accent-[#F97316] align-middle"
+                            />
+                          </th>
                           <th className="px-4 py-2 text-left text-zinc-600">#</th>
                           <th className="px-4 py-2 text-left text-zinc-600">Nome</th>
                           <th className="px-4 py-2 text-right text-zinc-600">PL</th>
@@ -674,21 +778,36 @@ export default function FidcHub() {
                         {rankingsLoading ? (
                           <>
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <tr key={i}><td colSpan={7}><SkeletonTableRow cols={7} /></td></tr>
+                              <tr key={i}><td colSpan={8}><SkeletonTableRow cols={8} /></td></tr>
                             ))}
                           </>
                         ) : rankingsFunds.length === 0 ? (
                           <tr>
-                            <td colSpan={7}>
+                            <td colSpan={8}>
                               <EmptyState variant="no-funds" description="Nenhum FIDC encontrado com os filtros selecionados." />
                             </td>
                           </tr>
                         ) : (
-                          rankingsFunds.map((fund, idx) => (
+                          rankingsFunds.map((fund, idx) => {
+                            const rowSlug = fund.slug || fund.cnpj_fundo_classe;
+                            const isSelected = rowSlug ? selectedSlugs.has(rowSlug) : false;
+                            const atCap = selectedSlugs.size >= MAX_BATCH_PRINT && !isSelected;
+                            return (
                             <tr
                               key={`${fund.cnpj_fundo_classe}-${idx}`}
                               className="border-t border-[#1a1a1a] hover:bg-[#0a0a0a]/50 transition-colors"
                             >
+                              <td className="px-3 py-2 text-center no-print">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => { if (rowSlug) toggleSlug(rowSlug); }}
+                                  disabled={!rowSlug || atCap}
+                                  aria-label={`Selecionar ${fund.denom_social || fund.cnpj_fundo_classe} para impressão em lote`}
+                                  title={atCap ? `Limite de ${MAX_BATCH_PRINT} lâminas atingido` : "Selecionar para impressão em lote"}
+                                  className="h-3 w-3 cursor-pointer accent-[#F97316] align-middle disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </td>
                               <td className="px-4 py-2 text-zinc-600">{rankingPage * 50 + idx + 1}</td>
                               <td className="px-4 py-2">
                                 <Link
@@ -718,7 +837,8 @@ export default function FidcHub() {
                                 {fund.tp_lastro_principal || "—"}
                               </td>
                             </tr>
-                          ))
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
