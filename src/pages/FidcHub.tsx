@@ -28,6 +28,8 @@ import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { SegmentStoryCard } from "@/components/hub/SegmentStoryCard";
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
 import { isFicFidc } from "@/components/hub/FicFidcPlaceholder";
+import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
+import { AdministradoresFidcRanking } from "@/components/hub/AdministradoresFidcRanking";
 import { pickFromList, toInt, toSortOrder, toSearchQuery } from "@/lib/queryParams";
 
 const SECTIONS = [
@@ -443,6 +445,7 @@ export default function FidcHub() {
               date={overviewData?.date}
               cadence="monthly"
               source="CVM Informe FIDC"
+              footnote="Séries com |rentab| > 95% são excluídas via v_hub_fidc_clean — filtro defensivo contra erros de escala/vírgula no informe CVM (preservando integridade das médias e rankings)."
             />
           </div>
         </div>
@@ -932,6 +935,12 @@ export default function FidcHub() {
                     </div>
                   )}
                 </div>
+
+                {/* V5-D7: Administradores ranking (admin ≈ custodiante/distribuidor em FIDCs) */}
+                <AdministradoresFidcRanking limit={10} accent="#F97316" />
+
+                {/* V5-D7: Glossário FIDC (colapsável, default closed) */}
+                <GlossarioFidc accent="#F97316" />
               </motion.div>
             </SectionErrorBoundary>
           </MacroSection>

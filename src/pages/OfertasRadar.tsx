@@ -51,6 +51,8 @@ import { exportCsv, csvFilename, type CsvColumn } from "@/lib/csvExport";
 import { ExportButton } from "@/components/hub/ExportButton";
 import { exportOfertasRankings, fetchAllOfertas } from "@/lib/ofertasExcel";
 import { pickFromList } from "@/lib/queryParams";
+import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
+import { CoordenadoresRanking } from "@/components/hub/CoordenadoresRanking";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -642,6 +644,9 @@ export default function OfertasRadar() {
                     </div>
                   </div>
                 </div>
+
+                {/* V5-D7: CVM 160 regulatory context card (compact, bottom of Overview) */}
+                <CvmRegulationCard preset="cvm-160" compact />
               </div>
             </SectionErrorBoundary>
           </MacroSection>
@@ -950,6 +955,9 @@ export default function OfertasRadar() {
                     </div>
                   </div>
                 )}
+
+                {/* V5-D7: Coordenadores líderes ranking (59% coverage, 418 distintos) */}
+                <CoordenadoresRanking limit={10} accent="#10B981" />
               </div>
             </SectionErrorBoundary>
           </MacroSection>

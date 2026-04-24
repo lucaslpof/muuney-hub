@@ -47,6 +47,12 @@ interface DataAsOfStampProps {
   className?: string;
   /** Compact mode hides cadence label. */
   compact?: boolean;
+  /**
+   * Optional methodological footnote rendered on a second line below the
+   * stamp. Used to explain data-cleaning rules or series adjustments (e.g.
+   * v_hub_fidc_clean outlier filter).
+   */
+  footnote?: string;
 }
 
 export function DataAsOfStamp({
@@ -55,6 +61,7 @@ export function DataAsOfStamp({
   source,
   className = "",
   compact = false,
+  footnote,
 }: DataAsOfStampProps) {
   const { dotColor, ageDays } = useMemo(() => {
     if (!date) return { dotColor: "bg-zinc-700", ageDays: null as number | null };
@@ -75,12 +82,19 @@ export function DataAsOfStamp({
   if (!date) {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 text-[9px] font-mono text-zinc-600 ${className}`}
+        className={`inline-flex flex-col gap-0.5 ${className}`}
         role="status"
         aria-label="Data de referência indisponível"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-        <span>Sem data de referência</span>
+        <div className="inline-flex items-center gap-1.5 text-[9px] font-mono text-zinc-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+          <span>Sem data de referência</span>
+        </div>
+        {footnote && (
+          <p className="text-[9px] font-mono text-zinc-600 leading-snug max-w-[640px]">
+            {footnote}
+          </p>
+        )}
       </div>
     );
   }
@@ -100,18 +114,25 @@ export function DataAsOfStamp({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 text-[9px] font-mono text-zinc-500 ${className}`}
+      className={`inline-flex flex-col gap-0.5 ${className}`}
       role="status"
-      aria-label={`Dados atualizados em ${formatDate(date)}${source ? ` — fonte ${source}` : ""}`}
+      aria-label={`Dados atualizados em ${formatDate(date)}${source ? ` — fonte ${source}` : ""}${footnote ? `. ${footnote}` : ""}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden />
-      <span className="text-zinc-600 uppercase tracking-wider">Dados</span>
-      <span className="text-zinc-400">{formatDate(date)}</span>
-      {ageLabel && <span className="text-zinc-700">· {ageLabel}</span>}
-      {!compact && (
-        <span className="text-zinc-700">· {CADENCE_LABELS[cadence]}</span>
+      <div className="inline-flex items-center gap-1.5 text-[9px] font-mono text-zinc-500">
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden />
+        <span className="text-zinc-600 uppercase tracking-wider">Dados</span>
+        <span className="text-zinc-400">{formatDate(date)}</span>
+        {ageLabel && <span className="text-zinc-700">· {ageLabel}</span>}
+        {!compact && (
+          <span className="text-zinc-700">· {CADENCE_LABELS[cadence]}</span>
+        )}
+        {source && <span className="text-zinc-700 truncate max-w-[160px]">· {source}</span>}
+      </div>
+      {footnote && (
+        <p className="text-[9px] font-mono text-zinc-600 leading-snug max-w-[640px]">
+          {footnote}
+        </p>
       )}
-      {source && <span className="text-zinc-700 truncate max-w-[160px]">· {source}</span>}
     </div>
   );
 }

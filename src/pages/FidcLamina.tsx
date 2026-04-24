@@ -29,6 +29,7 @@ import { PeerBeatsPanel, type PeerBeatsItem } from "@/components/hub/PeerBeatsPa
 import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSection";
 import { FicFidcPlaceholder, isFicFidc } from "@/components/hub/FicFidcPlaceholder";
 import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
+import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -839,6 +840,11 @@ export default function FidcLamina() {
             </motion.div>
           </SectionErrorBoundary>
         ) : null}
+
+        {/* === Section 3c: Glossário FIDC (V5-D7, collapsible) === */}
+        <SectionErrorBoundary sectionName="Glossário FIDC">
+          <GlossarioFidc accent="#F97316" />
+        </SectionErrorBoundary>
 
         {/* === Section 4: Performance === */}
         {rentabilidadeSeries.length > 1 && (
