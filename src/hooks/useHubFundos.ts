@@ -87,6 +87,10 @@ export interface FundRankingItem {
 
 export interface FundStatsResponse {
   total_funds: number;
+  /** Soma total de PL dos 29k fundos (R$ absoluto). Exposto pelo edge fn em hub-cvm-api v34+. */
+  total_pl?: number;
+  /** Maior PL individual (R$ absoluto). Exposto pelo edge fn em hub-cvm-api v34+. */
+  top_pl?: number;
   by_classe: Record<string, { count: number; pl_total: number }>;
   by_classe_rcvm175?: Record<string, { count: number; pl_total: number }>;
   last_updated: string;

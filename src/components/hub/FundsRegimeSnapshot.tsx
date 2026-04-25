@@ -12,6 +12,7 @@ import {
   detectFundMarketRegime,
   type MarketScopeProps,
 } from "./FundNarrativePanel";
+import { fmtNum } from "@/lib/format";
 
 interface Props extends MarketScopeProps {
   /** Optional click handler that scrolls to the analytics section. */
@@ -25,30 +26,32 @@ export function FundsRegimeSnapshot({ onJumpToAnalytics, ...marketProps }: Props
   // Build a compact 3-metric strip
   const chips: { label: string; value: string; tone: string }[] = [];
   if (marketProps.fidcInadim != null) {
+    // Thresholds calibrados com o universo real (média ~16% no DB).
     const v = marketProps.fidcInadim;
     chips.push({
       label: "FIDC Inadim",
-      value: `${v.toFixed(1)}%`,
+      value: `${fmtNum(v, 1)}%`,
       tone:
-        v > 5
+        v > 10
           ? "text-red-400"
-          : v > 3
+          : v > 5
           ? "text-amber-400"
           : "text-emerald-400",
     });
   }
   if (marketProps.fiiAvgDY != null) {
+    // Caller passa em %/mês (já multiplicado por 100 em narrativeProps).
     const v = marketProps.fiiAvgDY;
     chips.push({
       label: "FII DY",
-      value: `${v.toFixed(2)}%/m`,
+      value: `${fmtNum(v, 2)}%/m`,
       tone: v > 0.8 ? "text-emerald-400" : "text-zinc-400",
     });
   }
   if (marketProps.selicMeta != null) {
     chips.push({
       label: "Selic Meta",
-      value: `${marketProps.selicMeta.toFixed(2)}%`,
+      value: `${fmtNum(marketProps.selicMeta, 2)}%`,
       tone: marketProps.selicMeta > 12 ? "text-amber-400" : "text-zinc-400",
     });
   }

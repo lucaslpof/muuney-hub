@@ -98,7 +98,7 @@ export type FundNarrativeProps = MarketScopeProps | FundScopeProps;
 
 /* ─── Market regime detection ─── */
 export function detectFundMarketRegime(props: MarketScopeProps): RegimeBadge {
-  const { avgRentab, netFlow, selicMeta = 14.15, fidcInadim, fiiAvgDY } = props;
+  const { avgRentab, netFlow, selicMeta = 15.0, fidcInadim, fiiAvgDY } = props;
 
   const strongInflows = netFlow != null && netFlow > 0;
   const outflows = netFlow != null && netFlow < 0;
@@ -177,7 +177,7 @@ function generateFundMarketSignals(props: MarketScopeProps): Signal[] {
   const {
     avgRentab,
     netFlow,
-    selicMeta = 14.15,
+    selicMeta = 15.0,
     ipcaAccum = 5.0,
     avgTaxaAdm,
     fidcInadim,
@@ -284,7 +284,7 @@ function detectFundRegime(ctx: FundScopeContext): RegimeBadge {
     fidcInadimPct,
     fidcSubordPct,
     fiiDyMensal,
-    selicMeta = 14.15,
+    selicMeta = 15.0,
     classe,
   } = ctx;
 
@@ -424,7 +424,7 @@ function generateFundScopeSignals(ctx: FundScopeContext): Signal[] {
     fidcInadimPct,
     fiiDyMensal,
     taxaAdmPct,
-    selicMeta = 14.15,
+    selicMeta = 15.0,
     ipcaAccum = 5.0,
   } = ctx;
 

@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
 import { pickFromList } from "@/lib/queryParams";
+import { formatCount, fmtNum } from "@/lib/format";
 import { ExportButton } from "@/components/hub/ExportButton";
 import { useDebouncedValue } from "@/hooks/useDebounce";
 import { FundRankingTable } from "@/components/hub/FundRankingTable";
@@ -910,13 +911,19 @@ const HubFundos = () => {
 
   /* ─── Overview KPIs ─── */
   const overviewKPIs = useMemo(() => {
-    if (!stats || !catalog) return [];
-    const totalPL = Object.values(stats.by_classe).reduce((acc, c) => acc + c.pl_total, 0);
+    if (!stats) return [];
+    // Preferir os campos novos do edge fn hub-cvm-api v34+ (total_funds /
+    // total_pl / top_pl). Fallback para soma do by_classe_rcvm175 (RCVM 175
+    // tem 11 classes; legacy by_classe está truncado a 6).
+    const rcvm = stats.by_classe_rcvm175 ?? stats.by_classe ?? {};
+    const totalFunds = stats.total_funds ?? Object.values(rcvm).reduce((a, c) => a + c.count, 0);
+    const totalPL = stats.total_pl ?? Object.values(rcvm).reduce((a, c) => a + c.pl_total, 0);
+    const topPL = stats.top_pl ?? catalog?.funds?.[0]?.vl_patrim_liq ?? 0;
     return [
-      { title: "Fundos Ativos", value: String(stats.total_funds), icon: BarChart3 },
+      { title: "Fundos Ativos", value: formatCount(totalFunds), icon: BarChart3 },
       { title: "PL Total", value: formatPL(totalPL), icon: Wallet },
-      { title: "Classes", value: String(Object.keys(stats.by_classe).length), icon: PieChart },
-      { title: "Top PL", value: formatPL(catalog.funds[0]?.vl_patrim_liq), icon: Trophy },
+      { title: "Classes", value: String(Object.keys(rcvm).length), icon: PieChart },
+      { title: "Top PL", value: formatPL(topPL), icon: Trophy },
     ];
   }, [stats, catalog]);
 
@@ -929,15 +936,22 @@ const HubFundos = () => {
 
   /* ─── Narrative Panel Props (wired with real cross-module data) ─── */
   const narrativeProps = useMemo(() => {
-    const totalPL = stats ? Object.values(stats.by_classe).reduce((a, c) => a + c.pl_total, 0) : undefined;
+    // Preferir totals do edge fn (29k fundos). Fallback para soma dos buckets.
+    const rcvm = stats?.by_classe_rcvm175 ?? stats?.by_classe ?? {};
+    const totalPL =
+      stats?.total_pl ?? Object.values(rcvm).reduce((a, c) => a + c.pl_total, 0);
+    // FII DY chega como fração decimal (0,0036 = 0,36%/mês). Multiplicar p/ %.
+    const fiiDyPct = fiiOverview?.avg_dividend_yield != null
+      ? fiiOverview.avg_dividend_yield * 100
+      : null;
     return {
       totalFunds: stats?.total_funds,
       totalPL,
       avgRentab: fidcOverview?.avg_rentab_senior ?? null,
       fidcInadim: fidcOverview?.avg_inadimplencia ?? null,
-      fiiAvgDY: fiiOverview?.avg_dividend_yield ?? null,
-      selicMeta: 14.25,
-      ipcaAccum: 5.5,
+      fiiAvgDY: fiiDyPct,
+      selicMeta: 15.0,
+      ipcaAccum: 4.14,
     };
   }, [stats, fidcOverview, fiiOverview]);
 
@@ -945,36 +959,49 @@ const HubFundos = () => {
   const intelligenceStrip = useMemo(() => {
     const items: { label: string; value: string; color: string; detail: string }[] = [];
 
-    // FIDC Inadimplência
+    // FIDC Inadimplência (%)
     const inadim = fidcOverview?.avg_inadimplencia;
     if (inadim != null) {
       items.push({
         label: "FIDC Inadim",
-        value: `${inadim.toFixed(1)}%`,
-        color: inadim > 5 ? "text-red-400" : inadim > 3 ? "text-amber-400" : "text-emerald-400",
-        detail: inadim > 5 ? "Acima do limiar de stress" : inadim > 3 ? "Atenção redobrada" : "Controlada",
+        value: `${fmtNum(inadim, 1)}%`,
+        color: inadim > 10 ? "text-red-400" : inadim > 5 ? "text-amber-400" : "text-emerald-400",
+        detail:
+          inadim > 10
+            ? "Acima do limiar de stress"
+            : inadim > 5
+              ? "Atenção redobrada"
+              : "Controlada",
       });
     }
 
-    // FII DY
-    const dy = fiiOverview?.avg_dividend_yield;
-    if (dy != null) {
+    // FII DY — chega como fração decimal (0,0036 = 0,36%/mês). Multiplicar p/ %.
+    const dyRaw = fiiOverview?.avg_dividend_yield;
+    if (dyRaw != null) {
+      const dy = dyRaw * 100; // em %/mês
       items.push({
         label: "FII DY Médio",
-        value: `${dy.toFixed(2)}%/mês`,
+        value: `${fmtNum(dy, 2)}%/mês`,
         color: dy > 0.8 ? "text-emerald-400" : "text-zinc-400",
         detail: dy > 0.8 ? "Atrativo vs Selic" : "Comprimido pela Selic alta",
       });
     }
 
-    // FIDC Subordinação
+    // FIDC Índice de Subordinação — campo `indice_subordinacao` da CVM:
+    // razão (Subord+Mezanino)/Senior em %. Quanto MAIOR, maior a proteção
+    // do investidor sênior. Não é o "% subord do PL total".
     const subord = fidcOverview?.avg_subordinacao;
     if (subord != null) {
       items.push({
-        label: "FIDC Subord Média",
-        value: `${subord.toFixed(1)}%`,
-        color: subord < 10 ? "text-red-400" : subord < 20 ? "text-amber-400" : "text-emerald-400",
-        detail: subord < 10 ? "Proteção insuficiente" : "Nível adequado",
+        label: "FIDC Índ. Subord",
+        value: `${fmtNum(subord, 1)}%`,
+        color: subord < 20 ? "text-red-400" : subord < 35 ? "text-amber-400" : "text-emerald-400",
+        detail:
+          subord < 20
+            ? "Proteção insuficiente"
+            : subord < 35
+              ? "Cobertura limitada"
+              : "Cobertura robusta",
       });
     }
 
@@ -982,7 +1009,7 @@ const HubFundos = () => {
     if (stats?.total_funds) {
       items.push({
         label: "Classes CVM",
-        value: `${(stats.total_funds / 1000).toFixed(1)}k`,
+        value: `${fmtNum(stats.total_funds / 1000, 1)}k`,
         color: "text-zinc-300",
         detail: "RCVM 175 catalogadas",
       });
@@ -994,34 +1021,40 @@ const HubFundos = () => {
   const analyticsInsights = useMemo(() => {
     const items: { title: string; desc: string; color: string }[] = [];
 
-    // Dynamic FIDC health insight
+    // Dynamic FIDC health insight — usa indice_subordinacao (CVM) que é
+    // razão Subord/Senior em %, não % no PL total. Já é diretamente comparável
+    // com inadimplência (também %) — quanto maior a razão subord/inad, maior
+    // o colchão por unidade de carteira inadimplente.
     const inadim = fidcOverview?.avg_inadimplencia;
     const subord = fidcOverview?.avg_subordinacao;
     if (inadim != null && subord != null) {
       const ratio = subord / Math.max(inadim, 0.01);
       items.push({
         title: "Saúde FIDC",
-        desc: `Inadimplência média ${inadim.toFixed(2)}% vs subordinação ${subord.toFixed(1)}%. Razão cobertura: ${ratio.toFixed(1)}x. ${ratio > 3 ? "Proteção robusta." : ratio > 1.5 ? "Proteção adequada." : "Proteção frágil — monitorar."}`,
+        desc: `Inadimplência média ${fmtNum(inadim, 2)}% vs índice de subordinação ${fmtNum(subord, 1)}%. Razão cobertura: ${fmtNum(ratio, 1)}x. ${ratio > 3 ? "Proteção robusta." : ratio > 1.5 ? "Proteção adequada." : "Proteção frágil — monitorar."}`,
         color: ratio > 3 ? "#22C55E" : ratio > 1.5 ? "#F59E0B" : "#EF4444",
       });
     }
 
-    // Dynamic FII vs Selic
-    const dy = fiiOverview?.avg_dividend_yield;
-    if (dy != null) {
-      const selicMensal = (Math.pow(1 + 14.25 / 100, 1 / 12) - 1) * 100;
+    // Dynamic FII vs Selic — FII DY chega como fração decimal (× 100 → %).
+    const dyRaw = fiiOverview?.avg_dividend_yield;
+    if (dyRaw != null) {
+      const dy = dyRaw * 100; // %/mês
+      const SELIC = 15.0;
+      const selicMensal = (Math.pow(1 + SELIC / 100, 1 / 12) - 1) * 100;
       const spread = dy - selicMensal;
       items.push({
         title: "FII vs Selic",
-        desc: `DY médio FII (${dy.toFixed(2)}%/mês) vs Selic mensal (${selicMensal.toFixed(2)}%). Spread: ${spread >= 0 ? "+" : ""}${spread.toFixed(2)}pp. ${spread > 0 ? "FII gerando prêmio sobre RF." : "Selic comprimindo atratividade dos FIIs."}`,
+        desc: `DY médio FII (${fmtNum(dy, 2)}%/mês) vs Selic mensal (${fmtNum(selicMensal, 2)}%). Spread: ${spread >= 0 ? "+" : ""}${fmtNum(spread, 2)} p.p. ${spread > 0 ? "FII gerando prêmio sobre RF." : "Selic comprimindo atratividade dos FIIs."}`,
         color: spread > 0 ? "#EC4899" : "#8B5CF6",
       });
     }
 
     // Coverage
+    const totalFunds = stats?.total_funds ?? 0;
     items.push({
       title: "Cobertura de Dados",
-      desc: `${stats?.total_funds ? (stats.total_funds / 1000).toFixed(1) + "k" : "—"} classes catalogadas · ${fidcOverview?.total_fidcs || "—"} FIDCs · ${fiiOverview?.total_fiis || "—"} FIIs · RCVM 175 · Dados diários 6M`,
+      desc: `${totalFunds ? fmtNum(totalFunds / 1000, 1) + "k" : "—"} classes catalogadas · ${fidcOverview?.total_fidcs || "—"} FIDCs · ${fiiOverview?.total_fiis || "—"} FIIs · RCVM 175 · Dados diários 6M`,
       color: "#3B82F6",
     });
 

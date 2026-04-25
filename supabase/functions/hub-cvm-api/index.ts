@@ -152,22 +152,48 @@ Deno.serve(async (req) => {
       }
 
       case 'stats': {
-        const { data: meta } = await supabase
-          .from('hub_fundos_meta')
-          .select('classe, classe_rcvm175, vl_patrim_liq, tp_fundo')
+        // Bypass PostgREST 1000-row cap by paginating through hub_fundos_meta
+        // (29k+ classes). Sem isso o agregado fica truncado em 1000 fundos.
+        const meta: any[] = []
+        let from = 0
+        const chunkSize = 1000
+        for (let i = 0; i < 50; i++) {
+          const { data, error } = await supabase
+            .from('hub_fundos_meta')
+            .select('classe, classe_rcvm175, vl_patrim_liq, tp_fundo')
+            .order('cnpj_fundo_classe', { ascending: true })
+            .range(from, from + chunkSize - 1)
+          if (error) throw error
+          if (!data || data.length === 0) break
+          meta.push(...data)
+          if (data.length < chunkSize) break
+          from += chunkSize
+        }
+
         const byClasse: Record<string, { count: number; pl_total: number }> = {}
         const byClasseRcvm: Record<string, { count: number; pl_total: number }> = {}
-        for (const f of (meta || [])) {
+        let plTotal = 0
+        let topPl = 0
+        for (const f of meta) {
           const c = (f as any).classe || 'Outros'
           if (!byClasse[c]) byClasse[c] = { count: 0, pl_total: 0 }
           byClasse[c].count++
-          byClasse[c].pl_total += (f as any).vl_patrim_liq || 0
+          const pl = (f as any).vl_patrim_liq || 0
+          byClasse[c].pl_total += pl
+          plTotal += pl
+          if (pl > topPl) topPl = pl
           const rc = (f as any).classe_rcvm175 || 'Outros'
           if (!byClasseRcvm[rc]) byClasseRcvm[rc] = { count: 0, pl_total: 0 }
           byClasseRcvm[rc].count++
-          byClasseRcvm[rc].pl_total += (f as any).vl_patrim_liq || 0
+          byClasseRcvm[rc].pl_total += pl
         }
-        result = { by_classe: byClasse, by_classe_rcvm175: byClasseRcvm }
+        result = {
+          total_funds: meta.length,
+          total_pl: plTotal,
+          top_pl: topPl,
+          by_classe: byClasse,
+          by_classe_rcvm175: byClasseRcvm,
+        }
         break
       }
 
