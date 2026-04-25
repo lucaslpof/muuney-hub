@@ -210,6 +210,149 @@ Deno.serve(async (req) => {
         break
       }
 
+      case 'screener': {
+        // Screener V6 — join meta + metrics cache
+        // Filtros: classe_rcvm175 (CSV), pl_min, pl_max, taxa_adm_max,
+        // publico, tributacao, search. Sort por: pl, ret_3m, ret_6m, sharpe, vol, max_dd.
+        const classes = url.searchParams.get('classes') // CSV "RF,FII,FIDC"
+        const plMin = parseFloat(url.searchParams.get('pl_min') || '0')
+        const plMax = parseFloat(url.searchParams.get('pl_max') || '0')
+        const taxaAdmMax = parseFloat(url.searchParams.get('taxa_adm_max') || '0')
+        const publico = url.searchParams.get('publico')
+        const tributacao = url.searchParams.get('tributacao')
+        const search = (url.searchParams.get('search') || '').trim()
+        const sortBy = url.searchParams.get('sort_by') || 'pl'
+        const sortDir = url.searchParams.get('sort_dir') || 'desc'
+        const limit = Math.min(parseInt(url.searchParams.get('limit') || '100'), 500)
+        const offset = parseInt(url.searchParams.get('offset') || '0')
+
+        // Build query on meta with filters (catalog side)
+        let metaQ = supabase
+          .from('hub_fundos_meta')
+          .select(
+            'cnpj_fundo_classe, cnpj_fundo, denom_social, slug, classe_rcvm175, subclasse_rcvm175, ' +
+            'tp_fundo, tp_condom, vl_patrim_liq, taxa_adm, taxa_perfm, nr_cotistas, gestor_nome, ' +
+            'admin_nome, publico_alvo, tributacao, prazo_resgate',
+            { count: 'exact' }
+          )
+
+        if (classes) {
+          const arr = classes.split(',').map((s) => s.trim()).filter(Boolean)
+          if (arr.length > 0) metaQ = metaQ.in('classe_rcvm175', arr)
+        }
+        if (plMin > 0) metaQ = metaQ.gte('vl_patrim_liq', plMin)
+        if (plMax > 0) metaQ = metaQ.lte('vl_patrim_liq', plMax)
+        if (taxaAdmMax > 0) metaQ = metaQ.lte('taxa_adm', taxaAdmMax)
+        if (publico) metaQ = metaQ.eq('publico_alvo', publico)
+        if (tributacao) metaQ = metaQ.eq('tributacao', tributacao)
+        if (search.length >= 2) {
+          // Search by name OR slug (slug is lowercase). Sanitize wildcards.
+          const safe = search.replace(/[%_]/g, '')
+          metaQ = metaQ.or(`denom_social.ilike.%${safe}%,slug.ilike.%${safe.toLowerCase()}%`)
+        }
+
+        // For sort by metrics columns, we need to fetch a wider set then sort
+        // client-side here (after enrichment). For sort by PL/taxa/cotistas
+        // (meta columns) we can sort at the source.
+        const metricSortKeys = ['ret_3m', 'ret_6m', 'sharpe', 'vol', 'max_dd']
+        const isMetricSort = metricSortKeys.includes(sortBy)
+
+        if (!isMetricSort) {
+          const metaSortMap: Record<string, string> = {
+            pl: 'vl_patrim_liq',
+            cotistas: 'nr_cotistas',
+            taxa_adm: 'taxa_adm',
+          }
+          const col = metaSortMap[sortBy] || 'vl_patrim_liq'
+          metaQ = metaQ.order(col, { ascending: sortDir === 'asc', nullsFirst: false })
+          metaQ = metaQ.range(offset, offset + limit - 1)
+        } else {
+          // Pull a generous slice (5x limit) for client-side sort by metric
+          metaQ = metaQ.order('vl_patrim_liq', { ascending: false, nullsFirst: false })
+          metaQ = metaQ.limit(Math.min(limit * 5, 500))
+        }
+
+        const { data: metaRows, count: total, error: metaErr } = await metaQ
+        if (metaErr) throw metaErr
+
+        // Pull metrics cache for the resolved cnpjs
+        const cnpjs = (metaRows || []).map((r: any) => r.cnpj_fundo_classe).filter(Boolean)
+        const metricsMap: Record<string, any> = {}
+        if (cnpjs.length > 0) {
+          // chunk in 500s to avoid IN list too long
+          for (let i = 0; i < cnpjs.length; i += 500) {
+            const chunk = cnpjs.slice(i, i + 500)
+            const { data: mc } = await supabase
+              .from('hub_fund_metrics_cache')
+              .select('cnpj_fundo_classe, retorno_3m_pct, retorno_6m_pct, retorno_12m_pct, vol_anual_pct, sharpe, max_dd_pct, last_dt, obs_count')
+              .in('cnpj_fundo_classe', chunk)
+            for (const r of mc || []) metricsMap[(r as any).cnpj_fundo_classe] = r
+          }
+        }
+
+        let enriched = (metaRows || []).map((r: any) => {
+          const m = metricsMap[r.cnpj_fundo_classe] || {}
+          return {
+            cnpj_fundo_classe: r.cnpj_fundo_classe,
+            cnpj_fundo: r.cnpj_fundo,
+            denom_social: r.denom_social,
+            slug: r.slug,
+            classe_rcvm175: r.classe_rcvm175,
+            subclasse_rcvm175: r.subclasse_rcvm175,
+            tp_fundo: r.tp_fundo,
+            tp_condom: r.tp_condom,
+            publico_alvo: r.publico_alvo,
+            tributacao: r.tributacao,
+            prazo_resgate: r.prazo_resgate,
+            vl_patrim_liq: r.vl_patrim_liq,
+            taxa_adm: r.taxa_adm,
+            taxa_perfm: r.taxa_perfm,
+            nr_cotistas: r.nr_cotistas,
+            gestor_nome: r.gestor_nome,
+            admin_nome: r.admin_nome,
+            // Metrics
+            retorno_3m_pct: m.retorno_3m_pct ?? null,
+            retorno_6m_pct: m.retorno_6m_pct ?? null,
+            retorno_12m_pct: m.retorno_12m_pct ?? null,
+            vol_anual_pct: m.vol_anual_pct ?? null,
+            sharpe: m.sharpe ?? null,
+            max_dd_pct: m.max_dd_pct ?? null,
+            metrics_last_dt: m.last_dt ?? null,
+            metrics_obs_count: m.obs_count ?? null,
+          }
+        })
+
+        if (isMetricSort) {
+          const metricMap: Record<string, string> = {
+            ret_3m: 'retorno_3m_pct',
+            ret_6m: 'retorno_6m_pct',
+            sharpe: 'sharpe',
+            vol: 'vol_anual_pct',
+            max_dd: 'max_dd_pct',
+          }
+          const col = metricMap[sortBy]
+          enriched.sort((a: any, b: any) => {
+            const av = a[col]
+            const bv = b[col]
+            if (av == null && bv == null) return 0
+            if (av == null) return 1
+            if (bv == null) return -1
+            return sortDir === 'asc' ? av - bv : bv - av
+          })
+          enriched = enriched.slice(offset, offset + limit)
+        }
+
+        result = {
+          funds: enriched,
+          count: total ?? enriched.length,
+          limit,
+          offset,
+          sort_by: sortBy,
+          sort_dir: sortDir,
+        }
+        break
+      }
+
       case 'rankings': {
         const classe = url.searchParams.get('classe') || url.searchParams.get('classe_rcvm175')
         const limit = parseInt(url.searchParams.get('limit') || '50')
