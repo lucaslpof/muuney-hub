@@ -30,6 +30,7 @@ import { NarrativeSection, type MiniStat } from "@/components/hub/NarrativeSecti
 import { FicFidcPlaceholder, isFicFidc } from "@/components/hub/FicFidcPlaceholder";
 import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
+import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -530,6 +531,7 @@ export default function FidcLamina() {
                   </span>
                 ) : null}
                 <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
+                <OfertaAtivaBadge cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} size="sm" />
                 <DataAsOfStamp
                   date={latest?.dt_comptc}
                   cadence="monthly"

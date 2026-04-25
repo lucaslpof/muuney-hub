@@ -12,6 +12,7 @@ import {
   type FiiMonthlyItem,
 } from "@/hooks/useHubFundos";
 import { ClasseBadge } from "@/lib/rcvm175";
+import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { SectionErrorBoundary } from "@/components/hub/SectionErrorBoundary";
 import { SimpleKPICard as KPICard } from "@/components/hub/KPICard";
 import { computeMonthlyRiskMetrics } from "@/lib/monthlyRiskMetrics";
@@ -379,6 +380,7 @@ export default function FiiLamina() {
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <ClasseBadge classe="FII" size="md" />
                 <span className="text-[8px] text-zinc-700">{formatCnpj(meta.cnpj_fundo_classe || meta.cnpj_fundo)}</span>
+                <OfertaAtivaBadge cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} size="sm" />
                 {segmento !== "—" && (
                   <span className="text-[8px] text-zinc-500 font-mono">· {segmento}</span>
                 )}

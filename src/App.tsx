@@ -25,6 +25,9 @@ const FidcBatchPrint = React.lazy(() => import("./pages/FidcBatchPrint"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
 const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
+const OfertaDetalhe = React.lazy(() => import("./pages/OfertaDetalhe"));
+const OfertasWatchlist = React.lazy(() => import("./pages/OfertasWatchlist"));
+const OfertasAlertas = React.lazy(() => import("./pages/OfertasAlertas"));
 const AlternativosHub = React.lazy(() => import("./pages/AlternativosHub"));
 const AlternativosDetail = React.lazy(() => import("./pages/AlternativosDetail"));
 const HubPortfolio = React.lazy(() => import("./pages/HubPortfolio"));
@@ -112,7 +115,21 @@ const App = () => (
             path="/fundos/fii"
             element={<ProRoute feature="o módulo FII completo"><FiiHub /></ProRoute>}
           />
-          {/* Ofertas Públicas — standalone module, Pro only */}
+          {/* Ofertas Públicas — standalone module, Pro only.
+             Specific routes before generic — order matters: /watchlist, /alertas
+             must come before /:protocolo to avoid being captured as a "protocolo". */}
+          <Route
+            path="/ofertas/watchlist"
+            element={<ProRoute feature="suas ofertas acompanhadas"><OfertasWatchlist /></ProRoute>}
+          />
+          <Route
+            path="/ofertas/alertas"
+            element={<ProRoute feature="alertas de ofertas públicas"><OfertasAlertas /></ProRoute>}
+          />
+          <Route
+            path="/ofertas/:protocolo"
+            element={<ProRoute feature="a ficha da oferta pública"><OfertaDetalhe /></ProRoute>}
+          />
           <Route
             path="/ofertas"
             element={<ProRoute feature="o módulo Ofertas Públicas"><OfertasRadar /></ProRoute>}

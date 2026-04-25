@@ -13,6 +13,8 @@ import {
   Eye,
   Brain,
   FileSpreadsheet,
+  Bookmark,
+  Bell,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -53,6 +55,8 @@ import { exportOfertasRankings, fetchAllOfertas } from "@/lib/ofertasExcel";
 import { pickFromList } from "@/lib/queryParams";
 import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 import { CoordenadoresRanking } from "@/components/hub/CoordenadoresRanking";
+import { WatchlistSection } from "@/components/hub/WatchlistSection";
+import { useWatchlistOfertas, useAlertRules } from "@/hooks/useOfertasV2";
 
 /* ─── Status badges ─── */
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -102,16 +106,54 @@ const KPICard = ({
 );
 
 const SECTIONS = [
-  { id: "overview", label: "Visão Geral", icon: LayoutGrid },
-  { id: "timeline", label: "Timeline", icon: Calendar },
+  { id: "overview", label: "Abertas", icon: LayoutGrid },
+  { id: "timeline", label: "Calendário", icon: Calendar },
   { id: "pipeline", label: "Pipeline", icon: TrendingUp },
   { id: "explorer", label: "Explorer", icon: Search },
-  { id: "analytics", label: "Analytics", icon: Brain },
+  { id: "analytics", label: "Research", icon: Brain },
 ];
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
 const COLORS = ["#0B6C3E", "#F59E0B", "#8B5CF6", "#EC4899", "#3B82F6", "#F97316", "#06B6D4", "#10B981"];
+
+/* ─── Header actions: Watchlist + Alertas quick links ─── */
+function OfertasHeaderActions() {
+  const { data: watchlist } = useWatchlistOfertas();
+  const { data: rules } = useAlertRules();
+
+  const watchCount = watchlist?.length ?? 0;
+  const activeRules = rules?.filter((r) => r.ativa).length ?? 0;
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Link
+        to="/ofertas/watchlist"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono border border-zinc-800 text-zinc-400 rounded hover:border-[#0B6C3E]/40 hover:text-[#0B6C3E] transition-colors"
+      >
+        <Bookmark className="w-3 h-3" />
+        Watchlist
+        {watchCount > 0 && (
+          <span className="ml-0.5 px-1 bg-[#0B6C3E]/20 text-[#0B6C3E] rounded text-[9px]">
+            {watchCount}
+          </span>
+        )}
+      </Link>
+      <Link
+        to="/ofertas/alertas"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono border border-zinc-800 text-zinc-400 rounded hover:border-[#0B6C3E]/40 hover:text-[#0B6C3E] transition-colors"
+      >
+        <Bell className="w-3 h-3" />
+        Alertas
+        {activeRules > 0 && (
+          <span className="ml-0.5 px-1 bg-amber-500/20 text-amber-400 rounded text-[9px]">
+            {activeRules}
+          </span>
+        )}
+      </Link>
+    </div>
+  );
+}
 
 /** Ofertas Públicas Radar — V4 Fase 3 */
 export default function OfertasRadar() {
@@ -443,10 +485,13 @@ export default function OfertasRadar() {
           image="https://hub.muuney.com.br/og/ofertas.png"
         />
         <Breadcrumbs items={[{ label: "Ofertas Públicas" }]} className="mb-3" />
-        <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-          <Radar className="w-5 h-5 text-[#0B6C3E]" />
-          Ofertas Públicas Radar
-        </h1>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+            <Radar className="w-5 h-5 text-[#0B6C3E]" />
+            Ofertas Públicas Radar
+          </h1>
+          <OfertasHeaderActions />
+        </div>
         <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
           <p className="text-[9px] text-zinc-500 font-mono">
             CVM 160 · 476 · 400 — Debêntures · CRI · CRA · FIDC · FII · Ações
@@ -477,17 +522,20 @@ export default function OfertasRadar() {
       {/* Main content */}
       <div className="px-4 md:px-8 py-8">
         <div className="min-w-0 space-y-8">
-          {/* === SECTION 1: Visão Geral === */}
+          {/* === SECTION 1: Abertas (Visão Geral) === */}
           <MacroSection
             ref={(el) => {
               sectionRefs.current["overview"] = el;
             }}
             id="overview"
-            title="Visão Geral"
+            title="Abertas"
             icon={LayoutGrid}
           >
-            <SectionErrorBoundary sectionName="Visão Geral Ofertas">
+            <SectionErrorBoundary sectionName="Abertas Ofertas">
               <div className="space-y-6">
+                {/* V2: Watchlist preview — top 5, links to full page */}
+                <WatchlistSection limit={5} />
+
                 {/* Narrative insight */}
                 {narrativeOverview && (
                   <div className="space-y-2">
@@ -1186,7 +1234,21 @@ export default function OfertasRadar() {
                               )}
                             </td>
                             <td className="px-2 py-2.5">
-                              <Eye className="w-3 h-3 text-zinc-700 group-hover:text-zinc-400 transition-colors" />
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Eye
+                                  className="w-3 h-3 text-zinc-700 group-hover:text-zinc-400 transition-colors"
+                                  aria-label="Pré-visualizar"
+                                />
+                                <Link
+                                  to={`/ofertas/${encodeURIComponent(o.protocolo)}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-zinc-700 hover:text-[#0B6C3E] transition-colors"
+                                  title="Abrir ficha completa"
+                                  aria-label="Abrir ficha completa"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </Link>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1237,11 +1299,44 @@ export default function OfertasRadar() {
               sectionRefs.current["analytics"] = el;
             }}
             id="analytics"
-            title="Analytics"
+            title="Research"
             icon={Brain}
           >
-            <SectionErrorBoundary sectionName="Analytics Ofertas">
+            <SectionErrorBoundary sectionName="Research Ofertas">
               <div className="space-y-6">
+                {/* V2: Action band — alerts + watchlist CTAs */}
+                <div className="bg-[#0a0a0a] border border-[#0B6C3E]/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3 flex-wrap">
+                    <div className="flex-1 min-w-[260px]">
+                      <h3 className="text-sm font-semibold text-zinc-200 flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-[#0B6C3E]" />
+                        Não fique olhando — peça pro hub avisar você
+                      </h3>
+                      <p className="mt-1 text-[11px] font-mono text-zinc-500 leading-relaxed">
+                        Configure regras (ex: <span className="text-zinc-300">"CRI logística rating ≥ A min R$ 50M"</span>)
+                        e receba digest diário por email quando uma nova oferta enquadrar.
+                        Suas ofertas acompanhadas ficam salvas para revisão rápida.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Link
+                        to="/ofertas/alertas"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono bg-[#0B6C3E]/15 border border-[#0B6C3E]/40 text-[#0B6C3E] rounded hover:bg-[#0B6C3E]/25 transition-colors"
+                      >
+                        <Bell className="w-3.5 h-3.5" />
+                        Configurar alertas
+                      </Link>
+                      <Link
+                        to="/ofertas/watchlist"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono border border-zinc-700 text-zinc-300 rounded hover:border-[#0B6C3E]/40 hover:text-[#0B6C3E] transition-colors"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        Watchlist
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Narrative Intelligence Panel */}
                 {stats && timelineData?.timeline && (
                   <OfertasNarrativePanel
