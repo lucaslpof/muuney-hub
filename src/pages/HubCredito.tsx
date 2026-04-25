@@ -36,6 +36,8 @@ import {
 import type { MacroChartEvent } from "@/components/hub/MacroChart";
 import { percentChange, sma } from "@/lib/statistics";
 import { pickFromList } from "@/lib/queryParams";
+import { fmtNum } from "@/lib/format";
+import { fmtSaldoBi } from "@/lib/unitNormalize";
 import {
   LayoutGrid, Warehouse, Percent, ShieldAlert,
   Filter, Brain, ChevronDown,
@@ -55,7 +57,68 @@ const SECTIONS = [
 ] as const;
 
 /* ─── Hero KPI codes (top 8 for overview) ─── */
-const HERO_CODES = ["20540", "20539", "21082", "20783", "20631", "20714", "20715", "25147"];
+// 20539 = Saldo Total SFN (R$ milhões); 20622 = Crédito/PIB (%);
+// 21082 = Inadim. Total (%); 20783 = Spread PF (p.p.); 20631 = Concessões PF;
+// 20714 = Taxa PF; 20715 = Taxa PJ; 25147 = Cartões emitidos.
+const HERO_CODES = ["20539", "20622", "21082", "20783", "20631", "20714", "20715", "25147"];
+
+/* ─── KPI value formatter — pt-BR + adaptive scale ─── */
+/**
+ * Formata o valor exibido nos KPI cards de Crédito de forma adaptativa:
+ *   • "R$ milhões" / "R$ bi" → fmtSaldoBi (converte milhões para bi/tri,
+ *     pt-BR, com escala adaptativa). Retorna value="R$ 7,15" + unit="tri".
+ *   • "%" / "% a.a." → toLocaleString pt-BR + sufixo no unit.
+ *   • "p.p." / "unidades" / outros → toLocaleString pt-BR + unit original.
+ *
+ * Fonte do problema: hub_macro_series_meta armazena os valores brutos em
+ * R$ milhões, e o display anterior mostrava "7.145.681 R$ milhões" no
+ * lugar de "R$ 7,15 tri".
+ */
+function formatKpiCardValue(card: { last_value: number; unit?: string }): {
+  value: string;
+  unit: string | undefined;
+} {
+  const v = Number(card.last_value);
+  const u = (card.unit ?? "").toLowerCase();
+
+  // R$ em milhões → converter para bi e usar fmtSaldoBi (escala adaptativa)
+  if (u.includes("milh")) {
+    const inBi = v / 1_000;
+    const formatted = fmtSaldoBi(inBi); // ex: "R$ 7,15 T" ou "R$ 22 bi"
+    // Strip "R$ " do início e separar último token como unit:
+    const stripped = formatted.replace(/^R\$\s*/, "");
+    const lastSpace = stripped.lastIndexOf(" ");
+    if (lastSpace > 0) {
+      return {
+        value: `R$ ${stripped.slice(0, lastSpace)}`,
+        unit: stripped.slice(lastSpace + 1),
+      };
+    }
+    return { value: `R$ ${stripped}`, unit: undefined };
+  }
+
+  // R$ bi (já está em bi) → fmtSaldoBi direto
+  if (u.includes("bi") && u.startsWith("r$")) {
+    const formatted = fmtSaldoBi(v);
+    const stripped = formatted.replace(/^R\$\s*/, "");
+    const lastSpace = stripped.lastIndexOf(" ");
+    if (lastSpace > 0) {
+      return {
+        value: `R$ ${stripped.slice(0, lastSpace)}`,
+        unit: stripped.slice(lastSpace + 1),
+      };
+    }
+    return { value: `R$ ${stripped}`, unit: undefined };
+  }
+
+  // % e demais — toLocaleString pt-BR (vírgula decimal)
+  const decimals = Math.abs(v) >= 100 ? 0 : 2;
+  const value = v.toLocaleString("pt-BR", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return { value, unit: card.unit };
+}
 
 /* ─── Sparkline helper ─── */
 function toSparkline(data: { date: string; value: number }[], points = 20) {
@@ -204,7 +267,9 @@ const HubCredito = () => {
   }, [monetaryEvents]);
 
   /* ─── Shorthand series access ─── */
-  const saldoTotal = pickSeries(saldoBundle, "20540");
+  // 20539 = Saldo SFN Total (R$ milhões) — verificado contra BACEN SGS.
+  const saldoTotal = pickSeries(saldoBundle, "20539");
+  const saldoPJ = pickSeries(saldoBundle, "20540");
   const saldoPF = pickSeries(saldoBundle, "28848");
   const saldoPJLivres = pickSeries(saldoBundle, "28860");
   const veiculos = pickSeries(saldoBundle, "20581");
@@ -231,7 +296,8 @@ const HubCredito = () => {
   const spreadPre = pickSeries(spreadBundle, "20837");
 
   const cartoes = pickSeries(cartoesBundle, "25147");
-  const creditoPib = pickSeries(saldoBundle, "20539");
+  // 20622 = Saldo total/PIB (%) — verificado contra BACEN SGS.
+  const creditoPib = pickSeries(saldoBundle, "20622");
 
   /* ─── Focus expectations (macro module) for Analytics correlation ─── */
   // Fetched only when Analytics section is visited to save bandwidth; shares
@@ -319,10 +385,11 @@ const HubCredito = () => {
 
   /* ─── Insight inputs for dynamic cards ─── */
   const saldoInsights: InsightInput[] = useMemo(() => [
-    { code: "20540", label: "Saldo Total", data: saldoTotal, unit: "R$ bi" },
-    { code: "28848", label: "Saldo PF", data: saldoPF, unit: "R$ bi" },
-    { code: "20539", label: "Crédito/PIB", data: creditoPib, unit: "%", target: 55 },
-  ], [saldoTotal, saldoPF, creditoPib]);
+    { code: "20539", label: "Saldo Total SFN", data: saldoTotal, unit: "R$ milhões" },
+    { code: "20540", label: "Saldo PJ", data: saldoPJ, unit: "R$ milhões" },
+    { code: "28848", label: "Saldo PF Livres", data: saldoPF, unit: "R$ milhões" },
+    { code: "20622", label: "Crédito/PIB", data: creditoPib, unit: "%", target: 55 },
+  ], [saldoTotal, saldoPJ, saldoPF, creditoPib]);
 
   const taxaInsights: InsightInput[] = useMemo(() => [
     { code: "20714", label: "Taxa PF", data: taxaPF, unit: "% a.a." },
@@ -434,23 +501,31 @@ const HubCredito = () => {
             >
               {/* Narrativa de abertura — Visão Geral (regime consolidado) */}
               {(() => {
-                const saldoLast = lastVal(saldoTotal);
-                const inadLast = lastVal(inadTotal);
-                const spreadLast = lastVal(spreadPF);
-                const taxaLast = lastVal(taxaPF);
-                const concessoesMoMLast = lastVal(concessoesMoM);
-                const creditoPibLast = lastVal(creditoPib);
+                // saldoTotal e creditoPib chegam em "R$ milhões" e "%" via meta
+                // (ver migration hub_macro_meta_credito_visao_geral_fix). Os
+                // helpers fmtSaldoBi/fmtNum cuidam da formatação pt-BR + escala.
+                const saldoLast = lastVal(saldoTotal);                       // mi
+                const inadLast = lastVal(inadTotal);                         // %
+                const spreadLast = lastVal(spreadPF);                        // p.p.
+                const taxaLast = lastVal(taxaPF);                            // % a.a.
+                const concessoesMoMLast = lastVal(concessoesMoM);            // %
+                const creditoPibLast = lastVal(creditoPib);                  // %
 
-                // Regime consolidado: sinaliza em qual quadrante o mercado está
+                // saldo está em milhões → converter para bi para fmtSaldoBi
+                const saldoBi = saldoLast != null ? saldoLast / 1_000 : null;
+
+                // Regime consolidado — thresholds calibrados para BR
+                // (inad histórica oscila 3-5%, spread 18-25 p.p. é normal).
+                // Stress Sistêmico exige condição severa, não corriqueira.
                 const regime =
                   inadLast != null && spreadLast != null && concessoesMoMLast != null
-                    ? inadLast > 4 && spreadLast > 22
+                    ? inadLast > 5.5 && spreadLast > 28
                       ? "Stress Sistêmico"
-                      : concessoesMoMLast < -3
+                      : concessoesMoMLast < -5
                       ? "Contração"
-                      : concessoesMoMLast > 3 && inadLast < 3.5
+                      : concessoesMoMLast > 4 && inadLast < 4
                       ? "Expansão"
-                      : inadLast > 3.8
+                      : inadLast > 4.5 || spreadLast > 26
                       ? "Aperto de Risco"
                       : "Normalização"
                     : "—";
@@ -476,20 +551,23 @@ const HubCredito = () => {
                   },
                   {
                     label: "Saldo SFN",
-                    value: saldoLast != null ? `R$ ${saldoLast.toFixed(0)} bi` : "—",
-                    sublabel: creditoPibLast != null ? `${creditoPibLast.toFixed(1)}% do PIB` : undefined,
+                    value: fmtSaldoBi(saldoBi),
+                    sublabel:
+                      creditoPibLast != null
+                        ? `${fmtNum(creditoPibLast, 1)}% do PIB`
+                        : undefined,
                     color: "text-zinc-200",
-                    tooltip: "Estoque total do sistema financeiro nacional — série BACEN SGS 20540.",
+                    tooltip: "Estoque total do sistema financeiro nacional — série BACEN SGS 20539.",
                   },
                   {
                     label: "Inadim. Total",
-                    value: inadLast != null ? `${inadLast.toFixed(2)}%` : "—",
+                    value: inadLast != null ? `${fmtNum(inadLast, 2)}%` : "—",
                     sublabel: "meta BCB ~3,0%",
                     color:
                       inadLast != null
-                        ? inadLast > 4
+                        ? inadLast > 4.5
                           ? "text-red-400"
-                          : inadLast > 3.5
+                          : inadLast > 4
                           ? "text-amber-400"
                           : "text-emerald-400"
                         : "text-zinc-400",
@@ -497,8 +575,11 @@ const HubCredito = () => {
                   },
                   {
                     label: "Taxa PF média",
-                    value: taxaLast != null ? `${taxaLast.toFixed(1)}% a.a.` : "—",
-                    sublabel: spreadLast != null ? `spread ${spreadLast.toFixed(1)} p.p.` : undefined,
+                    value: taxaLast != null ? `${fmtNum(taxaLast, 1)}% a.a.` : "—",
+                    sublabel:
+                      spreadLast != null
+                        ? `spread ${fmtNum(spreadLast, 1)} p.p.`
+                        : undefined,
                     color: "text-zinc-200",
                     tooltip: "Taxa média consolidada para pessoa física — série BACEN SGS 20714.",
                   },
@@ -517,15 +598,28 @@ const HubCredito = () => {
                     prose={
                       <>
                         Mercado em regime de <strong className={regimeColor}>{regime}</strong> —
-                        estoque SFN em <strong className="text-zinc-200">R$ {saldoLast?.toFixed(0) ?? "—"} bi</strong>{" "}
-                        ({creditoPibLast != null ? `${creditoPibLast.toFixed(1)}% do PIB` : "—"}), inadimplência agregada em{" "}
-                        <strong className="text-zinc-200">{inadLast?.toFixed(2) ?? "—"}%</strong>{" "}
+                        estoque SFN em <strong className="text-zinc-200">{fmtSaldoBi(saldoBi)}</strong>
+                        {creditoPibLast != null ? (
+                          <> ({fmtNum(creditoPibLast, 1)}% do PIB)</>
+                        ) : null}
+                        , inadimplência agregada em{" "}
+                        <strong className="text-zinc-200">
+                          {inadLast != null ? `${fmtNum(inadLast, 2)}%` : "—"}
+                        </strong>{" "}
                         (meta BCB 3,0%) e spread PF em{" "}
-                        <strong className="text-zinc-200">{spreadLast?.toFixed(1) ?? "—"} p.p.</strong>. Ritmo de
-                        concessões PF {concessoesMoMLast != null ? (
+                        <strong className="text-zinc-200">
+                          {spreadLast != null ? `${fmtNum(spreadLast, 1)} p.p.` : "—"}
+                        </strong>
+                        . Ritmo de concessões PF{" "}
+                        {concessoesMoMLast != null ? (
                           <span className={concessoesMoMFmt.color}>{concessoesMoMFmt.text} MoM</span>
-                        ) : "sem variação"} —{" "}
-                        {concessoesMoMLast != null && concessoesMoMLast > 0 ? "sinal de aceleração do ciclo." : "sinal de desaceleração do ciclo."}
+                        ) : (
+                          "sem variação"
+                        )}
+                        {" — "}
+                        {concessoesMoMLast != null && concessoesMoMLast > 0
+                          ? "sinal de aceleração do ciclo."
+                          : "sinal de desaceleração do ciclo."}
                       </>
                     }
                     miniStats={miniStats}
@@ -533,21 +627,24 @@ const HubCredito = () => {
                 );
               })()}
 
-              {/* Hero KPIs */}
+              {/* Hero KPIs — adaptive formatting (R$ mi/bi → fmtSaldoBi, % → fmtNum) */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {heroKPIs.map((card) => (
-                  <KPICard
-                    key={card.serie_code}
-                    title={card.display_name}
-                    value={card.last_value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                    unit={card.unit}
-                    change={card.change_pct}
-                    trend={card.trend}
-                    lastDate={card.last_date}
-                    loading={cardsLoading}
-                    sparklineData={sparklineMap[card.serie_code]}
-                  />
-                ))}
+                {heroKPIs.map((card) => {
+                  const fmt = formatKpiCardValue(card);
+                  return (
+                    <KPICard
+                      key={card.serie_code}
+                      title={card.display_name}
+                      value={fmt.value}
+                      unit={fmt.unit}
+                      change={card.change_pct}
+                      trend={card.trend}
+                      lastDate={card.last_date}
+                      loading={cardsLoading}
+                      sparklineData={sparklineMap[card.serie_code]}
+                    />
+                  );
+                })}
               </div>
 
               {/* Secondary KPIs (expandable) */}
@@ -562,19 +659,22 @@ const HubCredito = () => {
                   </button>
                   {heroExpanded && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                      {secondaryKPIs.map((card) => (
-                        <KPICard
-                          key={card.serie_code}
-                          title={card.display_name}
-                          value={card.last_value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                          unit={card.unit}
-                          change={card.change_pct}
-                          trend={card.trend}
-                          lastDate={card.last_date}
-                          loading={cardsLoading}
-                          sparklineData={sparklineMap[card.serie_code]}
-                        />
-                      ))}
+                      {secondaryKPIs.map((card) => {
+                        const fmt = formatKpiCardValue(card);
+                        return (
+                          <KPICard
+                            key={card.serie_code}
+                            title={card.display_name}
+                            value={fmt.value}
+                            unit={fmt.unit}
+                            change={card.change_pct}
+                            trend={card.trend}
+                            lastDate={card.last_date}
+                            loading={cardsLoading}
+                            sparklineData={sparklineMap[card.serie_code]}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </>
