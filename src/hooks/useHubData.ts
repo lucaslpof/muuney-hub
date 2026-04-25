@@ -219,9 +219,14 @@ function mapSeriesBundleResponse(apiData: unknown): SeriesBundle {
   return bundle;
 }
 
+// Bumpar este sufixo invalida todos os caches React Query relacionados a meta
+// (latest/overview/series) e força refetch — usar quando hub_macro_series_meta
+// muda de label/unit/category. Última bumpada: 25/04/2026 (Crédito VG fix).
+const META_VERSION = "v2";
+
 export function useHubLatest(module: "macro" | "credito" = "macro") {
   return useQuery<LatestCard[]>({
-    queryKey: ["hub", "latest", module],
+    queryKey: ["hub", "latest", module, META_VERSION],
     queryFn: async () => mapLatestResponse(await fetchHub("latest", { module })),
     staleTime: 30 * 60 * 1000,
     retry: 2,
@@ -230,7 +235,7 @@ export function useHubLatest(module: "macro" | "credito" = "macro") {
 
 export function useHubOverview(module: "macro" | "credito" = "macro") {
   return useQuery<OverviewItem[]>({
-    queryKey: ["hub", "overview", module],
+    queryKey: ["hub", "overview", module, META_VERSION],
     queryFn: async () => mapOverviewResponse(await fetchHub("overview", { module })),
     staleTime: 30 * 60 * 1000,
     retry: 2,
@@ -239,7 +244,7 @@ export function useHubOverview(module: "macro" | "credito" = "macro") {
 
 export function useHubSeries(category: string, period: string = "1y", module: "macro" | "credito" = "macro") {
   return useQuery<SeriesDataPoint[]>({
-    queryKey: ["hub", "series", module, category, period],
+    queryKey: ["hub", "series", module, category, period, META_VERSION],
     queryFn: async () => mapSeriesResponse(await fetchHub("series", { category, period, module })),
     staleTime: 30 * 60 * 1000,
     enabled: !!category,
@@ -259,7 +264,7 @@ export function useHubSeriesBundle(
   enabled: boolean = true,
 ) {
   return useQuery<SeriesBundle>({
-    queryKey: ["hub", "series-bundle", module, category, period],
+    queryKey: ["hub", "series-bundle", module, category, period, META_VERSION],
     queryFn: async () => mapSeriesBundleResponse(await fetchHub("series", { category, period, module })),
     staleTime: 30 * 60 * 1000,
     enabled: enabled && !!category,
