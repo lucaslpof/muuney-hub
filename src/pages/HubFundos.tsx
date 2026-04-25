@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { HubSEO } from "@/lib/seo";
 import { exportCsv, csvFilename } from "@/lib/csvExport";
 import { pickFromList } from "@/lib/queryParams";
@@ -23,6 +23,7 @@ import {
   useFundSearch, useGestoraRankings, useAdminRankings,
   useFidcV4Overview, useFiiV4Overview,
   formatPL, formatPct, formatCnpj, fundDisplayName, primaryCnpj,
+  type FundSearchResult,
 } from "@/hooks/useHubFundos";
 import { computeFundMetrics, fmtMetric, metricColor, sharpeLabel } from "@/lib/fundMetrics";
 import { computeFundScore } from "@/lib/fundScore";
@@ -644,12 +645,32 @@ const ComparadorSection = ({ period }: { period: string }) => {
 };
 
 /* ─── Global Fund Search Bar ─── */
+/**
+ * Click no resultado:
+ *   1) Se o fundo tem `slug` → navega para a lâmina dedicada:
+ *        FIDC → /fundos/fidc/:slug   (FidcLamina, Pro)
+ *        FII  → /fundos/fii/:slug    (FiiLamina, Pro)
+ *        else → /fundos/:slug        (FundLamina, regular)
+ *   2) Sem slug → fallback: abre o painel inline via `onSelectFund(cnpj)`.
+ *
+ * Antes do fix: SEMPRE abria o painel inline (sem navegar). Bug visível
+ * pelo beta — usuário esperava lâmina ao clicar.
+ */
+function resolveFundLaminaPath(f: FundSearchResult): string | null {
+  if (!f.slug) return null;
+  const cls = (f.classe_rcvm175 || "").toUpperCase();
+  if (cls.includes("FIDC")) return `/fundos/fidc/${f.slug}`;
+  if (cls === "FII" || cls.includes("IMOBILI")) return `/fundos/fii/${f.slug}`;
+  return `/fundos/${f.slug}`;
+}
+
 const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void }) => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const debouncedQuery = useDebouncedValue(query, 300);
   const { data: results, isLoading } = useFundSearch(debouncedQuery, { limit: 12 });
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -658,6 +679,18 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleSelect = useCallback((f: FundSearchResult) => {
+    setOpen(false);
+    setQuery("");
+    const path = resolveFundLaminaPath(f);
+    if (path) {
+      navigate(path);
+    } else {
+      // Fallback: sem slug, abre o painel inline com o CNPJ.
+      onSelectFund(f.cnpj_fundo_classe || f.cnpj_fundo);
+    }
+  }, [navigate, onSelectFund]);
 
   return (
     <div ref={ref} className="relative w-full max-w-md">
@@ -688,8 +721,8 @@ const FundSearchBar = ({ onSelectFund }: { onSelectFund: (cnpj: string) => void 
             const isPremium = classeLabel.includes("FIDC") || classeLabel.includes("FII") || classeLabel === "FIP";
             return (
               <button
-                key={f.cnpj_fundo}
-                onClick={() => { onSelectFund(f.cnpj_fundo_classe || f.cnpj_fundo); setOpen(false); setQuery(""); }}
+                key={f.cnpj_fundo_classe || f.cnpj_fundo}
+                onClick={() => handleSelect(f)}
                 className="w-full text-left px-3 py-2 hover:bg-[#0B6C3E]/5 border-b border-[#141414] last:border-0 transition-colors"
               >
                 {/* Row 1: badge + name + PL on the right */}
