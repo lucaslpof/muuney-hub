@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/hub/EmptyState";
 import { useFipDetailV2, type FundMeta } from "@/hooks/useHubFundos";
 import { FipPerformancePanel } from "@/components/hub/FipPerformancePanel";
 import { FipCotistasPanel } from "@/components/hub/FipCotistasPanel";
+import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
 import { PrintFooter } from "@/components/hub/PrintFooter";
 
@@ -106,6 +107,9 @@ export default function FipLamina() {
           <ExportPdfButton title={`${fundName} — FIP`} accent={FIP_ACCENT} />
         </div>
       </motion.div>
+
+      {/* Eventos Relevantes (DEEP-S1) */}
+      <FundEventsBanner cnpj={metaTyped.cnpj_fundo_classe || cnpjFundo} days={30} limit={5} />
 
       {/* Resumo */}
       {latest && (

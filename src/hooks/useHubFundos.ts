@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { throwApiError } from "@/lib/apiError";
+import { supabase } from "@/integrations/supabase/client";
 
 const CVM_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-cvm-api";
 
@@ -1763,4 +1764,70 @@ export function useOfertaFundLink(
     },
     isLoading: q.isLoading,
   };
+}
+
+/* ═══ FUND EVENTS — DEEP-S1 (26/04/2026) ═══
+ * Eventos relevantes / comunicados ao mercado de fundos via hub_fundos_eventos.
+ * Fonte: CVM eventual_fi_YYYY.csv (refresh diário pg_cron 03h UTC).
+ * Severidade derivada por tp_doc — 'attention' p/ FATO RELEV, REGUL FDO,
+ * EDITAL AGO/AED, PROPOST ADM, Rel. Rating; 'info' p/ rotina (AGO, AVISO MERCADO).
+ */
+
+export interface FundEvent {
+  id: string;
+  cnpj_fundo_classe: string;
+  tp_fundo_classe: string | null;
+  denom_social: string | null;
+  dt_comptc: string | null;
+  dt_receb: string;
+  tp_doc: string;
+  nm_arq: string | null;
+  link_arq: string | null;
+  severidade: "info" | "attention" | "critical";
+}
+
+/** Recent events for a single fund (last N days). */
+export function useFundEvents(cnpj: string | null, opts: { days?: number; limit?: number; enabled?: boolean } = {}) {
+  const { days = 30, limit = 10 } = opts;
+  return useQuery<FundEvent[]>({
+    queryKey: ["fundos", "events", cnpj, days, limit],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      const { data, error } = await supabase
+        .from("hub_fundos_eventos")
+        .select("id, cnpj_fundo_classe, tp_fundo_classe, denom_social, dt_comptc, dt_receb, tp_doc, nm_arq, link_arq, severidade")
+        .eq("cnpj_fundo_classe", cnpj)
+        .gte("dt_receb", cutoff.toISOString().slice(0, 10))
+        .order("dt_receb", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as FundEvent[];
+    },
+    enabled: !!cnpj && opts.enabled !== false,
+    staleTime: 10 * 60 * 1000, // 10min
+  });
+}
+
+/** Cross-fund attention events (last N days) — for dashboard feed. */
+export function useGlobalAttentionEvents(opts: { days?: number; limit?: number } = {}) {
+  const { days = 7, limit = 50 } = opts;
+  return useQuery<FundEvent[]>({
+    queryKey: ["fundos", "events_global", days, limit],
+    queryFn: async () => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      const { data, error } = await supabase
+        .from("hub_fundos_eventos")
+        .select("id, cnpj_fundo_classe, tp_fundo_classe, denom_social, dt_comptc, dt_receb, tp_doc, nm_arq, link_arq, severidade")
+        .neq("severidade", "info")
+        .gte("dt_receb", cutoff.toISOString().slice(0, 10))
+        .order("dt_receb", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as FundEvent[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 }

@@ -22,6 +22,7 @@ import { computeMonthlyGridFromMonthly, summarizeDrawdown } from "@/lib/drawdown
 import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FiiPvpPayoutPanel } from "@/components/hub/FiiPvpPayoutPanel";
+import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -398,6 +399,9 @@ export default function FiiLamina() {
       </div>
 
       <div className="w-full px-6 py-8 space-y-8">
+        {/* === Eventos Relevantes (DEEP-S1) === */}
+        <FundEventsBanner cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} days={30} limit={5} />
+
         {/* === Section 1: Resumo + KPIs === */}
         <SectionErrorBoundary sectionName="Resumo">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">

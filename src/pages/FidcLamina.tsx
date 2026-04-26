@@ -32,6 +32,7 @@ import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
 import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
+import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -565,6 +566,13 @@ export default function FidcLamina() {
       </div>
 
       <div className="w-full px-6 py-8 space-y-8">
+        {/* === Eventos Relevantes (DEEP-S1) — usa CNPJ_FUNDO_CLASSE === */}
+        <FundEventsBanner
+          cnpj={fidcData?.meta?.cnpj_fundo_classe || cnpj}
+          days={30}
+          limit={5}
+        />
+
         {/* === Section 1: Resumo === */}
         <SectionErrorBoundary sectionName="Resumo">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
