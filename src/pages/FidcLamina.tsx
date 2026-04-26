@@ -31,6 +31,7 @@ import { FicFidcPlaceholder, isFicFidc } from "@/components/hub/FicFidcPlacehold
 import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
 import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
+import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -819,6 +820,9 @@ export default function FidcLamina() {
                 </div>
               </div>
             </div>
+
+            {/* V5 Depth Panel — prazo, duration, breakdown vencimento, SCR rating, top 5 cedentes */}
+            <FidcCarteiraDepthPanel latest={latest ?? null} cnpjFundo={cnpj} />
           </motion.div>
         </SectionErrorBoundary>
 

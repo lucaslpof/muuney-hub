@@ -87,12 +87,16 @@ function getMonthFilter(yearMonth: string): string {
   return y + '-' + m + '-01'
 }
 
-async function downloadAndUnzip(url: string): Promise<Record<string, Uint8Array>> {
+async function downloadAndUnzip(url: string, filter?: (name: string) => boolean): Promise<Record<string, Uint8Array>> {
   console.log('Downloading ' + url + '...')
   const resp = await fetch(url)
   if (!resp.ok) throw new Error('Download failed: ' + resp.status + ' from ' + url)
   const data = new Uint8Array(await resp.arrayBuffer())
-  console.log('Downloaded ' + (data.length / 1024 / 1024).toFixed(1) + ' MB, unzipping...')
+  console.log('Downloaded ' + (data.length / 1024 / 1024).toFixed(1) + ' MB, unzipping' + (filter ? ' (filtered)' : '') + '...')
+  // V5.1: fflate's `filter` option skips decompression of irrelevant entries
+  // entirely (huge memory saving for FIDC ZIPs which have 17 tabs but we only
+  // need 8). Without filter, the function OOMs on Dec/Jan/Feb (256MB budget).
+  if (filter) return unzipSync(data, { filter: (file: any) => filter(file.name) })
   return unzipSync(data)
 }
 
@@ -367,10 +371,26 @@ function classifySeries(clasRaw: string): 'senior' | 'mezanino' | 'subordinada' 
 
 async function ingestFIDC(supabase: any, yearMonth: string) {
   const zipUrl = 'https://dados.cvm.gov.br/dados/FIDC/DOC/INF_MENSAL/DADOS/inf_mensal_fidc_' + yearMonth + '.zip'
-  const files = await downloadAndUnzip(zipUrl)
+  // V5.1: filter at unzip time (fflate `filter` opt) — irrelevant entries are
+  // never decompressed. ZIP has 17 tabs; we keep 8 (I, II, IV, V, X root,
+  // X_1_1, X_2, X_3). Tabs III, VI, VII, IX, X_4..X_7 are skipped to fit
+  // Edge Function 256MB budget on big months (Dec/Jan/Feb OOMed at v5.0).
+  const isRelevantTab = (fn: string): boolean => {
+    const lower = fn.toLowerCase()
+    if (!lower.endsWith('.csv')) return false
+    if (lower.match(/tab_x_\d{6}\.csv$/i)) return true   // Tab X root (SCR rating)
+    if (lower.includes('tab_x_1_1_')) return true
+    if (lower.includes('tab_x_2_')) return true
+    if (lower.includes('tab_x_3_')) return true
+    if (lower.includes('tab_v_') && !lower.includes('tab_vi') && !lower.includes('tab_vii')) return true
+    if (lower.includes('tab_iv_')) return true
+    if (lower.includes('tab_ii_')) return true
+    if (lower.includes('tab_i_') && !lower.includes('tab_ii') && !lower.includes('tab_iv') && !lower.includes('tab_ix') && !lower.includes('tab_iii')) return true
+    return false
+  }
+  const files = await downloadAndUnzip(zipUrl, isRelevantTab)
   const tabs: Record<string, TabData> = {}
   for (const [filename, fileData] of Object.entries(files)) {
-    if (!filename.endsWith('.csv')) continue
     const text = decodeCSV(fileData)
     const rows = parseCSV(text)
     const indexed: Record<string, Record<string, string>> = {}
@@ -378,6 +398,8 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
     const key = filename.split('/').pop() || filename
     tabs[key] = { rows, indexed }
     console.log(key + ': ' + rows.length + ' rows')
+    // free decompressed buffer eagerly (text + rows are all we need now)
+    delete (files as any)[filename]
   }
   let tabI: TabData | null = null, tabII: TabData | null = null, tabIV: TabData | null = null
   let tabV: TabData | null = null, tabXroot: TabData | null = null
@@ -803,7 +825,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     moduleParam = url.searchParams.get('module') || 'cda'
     yearMonthParam = url.searchParams.get('year_month') || getLastMonth()
-    console.log('=== ingest-cvm-data v4: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
+    console.log('=== ingest-cvm-data v5.1: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

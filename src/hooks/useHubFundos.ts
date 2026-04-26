@@ -377,6 +377,35 @@ export interface FidcMonthlyItem {
   benchmark?: string | null;
   rentab_benchmark?: number | null;
   spread_cdi?: number | null;
+  // V5 depth fields (ingest-cvm-data v5, 27/04/2026)
+  prazo_medio_dias?: number | null;
+  duration_dias?: number | null;
+  pct_vencimento_0_30d?: number | null;
+  pct_vencimento_31_60d?: number | null;
+  pct_vencimento_61_180d?: number | null;
+  pct_vencimento_181_360d?: number | null;
+  pct_vencimento_361_720d?: number | null;
+  pct_vencimento_acima_720d?: number | null;
+  pct_top1_cedente?: number | null;
+  pct_top5_cedentes?: number | null;
+  scr_devedor_aa_pct?: number | null;
+  scr_devedor_a_pct?: number | null;
+  scr_devedor_b_pct?: number | null;
+  scr_devedor_c_pct?: number | null;
+  scr_devedor_d_pct?: number | null;
+  scr_devedor_e_pct?: number | null;
+  scr_devedor_f_pct?: number | null;
+  scr_devedor_g_pct?: number | null;
+  scr_devedor_h_pct?: number | null;
+  scr_oper_aa_pct?: number | null;
+  scr_oper_a_pct?: number | null;
+  scr_oper_b_pct?: number | null;
+  scr_oper_c_pct?: number | null;
+  scr_oper_d_pct?: number | null;
+  scr_oper_e_pct?: number | null;
+  scr_oper_f_pct?: number | null;
+  scr_oper_g_pct?: number | null;
+  scr_oper_h_pct?: number | null;
 }
 
 export interface FidcRankingItem {
