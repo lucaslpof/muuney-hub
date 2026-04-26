@@ -216,6 +216,7 @@ function DeepModuleStrip() {
   const launchers = [
     { to: "/fundos/fidc", label: "FIDC", desc: "~4,3k FIDCs · subordinação · inadim", color: "#F97316", badge: "PRO" },
     { to: "/fundos/fii", label: "FII", desc: "~1,2k FIIs · DY · segmento", color: "#EC4899", badge: "PRO" },
+    { to: "/fundos/fip", label: "FIP", desc: "~2k FIPs · TVPI · vintage · cotistas", color: "#06B6D4", badge: "PRO" },
     { to: "/ofertas", label: "Ofertas Públicas", desc: "CVM 160/476/400 · primárias", color: "#0B6C3E", badge: "PRO" },
   ];
   return (

@@ -230,6 +230,15 @@ export const KPI_HINTS: Record<string, string> = {
     "Spread AA (crédito privado): prêmio médio exigido em debêntures rating AA sobre o CDI. Benchmark para high grade corporativo.",
   "spread a":
     "Spread A (crédito privado): prêmio médio em debêntures rating A sobre o CDI. Maior que AA pelo aumento de risco.",
+  // FIP V2 (private equity)
+  "tvpi":
+    "TVPI (Total Value to Paid-In) = PL atual / Capital Integralizado. Mede quanto o fundo vale hoje em relação ao que foi colocado. > 1x = gerou valor. CAVEAT: CVM não publica capital_distribuído, então DPI puro não está disponível — TVPI mistura realizado + unrealizado.",
+  "vintage":
+    "Vintage year = ano da primeira chamada de capital do fundo. Útil para comparar performance entre fundos da mesma geração (cohort).",
+  "call-down":
+    "Call-down ratio = % do capital comprometido que já foi integralizado. Fundos jovens têm call-down baixo (10-30%), maduros chegam a 80-100%. Acima de 100% indica reuso de capital.",
+  "dry powder":
+    "Dry powder = capital comprometido ainda não chamado. Reserva que o gestor pode acionar para novos investimentos. Comum diluir ao longo dos primeiros 3-5 anos do fundo.",
 };
 
 export function getKpiHint(label: string): string | undefined {

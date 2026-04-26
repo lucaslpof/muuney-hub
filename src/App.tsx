@@ -24,6 +24,8 @@ const FidcLamina = React.lazy(() => import("./pages/FidcLamina"));
 const FidcBatchPrint = React.lazy(() => import("./pages/FidcBatchPrint"));
 const FiiHub = React.lazy(() => import("./pages/FiiHub"));
 const FiiLamina = React.lazy(() => import("./pages/FiiLamina"));
+const FipHub = React.lazy(() => import("./pages/FipHub"));
+const FipLamina = React.lazy(() => import("./pages/FipLamina"));
 const OfertasRadar = React.lazy(() => import("./pages/OfertasRadar"));
 const OfertaDetalhe = React.lazy(() => import("./pages/OfertaDetalhe"));
 const OfertasWatchlist = React.lazy(() => import("./pages/OfertasWatchlist"));
@@ -114,6 +116,15 @@ const App = () => (
           <Route
             path="/fundos/fii"
             element={<ProRoute feature="o módulo FII completo"><FiiHub /></ProRoute>}
+          />
+          {/* FIP V2 — Private Equity. Pro only. Specific before generic. */}
+          <Route
+            path="/fundos/fip/:slug"
+            element={<ProRoute feature="a lâmina completa de FIP"><FipLamina /></ProRoute>}
+          />
+          <Route
+            path="/fundos/fip"
+            element={<ProRoute feature="o módulo FIP completo"><FipHub /></ProRoute>}
           />
           {/* Ofertas Públicas — standalone module, Pro only.
              Specific routes before generic — order matters: /watchlist, /alertas

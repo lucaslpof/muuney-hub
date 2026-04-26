@@ -791,6 +791,39 @@ async function ingestFIP(supabase: any, yearMonth: string) {
       vl_cap_subscr: pn(row['VL_CAP_SUBSCR']),
       vl_cap_integr: pn(row['VL_CAP_INTEGR']),
       vl_invest_fip_cota: pn(row['VL_INVEST_FIP_COTA']),
+      // V2 FIP — cotistas subscritores detalhados (15 categorias) + agregados
+      nr_cotst_subscr_pf: pint(row['NR_COTST_SUBSCR_PF']),
+      nr_cotst_subscr_pj_nao_financ: pint(row['NR_COTST_SUBSCR_PJ_NAO_FINANC']),
+      nr_cotst_subscr_pj_financ: pint(row['NR_COTST_SUBSCR_PJ_FINANC']),
+      nr_cotst_subscr_banco: pint(row['NR_COTST_SUBSCR_BANCO']),
+      nr_cotst_subscr_corretora_distrib: pint(row['NR_COTST_SUBSCR_CORRETORA_DISTRIB']),
+      nr_cotst_subscr_distrib: pint(row['NR_COTST_SUBSCR_DISTRIB']),
+      nr_cotst_subscr_eapc: pint(row['NR_COTST_SUBSCR_EAPC']),
+      nr_cotst_subscr_efpc: pint(row['NR_COTST_SUBSCR_EFPC']),
+      nr_cotst_subscr_rpps: pint(row['NR_COTST_SUBSCR_RPPS']),
+      nr_cotst_subscr_segur: pint(row['NR_COTST_SUBSCR_SEGUR']),
+      nr_cotst_subscr_capitaliz: pint(row['NR_COTST_SUBSCR_CAPITALIZ']),
+      nr_cotst_subscr_fi: pint(row['NR_COTST_SUBSCR_FI']),
+      nr_cotst_subscr_fii: pint(row['NR_COTST_SUBSCR_FII']),
+      nr_cotst_subscr_invnr: pint(row['NR_COTST_SUBSCR_INVNR']),
+      nr_cotst_subscr_outro: pint(row['NR_COTST_SUBSCR_OUTRO']),
+      nr_total_cotst_subscr: pint(row['NR_TOTAL_COTST_SUBSCR']),
+      // % cotas subscritas por categoria
+      pr_cota_subscr_pf: pn(row['PR_COTA_SUBSCR_PF']),
+      pr_cota_subscr_pj_nao_financ: pn(row['PR_COTA_SUBSCR_PJ_NAO_FINANC']),
+      pr_cota_subscr_pj_financ: pn(row['PR_COTA_SUBSCR_PJ_FINANC']),
+      pr_cota_subscr_banco: pn(row['PR_COTA_SUBSCR_BANCO']),
+      pr_cota_subscr_corretora_distrib: pn(row['PR_COTA_SUBSCR_CORRETORA_DISTRIB']),
+      pr_cota_subscr_distrib: pn(row['PR_COTA_SUBSCR_DISTRIB']),
+      pr_cota_subscr_eapc: pn(row['PR_COTA_SUBSCR_EAPC']),
+      pr_cota_subscr_efpc: pn(row['PR_COTA_SUBSCR_EFPC']),
+      pr_cota_subscr_rpps: pn(row['PR_COTA_SUBSCR_RPPS']),
+      pr_cota_subscr_segur: pn(row['PR_COTA_SUBSCR_SEGUR']),
+      pr_cota_subscr_capitaliz: pn(row['PR_COTA_SUBSCR_CAPITALIZ']),
+      pr_cota_subscr_fi: pn(row['PR_COTA_SUBSCR_FI']),
+      pr_cota_subscr_fii: pn(row['PR_COTA_SUBSCR_FII']),
+      pr_cota_subscr_invnr: pn(row['PR_COTA_SUBSCR_INVNR']),
+      pr_cota_subscr_outro: pn(row['PR_COTA_SUBSCR_OUTRO']),
     })
   }
 
@@ -825,7 +858,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     moduleParam = url.searchParams.get('module') || 'cda'
     yearMonthParam = url.searchParams.get('year_month') || getLastMonth()
-    console.log('=== ingest-cvm-data v5.1: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
+    console.log('=== ingest-cvm-data v6: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

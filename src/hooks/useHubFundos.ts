@@ -1213,6 +1213,261 @@ export function useFiiV4Monthly(cnpj: string | null, months: number = 24) {
   });
 }
 
+/* ═══ FIP — V2 (26/04/2026) (hub-fip-api v3) ═══
+ * Endpoints: fip_pe_metrics, fip_cotistas_breakdown, fip_jcurve, fip_search,
+ *            fip_segments + bridges para fip_detail/rankings/overview.
+ *
+ * CAVEAT: CVM não publica capital_distribuido para FIPs. DPI puro (Distribuído/
+ * Integralizado) NÃO está disponível. Métricas usadas:
+ *   - TVPI = pl_atual / cap_integralizado (mistura realizado + unrealizado)
+ *   - call_down_pct = cap_integralizado / cap_comprometido
+ *   - vintage = primeiro quadrimestre com cap_integralizado > 0
+ *
+ * FIP_API + fetchFip já declarados acima (linhas 617-633 — bridging FIP rankings/overview).
+ */
+
+export interface FipQuarterlyItem {
+  cnpj_fundo: string;
+  dt_comptc: string;
+  nome_fundo: string | null;
+  tp_fundo_classe: string | null;
+  publico_alvo: string | null;
+  patrimonio_liquido: number | null;
+  vl_cap_comprom: number | null;
+  vl_cap_subscr: number | null;
+  vl_cap_integr: number | null;
+  nr_cotistas: number | null;
+  valor_patrimonial_cota: number | null;
+  // Cotistas detail (V2)
+  nr_cotst_subscr_pf?: number | null;
+  nr_cotst_subscr_efpc?: number | null;
+  nr_cotst_subscr_eapc?: number | null;
+  nr_cotst_subscr_rpps?: number | null;
+  nr_total_cotst_subscr?: number | null;
+  pr_cota_subscr_pf?: number | null;
+  pr_cota_subscr_efpc?: number | null;
+  pr_cota_subscr_eapc?: number | null;
+  pr_cota_subscr_rpps?: number | null;
+}
+
+export interface FipPeMetrics {
+  cnpj_fundo: string;
+  dt_referencia: string;
+  nome_fundo: string;
+  tp_fundo_classe: string | null;
+  pl_atual: number;
+  cap_comprometido: number;
+  cap_subscrito: number;
+  cap_integralizado: number;
+  nr_cotistas: number | null;
+  dt_first_call: string | null;
+  vintage_year: number | null;
+  age_years: number | null;
+  dry_powder: number;
+  tvpi: number | null;
+  tvpi_raw: number | null;
+  call_down_pct: number | null;
+  call_down_pct_raw: number | null;
+  subscription_pct: number | null;
+  subscription_pct_raw: number | null;
+  missing_comprometido: boolean;
+  calldown_anomaly: boolean;
+  tvpi_anomaly: boolean;
+}
+
+export interface FipCotistaBreakdownItem {
+  key: string;
+  label: string;
+  nr_cotistas: number | null;
+  pct_cota: number | null;
+}
+
+export interface FipCotistasBreakdownResponse {
+  cnpj_fundo: string;
+  dt_referencia: string | null;
+  nr_total_cotistas_subscr: number | null;
+  nr_cotistas_atuais: number | null;
+  breakdown: FipCotistaBreakdownItem[];
+}
+
+export interface FipJCurvePoint {
+  dt_comptc: string;
+  pl: number;
+  cap_comprometido: number;
+  cap_subscrito: number;
+  cap_integralizado: number;
+  dry_powder: number;
+  tvpi: number | null;
+  call_down_pct: number | null;
+  nr_cotistas: number | null;
+}
+
+export interface FipDetailResponse {
+  meta: FundMeta | null;
+  quarterly: FipQuarterlyItem[];
+  latest: FipQuarterlyItem | null;
+  similar: Array<FipQuarterlyItem & { denom_social?: string | null; slug?: string | null; gestor_nome?: string | null }>;
+  pe_metrics: FipPeMetrics | null;
+}
+
+export interface FipV2OverviewResponse {
+  date: string;
+  total_fips: number;
+  total_pl: number;
+  total_cap_comprom: number;
+  total_cap_subscr: number;
+  total_cap_integr: number;
+  pct_integralizado: number | null;
+  capital_a_chamar: number;
+  total_cotistas: number;
+  by_tipo: { tipo: string; count: number; pl: number; pct_pl: number }[];
+  by_publico: { publico: string; count: number; pl: number }[];
+}
+
+export interface FipV2Segment {
+  tipo: string;
+  count: number;
+  pl: number;
+}
+
+export interface FipSearchResult {
+  cnpj_fundo_classe: string;
+  cnpj_fundo_legado: string | null;
+  denom_social: string;
+  slug: string | null;
+  gestor_nome: string | null;
+  vl_patrim_liq: number | null;
+}
+
+/** FIP V2 — Detail (meta + quadrimestres + similar + PE metrics) */
+export function useFipDetailV2(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<FipDetailResponse>({
+    queryKey: ["fip", "v2_detail", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFip("fip_detail", params) as Promise<FipDetailResponse>;
+    },
+    enabled: !!identifier,
+    staleTime: STALE_REALTIME,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — Rankings sortable+filterable */
+export function useFipV2Rankings(opts: {
+  orderBy?: string;
+  order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+  tipo?: string;
+  publicoAlvo?: string;
+  minPl?: number;
+  search?: string;
+  enabled?: boolean;
+} = {}) {
+  const { orderBy = "patrimonio_liquido", order = "desc", limit = 50, offset = 0, tipo, publicoAlvo, minPl, search } = opts;
+  return useQuery<{ date: string; order_by: string; funds: FipQuarterlyItem[]; count: number }>({
+    queryKey: ["fip", "v2_rankings", orderBy, order, limit, offset, tipo, publicoAlvo, minPl, search],
+    queryFn: () => {
+      const params: Record<string, string> = { order_by: orderBy, order, limit: String(limit), offset: String(offset) };
+      if (tipo) params.tipo = tipo;
+      if (publicoAlvo) params.publico_alvo = publicoAlvo;
+      if (minPl && minPl > 0) params.min_pl = String(minPl);
+      if (search) params.search = search;
+      return fetchFip("fip_rankings", params) as Promise<{ date: string; order_by: string; funds: FipQuarterlyItem[]; count: number }>;
+    },
+    staleTime: STALE_FREQUENT,
+    enabled: opts.enabled !== false,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — Market overview */
+export function useFipV2Overview() {
+  return useQuery<FipV2OverviewResponse>({
+    queryKey: ["fip", "v2_overview"],
+    queryFn: () => fetchFip("fip_overview") as Promise<FipV2OverviewResponse>,
+    staleTime: STALE_MONTHLY,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — Search */
+export function useFipSearchV2(query: string, opts?: { limit?: number; enabled?: boolean }) {
+  const limit = opts?.limit ?? 20;
+  const trimmed = query.trim();
+  return useQuery<{ query: string; results: FipSearchResult[]; count: number }>({
+    queryKey: ["fip", "v2_search", trimmed, limit],
+    queryFn: () => fetchFip("fip_search", { q: trimmed, limit: String(limit) }) as Promise<{ query: string; results: FipSearchResult[]; count: number }>,
+    staleTime: STALE_REALTIME,
+    enabled: (opts?.enabled !== false) && trimmed.length >= 2,
+  });
+}
+
+/** FIP V2 — Segments distribution */
+export function useFipSegmentsV2() {
+  return useQuery<{ date: string; segments: FipV2Segment[] }>({
+    queryKey: ["fip", "v2_segments"],
+    queryFn: () => fetchFip("fip_segments") as Promise<{ date: string; segments: FipV2Segment[] }>,
+    staleTime: STALE_MONTHLY,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — PE metrics (TVPI/vintage/call-down/dry powder) for one fund */
+export function useFipPeMetrics(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<{ cnpj_fundo: string; metrics: FipPeMetrics | null }>({
+    queryKey: ["fip", "pe_metrics", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFip("fip_pe_metrics", params) as Promise<{ cnpj_fundo: string; metrics: FipPeMetrics | null }>;
+    },
+    enabled: !!identifier,
+    staleTime: STALE_MONTHLY,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — Cotistas breakdown (15 categories + percentuais) */
+export function useFipCotistasBreakdown(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<FipCotistasBreakdownResponse>({
+    queryKey: ["fip", "cotistas_breakdown", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFip("fip_cotistas_breakdown", params) as Promise<FipCotistasBreakdownResponse>;
+    },
+    enabled: !!identifier,
+    staleTime: STALE_MONTHLY,
+    retry: 2,
+  });
+}
+
+/** FIP V2 — J-curve series (capital chamado, dry powder, TVPI ao longo dos quadrimestres) */
+export function useFipJCurve(identifier: string | null) {
+  const isSlug = identifier ? !/\d{2}\.\d{3}\.\d{3}/.test(identifier) && !/^\d{14}$/.test(identifier) : false;
+  return useQuery<{ cnpj_fundo: string; series: FipJCurvePoint[]; count: number }>({
+    queryKey: ["fip", "jcurve", identifier],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (isSlug) params.slug = identifier!;
+      else params.cnpj = identifier!;
+      return fetchFip("fip_jcurve", params) as Promise<{ cnpj_fundo: string; series: FipJCurvePoint[]; count: number }>;
+    },
+    enabled: !!identifier,
+    staleTime: STALE_MONTHLY,
+    retry: 2,
+  });
+}
+
 /* ═══ Ofertas Públicas — V4 Fase 3 (hub-ofertas-api) ═══ */
 
 const OFERTAS_API = "https://yheopprbuimsunqfaqbp.supabase.co/functions/v1/hub-ofertas-api";
