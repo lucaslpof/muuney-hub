@@ -1,11 +1,21 @@
-// ingest-cvm-data v4 — full parser rewrite for FIDC module
-// Fixes:
-//  - Tab X_1_1: sum nr_cotistas_senior + nr_cotistas_subordinada (16 investor type cols each)
-//  - Mezanino branch in X_2/X_3 (no longer collapses into subordinada)
-//  - Tab II argmax → tp_lastro_principal (11 high-level asset categories)
-//  - Hard cap rentab ±95% (drops CVM outlier values like -280 bi%)
+// ingest-cvm-data v5 — FIDC depth fields (carteira mensal enrichment)
+//
+// V5 (27/04/2026):
+//  - Tab V (vencimento): prazo_medio_dias, duration_dias (proxy), breakdown
+//    pct_vencimento por bucket (0-30 / 31-60 / 61-180 / 181-360 / 361-720 / >720d).
+//  - Tab X (root, rating SCR BACEN 2682): scr_devedor_aa..h_pct (% do PL)
+//    e scr_oper_aa..h_pct.
+//  - Tab I PR_CEDENTE_1..5 → top 5 cedentes em hub_fidc_concentracao
+//    (apenas FIDCs com PL >= R$ 10M).
+//
+// V4 (20/04/2026):
+//  - Tab X_1_1: sum nr_cotistas_senior + nr_cotistas_subordinada (16 cols)
+//  - Mezanino branch em X_2/X_3 (não colapsa em subordinada)
+//  - Tab II argmax → tp_lastro_principal (11 asset categories)
+//  - Hard cap rentab ±95% (drops CVM outliers tipo -280 bi%)
 //  - Weighted avg rentab_fundo = sum(rentab_class * vl_pl_class) / vl_pl_total
-// Ref: DIAGNOSTICO_FUNDOS.md §H-I (forensic deep-dive)
+//
+// Ref: DIAGNOSTICO_FUNDOS.md §H-I + CVM Inf Mensal FIDC schema (Tab V/VII/X)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { unzipSync } from 'https://esm.sh/fflate@0.8.2'
 
@@ -157,7 +167,142 @@ async function ingestCDA(supabase: any, yearMonth: string) {
   return { module: 'cda', year_month: yearMonth, total_ingested: totalIngested, tracked_funds: trackedCnpjs.size, details: details }
 }
 
-// ---- FIDC Ingestion v4 — full rewrite ----
+// ---- FIDC Ingestion v5 — depth fields (prazo, vencimento, SCR, top cedentes) ----
+//
+// V5 (27/04/2026):
+//  - Tab V (vencimento futuro): prazo_medio_dias, duration_dias, breakdown
+//    pct_vencimento_0_30d / 31_60d / 61_180d / 181_360d / 361_720d / >720d.
+//  - Tab X (rating SCR BACEN 2682): scr_devedor_aa..h_pct + scr_oper_aa..h_pct.
+//  - Tab I PR_CEDENTE_1..5 → top 5 cedentes em hub_fidc_concentracao.
+//  - Filtro PL >= R$ 10M aplicado às tabelas relacionais (hub_fidc_concentracao)
+//    para não contaminar com fundos pequenos/irrelevantes.
+
+// Buckets de vencimento Tab V — midpoints (dias) para prazo médio ponderado
+const VENC_BUCKETS: Array<[string, number]> = [
+  ['TAB_V_A1_VL_PRAZO_VENC_30', 15],
+  ['TAB_V_A2_VL_PRAZO_VENC_60', 45],
+  ['TAB_V_A3_VL_PRAZO_VENC_90', 75],
+  ['TAB_V_A4_VL_PRAZO_VENC_120', 105],
+  ['TAB_V_A5_VL_PRAZO_VENC_150', 135],
+  ['TAB_V_A6_VL_PRAZO_VENC_180', 165],
+  ['TAB_V_A7_VL_PRAZO_VENC_360', 270],
+  ['TAB_V_A8_VL_PRAZO_VENC_720', 540],
+  ['TAB_V_A9_VL_PRAZO_VENC_1080', 900],
+  ['TAB_V_A10_VL_PRAZO_VENC_MAIOR_1080', 1500],
+]
+
+interface VencimentoMetrics {
+  prazo_medio_dias: number | null
+  duration_dias: number | null
+  pct_vencimento_0_30d: number | null
+  pct_vencimento_31_60d: number | null
+  pct_vencimento_61_180d: number | null
+  pct_vencimento_181_360d: number | null
+  pct_vencimento_361_720d: number | null
+  pct_vencimento_acima_720d: number | null
+}
+
+/** Compute prazo médio ponderado, duration (proxy) e breakdown vencimento.
+ *  Fonte: Tab V do Inf Mensal CVM (a vencer apenas). */
+function computeVencimentoMetrics(row: Record<string, string>): VencimentoMetrics {
+  let total = 0
+  const vals: number[] = []
+  for (const [col, _] of VENC_BUCKETS) {
+    const v = pn(row[col]) ?? 0
+    vals.push(v)
+    total += v
+  }
+  if (total <= 0) {
+    return {
+      prazo_medio_dias: null, duration_dias: null,
+      pct_vencimento_0_30d: null, pct_vencimento_31_60d: null,
+      pct_vencimento_61_180d: null, pct_vencimento_181_360d: null,
+      pct_vencimento_361_720d: null, pct_vencimento_acima_720d: null,
+    }
+  }
+  // Prazo médio ponderado
+  let weighted = 0
+  for (let i = 0; i < VENC_BUCKETS.length; i++) {
+    weighted += vals[i] * VENC_BUCKETS[i][1]
+  }
+  const prazo = weighted / total
+  // Duration ≈ prazo (sem yield curve, proxy)
+  const duration = prazo
+  // Breakdown agrupado em 6 buckets (pra UI)
+  const pct = (x: number) => Math.round((x / total) * 100 * 100) / 100
+  return {
+    prazo_medio_dias: Math.round(prazo * 100) / 100,
+    duration_dias: Math.round(duration * 100) / 100,
+    pct_vencimento_0_30d:    pct(vals[0]),
+    pct_vencimento_31_60d:   pct(vals[1] + vals[2]),                                  // 60+90
+    pct_vencimento_61_180d:  pct(vals[3] + vals[4] + vals[5]),                        // 120+150+180
+    pct_vencimento_181_360d: pct(vals[6]),
+    pct_vencimento_361_720d: pct(vals[7]),
+    pct_vencimento_acima_720d: pct(vals[8] + vals[9]),                                // 1080+>1080
+  }
+}
+
+interface ScrRating {
+  scr_devedor_aa_pct: number | null
+  scr_devedor_a_pct: number | null
+  scr_devedor_b_pct: number | null
+  scr_devedor_c_pct: number | null
+  scr_devedor_d_pct: number | null
+  scr_devedor_e_pct: number | null
+  scr_devedor_f_pct: number | null
+  scr_devedor_g_pct: number | null
+  scr_devedor_h_pct: number | null
+  scr_oper_aa_pct: number | null
+  scr_oper_a_pct: number | null
+  scr_oper_b_pct: number | null
+  scr_oper_c_pct: number | null
+  scr_oper_d_pct: number | null
+  scr_oper_e_pct: number | null
+  scr_oper_f_pct: number | null
+  scr_oper_g_pct: number | null
+  scr_oper_h_pct: number | null
+}
+
+function extractScr(row: Record<string, string> | undefined, vlPl: number | null): ScrRating {
+  const empty: ScrRating = {
+    scr_devedor_aa_pct: null, scr_devedor_a_pct: null, scr_devedor_b_pct: null,
+    scr_devedor_c_pct: null, scr_devedor_d_pct: null, scr_devedor_e_pct: null,
+    scr_devedor_f_pct: null, scr_devedor_g_pct: null, scr_devedor_h_pct: null,
+    scr_oper_aa_pct: null, scr_oper_a_pct: null, scr_oper_b_pct: null,
+    scr_oper_c_pct: null, scr_oper_d_pct: null, scr_oper_e_pct: null,
+    scr_oper_f_pct: null, scr_oper_g_pct: null, scr_oper_h_pct: null,
+  }
+  if (!row || !vlPl || vlPl <= 0) return empty
+  const pct = (col: string) => {
+    const v = pn(row[col])
+    if (v == null) return null
+    return Math.round((v / vlPl) * 100 * 100) / 100
+  }
+  return {
+    scr_devedor_aa_pct: pct('TAB_X_SCR_RISCO_DEVEDOR_AA'),
+    scr_devedor_a_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_A'),
+    scr_devedor_b_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_B'),
+    scr_devedor_c_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_C'),
+    scr_devedor_d_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_D'),
+    scr_devedor_e_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_E'),
+    scr_devedor_f_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_F'),
+    scr_devedor_g_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_G'),
+    scr_devedor_h_pct:  pct('TAB_X_SCR_RISCO_DEVEDOR_H'),
+    scr_oper_aa_pct: pct('TAB_X_SCR_RISCO_OPER_AA'),
+    scr_oper_a_pct:  pct('TAB_X_SCR_RISCO_OPER_A'),
+    scr_oper_b_pct:  pct('TAB_X_SCR_RISCO_OPER_B'),
+    scr_oper_c_pct:  pct('TAB_X_SCR_RISCO_OPER_C'),
+    scr_oper_d_pct:  pct('TAB_X_SCR_RISCO_OPER_D'),
+    scr_oper_e_pct:  pct('TAB_X_SCR_RISCO_OPER_E'),
+    scr_oper_f_pct:  pct('TAB_X_SCR_RISCO_OPER_F'),
+    scr_oper_g_pct:  pct('TAB_X_SCR_RISCO_OPER_G'),
+    scr_oper_h_pct:  pct('TAB_X_SCR_RISCO_OPER_H'),
+  }
+}
+
+// Threshold de filtragem para tabelas relacionais (top cedentes/sacados)
+const PL_DEPTH_THRESHOLD_BRL = 10_000_000
+
 
 interface TabData { rows: Record<string, string>[]; indexed: Record<string, Record<string, string>> }
 
@@ -235,12 +380,16 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
     console.log(key + ': ' + rows.length + ' rows')
   }
   let tabI: TabData | null = null, tabII: TabData | null = null, tabIV: TabData | null = null
+  let tabV: TabData | null = null, tabXroot: TabData | null = null
   let tabX11: TabData | null = null, tabX2: TabData | null = null, tabX3: TabData | null = null
   for (const [fname, data] of Object.entries(tabs)) {
     const fn = fname.toLowerCase()
     if (fn.includes('tab_i_') && !fn.includes('tab_ii') && !fn.includes('tab_iv') && !fn.includes('tab_ix') && !fn.includes('tab_iii')) tabI = data
     else if (fn.includes('tab_ii_')) tabII = data
     else if (fn.includes('tab_iv_')) tabIV = data
+    else if (fn.includes('tab_v_') && !fn.includes('tab_vi') && !fn.includes('tab_vii')) tabV = data
+    // Tab X (root) — depth fields (rating SCR). Filename: inf_mensal_fidc_tab_X_YYYYMM.csv (sem sufixo numérico)
+    else if (fn.match(/tab_x_\d{6}\.csv$/i)) tabXroot = data
     else if (fn.includes('tab_x_1_1_')) tabX11 = data
     else if (fn.includes('tab_x_2_')) tabX2 = data
     else if (fn.includes('tab_x_3_')) tabX3 = data
@@ -349,6 +498,35 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
       nrCotstSub = sumCotistas(x11r, 'SUBORD')
     }
 
+    // --- V5 DEPTH FIELDS ---
+    // Tab V → prazo médio + duration + breakdown vencimento
+    const vencMetrics: VencimentoMetrics = tabV && tabV.indexed[cnpj]
+      ? computeVencimentoMetrics(tabV.indexed[cnpj])
+      : {
+          prazo_medio_dias: null, duration_dias: null,
+          pct_vencimento_0_30d: null, pct_vencimento_31_60d: null,
+          pct_vencimento_61_180d: null, pct_vencimento_181_360d: null,
+          pct_vencimento_361_720d: null, pct_vencimento_acima_720d: null,
+        }
+
+    // Tab X (root) → SCR breakdown (depende de vlPl)
+    const scrMetrics: ScrRating = extractScr(tabXroot?.indexed[cnpj], vlPl)
+
+    // Tab I → top 5 cedentes (PR_CEDENTE_1..5 são porcentagens)
+    let pctTop5Ced: number | null = null
+    let pctTop1Ced: number | null = null
+    {
+      let sum5 = 0
+      let any = false
+      const v1 = pn(row['TAB_I2A12_PR_CEDENTE_1'])
+      if (v1 != null) { pctTop1Ced = v1; sum5 += v1; any = true }
+      for (let i = 2; i <= 5; i++) {
+        const vi = pn(row['TAB_I2A12_PR_CEDENTE_' + i])
+        if (vi != null) { sum5 += vi; any = true }
+      }
+      if (any) pctTop5Ced = Math.round(sum5 * 100) / 100
+    }
+
     mapped.push({
       cnpj_fundo: cnpj,
       dt_comptc: dt,
@@ -368,6 +546,11 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
       concentracao_cedente: topCed,
       nr_cotistas_senior: nrCotstSr,
       nr_cotistas_subordinada: nrCotstSub,
+      // V5 depth fields
+      ...vencMetrics,
+      ...scrMetrics,
+      pct_top1_cedente: pctTop1Ced,
+      pct_top5_cedentes: pctTop5Ced,
     })
   }
 
@@ -377,13 +560,54 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
     if (error) { console.error('FIDC err ' + i + ': ' + error.message); be++ }
   }
 
+  // V5 — Top 5 cedentes em hub_fidc_concentracao (filtro PL >= R$ 10M)
+  const concentracaoRows: any[] = []
+  for (const row of tabI.rows) {
+    const cnpj = (row['CNPJ_FUNDO_CLASSE'] || '').trim()
+    const dt = (row['DT_COMPTC'] || '').trim()
+    if (!cnpj || !dt) continue
+    // Filter by PL via mapped lookup
+    const m = mapped.find((x: any) => x.cnpj_fundo === cnpj)
+    if (!m || !m.vl_pl_total || m.vl_pl_total < PL_DEPTH_THRESHOLD_BRL) continue
+    for (let rank = 1; rank <= 5; rank++) {
+      const pct = pn(row['TAB_I2A12_PR_CEDENTE_' + rank])
+      if (pct == null) continue
+      concentracaoRows.push({
+        cnpj_fundo: cnpj,
+        dt_comptc: dt,
+        tipo: 'cedente',
+        rank,
+        nome: null, // CVM CSV não traz nome nominal — só percentual
+        cnpj_terceiro: null,
+        pct_pl: pct,
+        vl_pos_final: null,
+      })
+    }
+  }
+  let conce = 0
+  for (let i = 0; i < concentracaoRows.length; i += 500) {
+    const { error } = await supabase.from('hub_fidc_concentracao')
+      .upsert(concentracaoRows.slice(i, i + 500), {
+        onConflict: 'cnpj_fundo,dt_comptc,tipo,rank',
+        ignoreDuplicates: false,
+      })
+    if (error) { console.error('FIDC concentracao err ' + i + ': ' + error.message); conce++ }
+  }
+  console.log('FIDC concentracao: ' + concentracaoRows.length + ' rows inserted (' + conce + ' batch errors)')
+
   return {
     module: 'fidc',
     year_month: yearMonth,
     total_ingested: mapped.length,
     batch_errors: be,
+    concentracao_rows: concentracaoRows.length,
+    concentracao_errors: conce,
     stats: {
       with_pl: mapped.filter(m => m.vl_pl_total).length,
+      with_pl_10m: mapped.filter(m => m.vl_pl_total && m.vl_pl_total >= PL_DEPTH_THRESHOLD_BRL).length,
+      with_prazo_medio: mapped.filter(m => m.prazo_medio_dias != null).length,
+      with_scr_devedor: mapped.filter(m => m.scr_devedor_aa_pct != null || m.scr_devedor_a_pct != null).length,
+      with_top_cedente: mapped.filter(m => m.pct_top1_cedente != null).length,
       with_subordination: mapped.filter(m => m.indice_subordinacao).length,
       with_inadimplencia: mapped.filter(m => m.taxa_inadimplencia).length,
       with_rentab_senior: mapped.filter(m => m.rentab_senior != null).length,
