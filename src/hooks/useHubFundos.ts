@@ -2009,3 +2009,83 @@ export function useFundPerfilMensal(cnpj: string | null) {
     staleTime: 60 * 60 * 1000,
   });
 }
+
+// ============================================================================
+// DEEP-S3: B3 daily quotes FII (Yahoo Finance via ingest-b3-fii-quotes)
+// ============================================================================
+export interface FiiB3Ticker {
+  cnpj_fundo: string;
+  ticker: string;
+  long_name: string | null;
+  source: string;
+  validated_at: string;
+  last_quote_at: string | null;
+}
+
+export interface FiiB3Quote {
+  cnpj_fundo: string;
+  ticker: string;
+  dt: string;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number | null;
+  volume: number | null;
+  market_cap: number | null;
+}
+
+/** Resolve ticker B3 a partir do CNPJ (com dual lookup classe → cnpj_fundo_legado). */
+export function useFiiB3Ticker(cnpj: string | null) {
+  return useQuery<FiiB3Ticker | null>({
+    queryKey: ["fii-b3", "ticker", cnpj],
+    queryFn: async () => {
+      if (!cnpj) return null;
+      const direct = await supabase
+        .from("hub_fii_b3_tickers")
+        .select("*")
+        .eq("cnpj_fundo", cnpj)
+        .maybeSingle();
+      if (direct.data) return direct.data as FiiB3Ticker;
+      const meta = await supabase
+        .from("hub_fundos_meta")
+        .select("cnpj_fundo_legado")
+        .eq("cnpj_fundo_classe", cnpj)
+        .maybeSingle();
+      const legado = (meta.data as { cnpj_fundo_legado?: string | null } | null)?.cnpj_fundo_legado;
+      if (!legado) return null;
+      const viaLegado = await supabase
+        .from("hub_fii_b3_tickers")
+        .select("*")
+        .eq("cnpj_fundo", legado)
+        .maybeSingle();
+      return (viaLegado.data ?? null) as FiiB3Ticker | null;
+    },
+    enabled: !!cnpj,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+/** Histórico diário B3 (até `lookbackDays` dias). Aceita CNPJ ou ticker. */
+export function useFiiB3Quotes(cnpjOrTicker: string | null, lookbackDays = 730) {
+  return useQuery<FiiB3Quote[]>({
+    queryKey: ["fii-b3", "quotes", cnpjOrTicker, lookbackDays],
+    queryFn: async () => {
+      if (!cnpjOrTicker) return [];
+      const cutoff = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const isTicker = /^[A-Z0-9]{4,6}11$/.test(cnpjOrTicker);
+      let q = supabase
+        .from("hub_fii_b3_diario")
+        .select("cnpj_fundo, ticker, dt, open, high, low, close, volume, market_cap")
+        .gte("dt", cutoff)
+        .order("dt", { ascending: true });
+      q = isTicker ? q.eq("ticker", cnpjOrTicker) : q.eq("cnpj_fundo", cnpjOrTicker);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as FiiB3Quote[];
+    },
+    enabled: !!cnpjOrTicker,
+    staleTime: 60 * 60 * 1000,
+  });
+}

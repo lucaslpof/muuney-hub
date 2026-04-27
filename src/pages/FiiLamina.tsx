@@ -26,6 +26,7 @@ import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
 import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
+import { FiiB3Panel } from "@/components/hub/FiiB3Panel";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -414,6 +415,13 @@ export default function FiiLamina() {
 
         {/* === Perfil cotistas (DEEP-S2) === */}
         <FundPerfilCotistasPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" />
+
+        {/* === Cotação B3 (DEEP-S3) — preço × VP/cota, P/VP, volume === */}
+        <FiiB3Panel
+          cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo}
+          vpCota={latest?.valor_patrimonial_cota ?? null}
+          accent="#EC4899"
+        />
 
         {/* === Section 1: Resumo + KPIs === */}
         <SectionErrorBoundary sectionName="Resumo">
