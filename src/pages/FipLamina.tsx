@@ -13,6 +13,7 @@ import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
 import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
+import { FundAssembleiasPanel } from "@/components/hub/FundAssembleiasPanel";
 import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
 import { PrintFooter } from "@/components/hub/PrintFooter";
 
@@ -123,6 +124,9 @@ export default function FipLamina() {
 
       {/* Perfil cotistas (DEEP-S2) */}
       <FundPerfilCotistasPanel cnpj={metaTyped.cnpj_fundo_classe || cnpjFundo} accent="#06B6D4" />
+
+      {/* Atas/Editais (DEEP-S4) */}
+      <FundAssembleiasPanel cnpj={metaTyped.cnpj_fundo_classe || cnpjFundo} accent="#06B6D4" limit={6} />
 
       {/* Resumo */}
       {latest && (

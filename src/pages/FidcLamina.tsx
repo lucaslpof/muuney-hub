@@ -34,6 +34,7 @@ import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
+import { FundAssembleiasPanel } from "@/components/hub/FundAssembleiasPanel";
 import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
 import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
 
@@ -579,6 +580,13 @@ export default function FidcLamina() {
         {/* === Risco regulatório gestor/admin (DEEP-S2) === */}
         <GestorRiskBadge nome={fidcData?.meta?.gestor_nome ?? null} tipo="gestor" />
         <GestorRiskBadge nome={fidcData?.meta?.admin_nome ?? null} tipo="admin" />
+
+        {/* === Atas/Editais (DEEP-S4) — assembleias últimas === */}
+        <FundAssembleiasPanel
+          cnpj={fidcData?.meta?.cnpj_fundo_classe || cnpj}
+          accent="#F97316"
+          limit={6}
+        />
 
         {/* === Section 1: Resumo === */}
         <SectionErrorBoundary sectionName="Resumo">

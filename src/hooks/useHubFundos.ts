@@ -2065,6 +2065,201 @@ export function useFiiB3Ticker(cnpj: string | null) {
   });
 }
 
+// ============================================================================
+// DEEP-S4: Anexo 14-V FII (CVM INF_TRIMESTRAL — vacância, inquilinos, DRE)
+// ============================================================================
+export interface FiiImovelKpi {
+  cnpj_fundo_classe: string;
+  data_referencia: string;
+  num_imoveis: number;
+  num_imoveis_with_vacancia: number;
+  vacancia_media_simples: number | null;
+  vacancia_media_ponderada_receita: number | null;
+  locado_medio: number | null;
+  inadimplencia_media: number | null;
+  area_total_m2: number | null;
+  unidades_total: number | null;
+}
+
+export interface FiiInquilinoKpi {
+  cnpj_fundo_classe: string;
+  data_referencia: string;
+  num_inquilinos_total: number;
+  top5_concentracao_pct: number | null;
+  top10_concentracao_pct: number | null;
+  maior_inquilino_pct: number | null;
+  hhi_inquilinos: number | null;
+  top_setor: string | null;
+}
+
+export interface FiiImovelRow {
+  cnpj_fundo_classe: string;
+  data_referencia: string;
+  classe: string | null;
+  nome_imovel: string;
+  endereco: string | null;
+  area: number | null;
+  numero_unidades: number | null;
+  percentual_vacancia: number | null;
+  percentual_inadimplencia: number | null;
+  percentual_receitas_fii: number | null;
+  percentual_locado: number | null;
+}
+
+export interface FiiInquilinoRow {
+  cnpj_fundo_classe: string;
+  data_referencia: string;
+  nome_imovel: string;
+  setor_atuacao: string | null;
+  percentual_receita_imovel: number | null;
+  percentual_receitas_fii: number | null;
+}
+
+export interface FiiDreRow {
+  cnpj_fundo_classe: string;
+  data_referencia: string;
+  receita_aluguel_contabil: number | null;
+  taxa_administracao_contabil: number | null;
+  resultado_liquido_total_contabil: number | null;
+  resultado_trimestral_contabil: number | null;
+  rendimentos_declarados: number | null;
+  pct_resultado_financ_liq_declarado: number | null;
+  rendimentos_pagos_antecipadamente: number | null;
+  total_receitas_despesas_contabil: number | null;
+}
+
+/** KPIs de imóveis (vacância média, área, etc) — última ou histórico. */
+export function useFiiImovelKpis(cnpj: string | null, lookback = 8) {
+  return useQuery<FiiImovelKpi[]>({
+    queryKey: ["fii-anexo14v", "imovel-kpis", cnpj, lookback],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      const { data, error } = await supabase
+        .from("v_hub_fii_imoveis_kpis")
+        .select("*")
+        .eq("cnpj_fundo_classe", cnpj)
+        .order("data_referencia", { ascending: false })
+        .limit(lookback);
+      if (error) throw error;
+      return ((data ?? []) as FiiImovelKpi[]).reverse();
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/** KPIs de inquilinos (concentração top-N). */
+export function useFiiInquilinoKpis(cnpj: string | null, lookback = 8) {
+  return useQuery<FiiInquilinoKpi[]>({
+    queryKey: ["fii-anexo14v", "inquilino-kpis", cnpj, lookback],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      const { data, error } = await supabase
+        .from("v_hub_fii_inquilinos_kpis")
+        .select("*")
+        .eq("cnpj_fundo_classe", cnpj)
+        .order("data_referencia", { ascending: false })
+        .limit(lookback);
+      if (error) throw error;
+      return ((data ?? []) as FiiInquilinoKpi[]).reverse();
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/** Lista imóveis (último trimestre ou específico). */
+export function useFiiImoveisList(cnpj: string | null, dataReferencia?: string | null) {
+  return useQuery<FiiImovelRow[]>({
+    queryKey: ["fii-anexo14v", "imoveis-list", cnpj, dataReferencia],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      let dt = dataReferencia;
+      if (!dt) {
+        const { data: latest } = await supabase
+          .from("hub_fii_imoveis")
+          .select("data_referencia")
+          .eq("cnpj_fundo_classe", cnpj)
+          .order("data_referencia", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        dt = (latest as { data_referencia?: string } | null)?.data_referencia;
+        if (!dt) return [];
+      }
+      const { data, error } = await supabase
+        .from("hub_fii_imoveis")
+        .select(
+          "cnpj_fundo_classe, data_referencia, classe, nome_imovel, endereco, area, numero_unidades, percentual_vacancia, percentual_inadimplencia, percentual_receitas_fii, percentual_locado"
+        )
+        .eq("cnpj_fundo_classe", cnpj)
+        .eq("data_referencia", dt)
+        .order("percentual_receitas_fii", { ascending: false, nullsFirst: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as FiiImovelRow[];
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/** Lista inquilinos (top-N por % receita FII no último trimestre ou específico). */
+export function useFiiInquilinosList(cnpj: string | null, dataReferencia?: string | null, limit = 20) {
+  return useQuery<FiiInquilinoRow[]>({
+    queryKey: ["fii-anexo14v", "inquilinos-list", cnpj, dataReferencia, limit],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      let dt = dataReferencia;
+      if (!dt) {
+        const { data: latest } = await supabase
+          .from("hub_fii_inquilinos")
+          .select("data_referencia")
+          .eq("cnpj_fundo_classe", cnpj)
+          .order("data_referencia", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        dt = (latest as { data_referencia?: string } | null)?.data_referencia;
+        if (!dt) return [];
+      }
+      const { data, error } = await supabase
+        .from("hub_fii_inquilinos")
+        .select(
+          "cnpj_fundo_classe, data_referencia, nome_imovel, setor_atuacao, percentual_receita_imovel, percentual_receitas_fii"
+        )
+        .eq("cnpj_fundo_classe", cnpj)
+        .eq("data_referencia", dt)
+        .order("percentual_receitas_fii", { ascending: false, nullsFirst: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as FiiInquilinoRow[];
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/** DRE histórica (último N trimestres). */
+export function useFiiDreHistory(cnpj: string | null, lookback = 8) {
+  return useQuery<FiiDreRow[]>({
+    queryKey: ["fii-anexo14v", "dre", cnpj, lookback],
+    queryFn: async () => {
+      if (!cnpj) return [];
+      const { data, error } = await supabase
+        .from("v_hub_fii_dre")
+        .select(
+          "cnpj_fundo_classe, data_referencia, receita_aluguel_contabil, taxa_administracao_contabil, resultado_liquido_total_contabil, resultado_trimestral_contabil, rendimentos_declarados, pct_resultado_financ_liq_declarado, rendimentos_pagos_antecipadamente, total_receitas_despesas_contabil"
+        )
+        .eq("cnpj_fundo_classe", cnpj)
+        .order("data_referencia", { ascending: false })
+        .limit(lookback);
+      if (error) throw error;
+      return ((data ?? []) as FiiDreRow[]).reverse();
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 /** Histórico diário B3 (até `lookbackDays` dias). Aceita CNPJ ou ticker. */
 export function useFiiB3Quotes(cnpjOrTicker: string | null, lookbackDays = 730) {
   return useQuery<FiiB3Quote[]>({

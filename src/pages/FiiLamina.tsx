@@ -27,6 +27,8 @@ import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
 import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
 import { FiiB3Panel } from "@/components/hub/FiiB3Panel";
+import { FiiAnexo14VPanel } from "@/components/hub/FiiAnexo14VPanel";
+import { FundAssembleiasPanel } from "@/components/hub/FundAssembleiasPanel";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -422,6 +424,12 @@ export default function FiiLamina() {
           vpCota={latest?.valor_patrimonial_cota ?? null}
           accent="#EC4899"
         />
+
+        {/* === Anexo 14-V FII (DEEP-S4) — imóveis + inquilinos + DRE === */}
+        <FiiAnexo14VPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" />
+
+        {/* === Atas/Editais (DEEP-S4) — assembleias últimas === */}
+        <FundAssembleiasPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" limit={6} />
 
         {/* === Section 1: Resumo + KPIs === */}
         <SectionErrorBoundary sectionName="Resumo">
