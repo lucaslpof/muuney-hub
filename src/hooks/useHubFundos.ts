@@ -1903,3 +1903,109 @@ export function useFundLamina(cnpj: string | null) {
     staleTime: 60 * 60 * 1000, // 60min
   });
 }
+
+/* ═══ GESTOR SANÇÕES — DEEP-S2 (28/04/2026) ═══
+ * Cross-ref hub_cvm_sancoes (CVM PAS) com gestor_nome/admin_nome via pg_trgm.
+ * Limitação: acusados são em maioria pessoas físicas, não PJ — fuzzy match.
+ */
+
+export interface GestorSancao {
+  nome_acusado: string;
+  match_type: "exato" | "fuzzy";
+  similarity: number;
+  total_processos: number;
+  julgados: number;
+  em_curso: number;
+  tlts: number;
+  ultima_movimentacao: string | null;
+  nups: string[];
+}
+
+/** Busca processos sancionadores CVM relacionados a um nome de gestor/admin. */
+export function useGestorSancoes(nome: string | null, opts?: { minSimilarity?: number; enabled?: boolean }) {
+  const minSim = opts?.minSimilarity ?? 0.45;
+  return useQuery<GestorSancao[]>({
+    queryKey: ["gestor", "sancoes", nome, minSim],
+    queryFn: async () => {
+      if (!nome || nome.trim().length < 4) return [];
+      const { data, error } = await supabase.rpc("get_gestor_sancoes", { p_nome: nome, p_min_similarity: minSim });
+      if (error) throw error;
+      return (data ?? []) as GestorSancao[];
+    },
+    enabled: !!nome && (opts?.enabled !== false),
+    staleTime: 60 * 60 * 1000, // 60min
+  });
+}
+
+/* ═══ PERFIL MENSAL — DEEP-S2 (28/04/2026) ═══
+ * Cotistas detalhados (17 categorias × NR + PR_PL) + cenários FPR estresse.
+ * Fonte: hub_fundos_perfil_mensal (refresh mensal pg_cron dia 8 06:30 UTC).
+ */
+
+export interface FundPerfilMensal {
+  cnpj_fundo_classe: string;
+  dt_comptc: string;
+  // Cotistas counts (17)
+  nr_cotst_pf_pb: number | null;
+  nr_cotst_pf_varejo: number | null;
+  nr_cotst_pj_nao_financ_pb: number | null;
+  nr_cotst_pj_nao_financ_varejo: number | null;
+  nr_cotst_banco: number | null;
+  nr_cotst_corretora_distrib: number | null;
+  nr_cotst_pj_financ: number | null;
+  nr_cotst_invnr: number | null;
+  nr_cotst_eapc: number | null;
+  nr_cotst_efpc: number | null;
+  nr_cotst_rpps: number | null;
+  nr_cotst_segur: number | null;
+  nr_cotst_capitaliz: number | null;
+  nr_cotst_fi_clube: number | null;
+  nr_cotst_distrib: number | null;
+  nr_cotst_outro: number | null;
+  // % PL (17)
+  pr_pl_cotst_pf_pb: number | null;
+  pr_pl_cotst_pf_varejo: number | null;
+  pr_pl_cotst_pj_nao_financ_pb: number | null;
+  pr_pl_cotst_pj_nao_financ_varejo: number | null;
+  pr_pl_cotst_banco: number | null;
+  pr_pl_cotst_corretora_distrib: number | null;
+  pr_pl_cotst_pj_financ: number | null;
+  pr_pl_cotst_invnr: number | null;
+  pr_pl_cotst_eapc: number | null;
+  pr_pl_cotst_efpc: number | null;
+  pr_pl_cotst_rpps: number | null;
+  pr_pl_cotst_segur: number | null;
+  pr_pl_cotst_capitaliz: number | null;
+  pr_pl_cotst_fi_clube: number | null;
+  pr_pl_cotst_distrib: number | null;
+  pr_pl_cotst_outro: number | null;
+  // FPR estresse
+  fpr: string | null;
+  cenario_fpr_ibovespa: number | null;
+  cenario_fpr_juros: number | null;
+  cenario_fpr_cupom: number | null;
+  cenario_fpr_dolar: number | null;
+  cenario_fpr_outro: number | null;
+  pr_variacao_diaria_cota_estresse: number | null;
+  pr_variacao_diaria_cota: number | null;
+}
+
+export function useFundPerfilMensal(cnpj: string | null) {
+  return useQuery<FundPerfilMensal | null>({
+    queryKey: ["fundos", "perfil_mensal", cnpj],
+    queryFn: async () => {
+      if (!cnpj) return null;
+      const { data, error } = await supabase
+        .from("hub_fundos_perfil_mensal")
+        .select("*")
+        .eq("cnpj_fundo_classe", cnpj)
+        .order("dt_comptc", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") throw error;
+      return (data ?? null) as FundPerfilMensal | null;
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000,
+  });
+}

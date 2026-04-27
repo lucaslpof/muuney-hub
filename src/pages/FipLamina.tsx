@@ -11,6 +11,8 @@ import { FipPerformancePanel } from "@/components/hub/FipPerformancePanel";
 import { FipCotistasPanel } from "@/components/hub/FipCotistasPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
+import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
+import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
 import { ExportPdfButton } from "@/components/hub/ExportPdfButton";
 import { PrintFooter } from "@/components/hub/PrintFooter";
 
@@ -114,6 +116,13 @@ export default function FipLamina() {
 
       {/* Lâmina CVM (DEEP-S1) — política e taxas */}
       <FundLaminaPolicyPanel cnpj={metaTyped.cnpj_fundo_classe || cnpjFundo} accent="#06B6D4" />
+
+      {/* Risco regulatório gestor/admin (DEEP-S2) */}
+      <GestorRiskBadge nome={metaTyped.gestor_nome ?? null} tipo="gestor" />
+      <GestorRiskBadge nome={metaTyped.admin_nome ?? null} tipo="admin" />
+
+      {/* Perfil cotistas (DEEP-S2) */}
+      <FundPerfilCotistasPanel cnpj={metaTyped.cnpj_fundo_classe || cnpjFundo} accent="#06B6D4" />
 
       {/* Resumo */}
       {latest && (

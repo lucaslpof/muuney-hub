@@ -34,6 +34,8 @@ import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
+import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
+import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -574,6 +576,10 @@ export default function FidcLamina() {
           limit={5}
         />
 
+        {/* === Risco regulatório gestor/admin (DEEP-S2) === */}
+        <GestorRiskBadge nome={fidcData?.meta?.gestor_nome ?? null} tipo="gestor" />
+        <GestorRiskBadge nome={fidcData?.meta?.admin_nome ?? null} tipo="admin" />
+
         {/* === Section 1: Resumo === */}
         <SectionErrorBoundary sectionName="Resumo">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -774,6 +780,12 @@ export default function FidcLamina() {
 
         {/* === Lâmina CVM (DEEP-S1) — política e taxas === */}
         <FundLaminaPolicyPanel
+          cnpj={fidcData?.meta?.cnpj_fundo_classe || cnpj}
+          accent="#F97316"
+        />
+
+        {/* === Perfil cotistas (DEEP-S2) — 17 categorias × % PL + FPR estresse === */}
+        <FundPerfilCotistasPanel
           cnpj={fidcData?.meta?.cnpj_fundo_classe || cnpj}
           accent="#F97316"
         />

@@ -24,6 +24,8 @@ import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FiiPvpPayoutPanel } from "@/components/hub/FiiPvpPayoutPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
+import { GestorRiskBadge } from "@/components/hub/GestorRiskBadge";
+import { FundPerfilCotistasPanel } from "@/components/hub/FundPerfilCotistasPanel";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -405,6 +407,13 @@ export default function FiiLamina() {
 
         {/* === Lâmina CVM (DEEP-S1) — política e taxas === */}
         <FundLaminaPolicyPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" />
+
+        {/* === Risco regulatório gestor/admin (DEEP-S2) === */}
+        <GestorRiskBadge nome={meta.gestor_nome ?? null} tipo="gestor" />
+        <GestorRiskBadge nome={meta.admin_nome ?? null} tipo="admin" />
+
+        {/* === Perfil cotistas (DEEP-S2) === */}
+        <FundPerfilCotistasPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" />
 
         {/* === Section 1: Resumo + KPIs === */}
         <SectionErrorBoundary sectionName="Resumo">
