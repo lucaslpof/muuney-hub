@@ -407,6 +407,20 @@ export interface FidcMonthlyItem {
   scr_oper_f_pct?: number | null;
   scr_oper_g_pct?: number | null;
   scr_oper_h_pct?: number | null;
+  // V4+ extras (já em hub_fidc_mensal mas faltavam no tipo)
+  pct_top1_sacado?: number | null;
+  pct_top5_sacados?: number | null;
+  vl_captacao_mes?: number | null;
+  qt_cotas_emitidas_mes?: number | null;
+  vl_liquidez_0d?: number | null;
+  vl_liquidez_30d?: number | null;
+  vl_liquidez_60d?: number | null;
+  vl_liquidez_90d?: number | null;
+  vl_liquidez_180d?: number | null;
+  vl_liquidez_360d?: number | null;
+  vl_liquidez_maior_360d?: number | null;
+  vl_garantia_dircred?: number | null;
+  pr_garantia_dircred?: number | null;
 }
 
 export interface FidcRankingItem {

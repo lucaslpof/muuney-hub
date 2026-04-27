@@ -32,6 +32,8 @@ import { CvmRegulationCard } from "@/components/hub/CvmRegulationCard";
 import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
 import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
+import { FidcSafrasPanel } from "@/components/hub/FidcSafrasPanel";
+import { FidcLiquidezPanel } from "@/components/hub/FidcLiquidezPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
 import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 import { FundAssembleiasPanel } from "@/components/hub/FundAssembleiasPanel";
@@ -858,6 +860,12 @@ export default function FidcLamina() {
 
             {/* V5 Depth Panel — prazo, duration, breakdown vencimento, SCR rating, top 5 cedentes */}
             <FidcCarteiraDepthPanel latest={latest ?? null} cnpjFundo={cnpj} />
+
+            {/* DEEP-S4: Liquidez por horizonte de saque (Tab V CVM) */}
+            <FidcLiquidezPanel latest={latest ?? null} />
+
+            {/* DEEP-S4: Safras de concessão (vintage — vl_captacao_mes histórico) */}
+            <FidcSafrasPanel monthly={monthly as FidcMonthlyItem[]} lookbackMonths={24} />
           </motion.div>
         </SectionErrorBoundary>
 
