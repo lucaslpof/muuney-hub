@@ -33,6 +33,7 @@ import { GlossarioFidc } from "@/components/hub/GlossarioFidc";
 import { OfertaAtivaBadge } from "@/components/hub/OfertaAtivaBadge";
 import { FidcCarteiraDepthPanel } from "@/components/hub/FidcCarteiraDepthPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
+import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 
 /**
  * Compute monthly series for chart (Senior, Subordinada, Fundo).
@@ -770,6 +771,12 @@ export default function FidcLamina() {
             </motion.div>
           </SectionErrorBoundary>
         )}
+
+        {/* === Lâmina CVM (DEEP-S1) — política e taxas === */}
+        <FundLaminaPolicyPanel
+          cnpj={fidcData?.meta?.cnpj_fundo_classe || cnpj}
+          accent="#F97316"
+        />
 
         {/* === Section 3: Carteira === */}
         <SectionErrorBoundary sectionName="Carteira">

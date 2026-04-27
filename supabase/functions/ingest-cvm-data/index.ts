@@ -371,10 +371,13 @@ function classifySeries(clasRaw: string): 'senior' | 'mezanino' | 'subordinada' 
 
 async function ingestFIDC(supabase: any, yearMonth: string) {
   const zipUrl = 'https://dados.cvm.gov.br/dados/FIDC/DOC/INF_MENSAL/DADOS/inf_mensal_fidc_' + yearMonth + '.zip'
-  // V5.1: filter at unzip time (fflate `filter` opt) — irrelevant entries are
-  // never decompressed. ZIP has 17 tabs; we keep 8 (I, II, IV, V, X root,
-  // X_1_1, X_2, X_3). Tabs III, VI, VII, IX, X_4..X_7 are skipped to fit
-  // Edge Function 256MB budget on big months (Dec/Jan/Feb OOMed at v5.0).
+  // V5.1+v7: filter at unzip time (fflate `filter` opt) — irrelevant entries
+  // are never decompressed. ZIP has 17 tabs; we keep 11 (I, II, IV, V, X root,
+  // X_1_1, X_2, X_3, X_4, X_5, X_7). Tabs III, VI, VII, IX, X_6 ainda são
+  // pulados para fitar Edge Function 256MB.
+  // X_4 = Captações no mês por classe (multi-row)
+  // X_5 = Liquidez do passivo por janela (0/30/60/90/180/360/>360 dias)
+  // X_7 = Garantia direitos creditórios (vl + pct)
   const isRelevantTab = (fn: string): boolean => {
     const lower = fn.toLowerCase()
     if (!lower.endsWith('.csv')) return false
@@ -382,6 +385,7 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
     if (lower.includes('tab_x_1_1_')) return true
     if (lower.includes('tab_x_2_')) return true
     if (lower.includes('tab_x_3_')) return true
+    if (lower.includes('tab_x_4_')) return true   // v7: captações (X_5 + X_7 deferred — OOM 256MB)
     if (lower.includes('tab_v_') && !lower.includes('tab_vi') && !lower.includes('tab_vii')) return true
     if (lower.includes('tab_iv_')) return true
     if (lower.includes('tab_ii_')) return true
@@ -404,6 +408,8 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
   let tabI: TabData | null = null, tabII: TabData | null = null, tabIV: TabData | null = null
   let tabV: TabData | null = null, tabXroot: TabData | null = null
   let tabX11: TabData | null = null, tabX2: TabData | null = null, tabX3: TabData | null = null
+  // v7: X_4 (multi-row), X_5 (single-row), X_7 (single-row)
+  let tabX4: TabData | null = null, tabX5: TabData | null = null, tabX7: TabData | null = null
   for (const [fname, data] of Object.entries(tabs)) {
     const fn = fname.toLowerCase()
     if (fn.includes('tab_i_') && !fn.includes('tab_ii') && !fn.includes('tab_iv') && !fn.includes('tab_ix') && !fn.includes('tab_iii')) tabI = data
@@ -415,6 +421,9 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
     else if (fn.includes('tab_x_1_1_')) tabX11 = data
     else if (fn.includes('tab_x_2_')) tabX2 = data
     else if (fn.includes('tab_x_3_')) tabX3 = data
+    else if (fn.includes('tab_x_4_')) tabX4 = data   // v7: captações multi-row
+    else if (fn.includes('tab_x_5_')) tabX5 = data   // v7: liquidez passivo (single-row indexed)
+    else if (fn.includes('tab_x_7_')) tabX7 = data   // v7: garantia (single-row indexed)
   }
   if (!tabI) throw new Error('Tab I not found in FIDC ZIP!')
 
@@ -423,6 +432,9 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
   if (tabX2) for (const r of tabX2.rows) { const c = (r['CNPJ_FUNDO_CLASSE'] || '').trim(); if (c) { (x2ByCnpj[c] ||= []).push(r) } }
   const x3ByCnpj: Record<string, Record<string, string>[]> = {}
   if (tabX3) for (const r of tabX3.rows) { const c = (r['CNPJ_FUNDO_CLASSE'] || '').trim(); if (c) { (x3ByCnpj[c] ||= []).push(r) } }
+  // v7: Group X_4 by cnpj (multi-row — sum captações across all classes)
+  const x4ByCnpj: Record<string, Record<string, string>[]> = {}
+  if (tabX4) for (const r of tabX4.rows) { const c = (r['CNPJ_FUNDO_CLASSE'] || '').trim(); if (c) { (x4ByCnpj[c] ||= []).push(r) } }
 
   const mapped: any[] = []
   for (const row of tabI.rows) {
@@ -549,6 +561,41 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
       if (any) pctTop5Ced = Math.round(sum5 * 100) / 100
     }
 
+    // --- V7 X_4: Captações no mês (sum across all classes/series) ---
+    let vlCaptacaoMes: number | null = null, qtCotasMes: number | null = null
+    {
+      let sumVl = 0, sumQt = 0
+      let any = false
+      for (const x4r of (x4ByCnpj[cnpj] || [])) {
+        const tp = (x4r['TAB_X_TP_OPER'] || '').toLowerCase()
+        if (!tp.includes('capta')) continue   // só linhas de "Captações no Mês"
+        const vl = pn(x4r['TAB_X_VL_TOTAL']) ?? 0
+        const qt = pn(x4r['TAB_X_QT_COTA']) ?? 0
+        sumVl += vl
+        sumQt += qt
+        any = true
+      }
+      if (any) {
+        vlCaptacaoMes = Math.round(sumVl * 100) / 100
+        qtCotasMes = Math.round(sumQt * 100000000) / 100000000
+      }
+    }
+
+    // --- V7 X_5: Liquidez passivo por janela ---
+    const x5r = tabX5?.indexed[cnpj]
+    const vlLiq0d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_0']) : null
+    const vlLiq30d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_30']) : null
+    const vlLiq60d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_60']) : null
+    const vlLiq90d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_90']) : null
+    const vlLiq180d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_180']) : null
+    const vlLiq360d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_360']) : null
+    const vlLiqMaior360d = x5r ? pn(x5r['TAB_X_VL_LIQUIDEZ_MAIOR_360']) : null
+
+    // --- V7 X_7: Garantia direitos creditórios ---
+    const x7r = tabX7?.indexed[cnpj]
+    const vlGarantia = x7r ? pn(x7r['TAB_X_VL_GARANTIA_DIRCRED']) : null
+    const prGarantia = x7r ? pn(x7r['TAB_X_PR_GARANTIA_DIRCRED']) : null
+
     mapped.push({
       cnpj_fundo: cnpj,
       dt_comptc: dt,
@@ -573,6 +620,18 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
       ...scrMetrics,
       pct_top1_cedente: pctTop1Ced,
       pct_top5_cedentes: pctTop5Ced,
+      // V7 (DEEP-S1): X_4 captações + X_5 liquidez passivo + X_7 garantia
+      vl_captacao_mes: vlCaptacaoMes,
+      qt_cotas_emitidas_mes: qtCotasMes,
+      vl_liquidez_0d: vlLiq0d,
+      vl_liquidez_30d: vlLiq30d,
+      vl_liquidez_60d: vlLiq60d,
+      vl_liquidez_90d: vlLiq90d,
+      vl_liquidez_180d: vlLiq180d,
+      vl_liquidez_360d: vlLiq360d,
+      vl_liquidez_maior_360d: vlLiqMaior360d,
+      vl_garantia_dircred: vlGarantia,
+      pr_garantia_dircred: prGarantia,
     })
   }
 
@@ -638,6 +697,10 @@ async function ingestFIDC(supabase: any, yearMonth: string) {
       with_lastro: mapped.filter(m => m.tp_lastro_principal).length,
       with_cotistas_senior: mapped.filter(m => m.nr_cotistas_senior != null).length,
       with_cotistas_subord: mapped.filter(m => m.nr_cotistas_subordinada != null).length,
+      // V7 stats
+      with_captacao_mes: mapped.filter(m => m.vl_captacao_mes != null).length,
+      with_liquidez_passivo: mapped.filter(m => m.vl_liquidez_0d != null).length,
+      with_garantia: mapped.filter(m => m.vl_garantia_dircred != null).length,
     },
   }
 }
@@ -858,7 +921,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     moduleParam = url.searchParams.get('module') || 'cda'
     yearMonthParam = url.searchParams.get('year_month') || getLastMonth()
-    console.log('=== ingest-cvm-data v6: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
+    console.log('=== ingest-cvm-data v7: module=' + moduleParam + ', year_month=' + yearMonthParam + ' ===')
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

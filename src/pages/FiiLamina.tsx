@@ -23,6 +23,7 @@ import { DrawdownHeatmap } from "@/components/hub/DrawdownHeatmap";
 import { DYCalendarFII } from "@/components/hub/DYCalendarFII";
 import { FiiPvpPayoutPanel } from "@/components/hub/FiiPvpPayoutPanel";
 import { FundEventsBanner } from "@/components/hub/FundEventsBanner";
+import { FundLaminaPolicyPanel } from "@/components/hub/FundLaminaPolicyPanel";
 import { FundNarrativePanel, type FundScopeContext } from "@/components/hub/FundNarrativePanel";
 import { ManagerTenureTimeline } from "@/components/hub/ManagerTenureTimeline";
 import { DataAsOfStamp } from "@/components/hub/DataAsOfStamp";
@@ -401,6 +402,9 @@ export default function FiiLamina() {
       <div className="w-full px-6 py-8 space-y-8">
         {/* === Eventos Relevantes (DEEP-S1) === */}
         <FundEventsBanner cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} days={30} limit={5} />
+
+        {/* === Lâmina CVM (DEEP-S1) — política e taxas === */}
+        <FundLaminaPolicyPanel cnpj={meta.cnpj_fundo_classe || meta.cnpj_fundo} accent="#EC4899" />
 
         {/* === Section 1: Resumo + KPIs === */}
         <SectionErrorBoundary sectionName="Resumo">

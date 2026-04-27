@@ -1831,3 +1831,75 @@ export function useGlobalAttentionEvents(opts: { days?: number; limit?: number }
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/* ═══ FUND LAMINA — DEEP-S1 (26/04/2026) ═══
+ * Lâmina mensal CVM: política, taxas, limites, alavancagem, classe risco.
+ * Fonte: hub_fundos_lamina (refresh mensal pg_cron — TODO Sprint 1 finish).
+ */
+
+export interface FundLamina {
+  cnpj_fundo_classe: string;
+  dt_comptc: string;
+  tp_fundo_classe: string | null;
+  denom_social: string | null;
+  publico_alvo: string | null;
+  restr_invest: string | null;
+  objetivo: string | null;
+  polit_invest: string | null;
+  pr_pl_ativo_exterior: number | null;
+  pr_pl_ativo_cred_priv: number | null;
+  pr_pl_alavanc: number | null;
+  pr_ativo_emissor: number | null;
+  deriv_protecao_carteira: string | null;
+  risco_perda: string | null;
+  risco_perda_negativo: string | null;
+  pr_pl_aplic_max_fundo_unico: number | null;
+  invest_inicial_min: number | null;
+  invest_adic: number | null;
+  resgate_min: number | null;
+  vl_min_perman: number | null;
+  qt_dia_caren: number | null;
+  condic_caren: string | null;
+  qt_dia_conversao_cota_resgate: number | null;
+  qt_dia_pagto_resgate: number | null;
+  tp_dia_pagto_resgate: string | null;
+  tp_taxa_adm: string | null;
+  taxa_adm: number | null;
+  taxa_adm_min: number | null;
+  taxa_adm_max: number | null;
+  taxa_adm_obs: string | null;
+  taxa_entr: number | null;
+  taxa_saida: number | null;
+  taxa_perfm: string | null;
+  pr_pl_despesa: number | null;
+  vl_patrim_liq: number | null;
+  classe_risco_admin: string | null;
+  pr_rentab_fundo_5ano: number | null;
+  indice_refer: string | null;
+  pr_variacao_indice_refer_5ano: number | null;
+  qt_ano_perda: number | null;
+  remun_distrib: string | null;
+  conflito_venda: string | null;
+  tel_sac: string | null;
+}
+
+/** Latest LAMINA for a fund (most recent dt_comptc). */
+export function useFundLamina(cnpj: string | null) {
+  return useQuery<FundLamina | null>({
+    queryKey: ["fundos", "lamina", cnpj],
+    queryFn: async () => {
+      if (!cnpj) return null;
+      const { data, error } = await supabase
+        .from("hub_fundos_lamina")
+        .select("*")
+        .eq("cnpj_fundo_classe", cnpj)
+        .order("dt_comptc", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") throw error;
+      return (data ?? null) as FundLamina | null;
+    },
+    enabled: !!cnpj,
+    staleTime: 60 * 60 * 1000, // 60min
+  });
+}
